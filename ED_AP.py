@@ -592,6 +592,56 @@ class EDAutopilot:
         else:
             return False
 
+    # look for the "0:07" in the target range, if in this region then return true
+    # Steve
+    def have_7seconds(self, scr_reg) -> bool:
+        threshold = 0.54
+        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('7Seconds', 'target')
+
+        # Determine if target is in the target region
+        if maxVal >= threshold:
+            pt = maxLoc
+
+            destination_width = scr_reg.reg['target']['width']
+            destination_height = scr_reg.reg['target']['height']
+
+            width = scr_reg.templates.template['target']['width']
+            height = scr_reg.templates.template['target']['height']
+
+            x = pt[0]
+            y = pt[1]
+            h = height
+            w = destination_width
+            tar_image = dst_image[y:y + h, x:x + w]
+
+            #print(destination_width, destination_height, width, height)
+            #print(maxLoc)
+
+            if self.cv_view:
+                dst_image_d = cv2.cvtColor(tar_image, cv2.COLOR_GRAY2RGB)
+                try:
+                    self.draw_match_rect(dst_image_d, pt, (pt[0] + width, pt[1] + height), (0, 0, 255), 2)
+                    #dim = (int(destination_width / 2), int(destination_height / 2))
+                    dim = (int(w), int(h))
+
+                    img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
+                    cv2.putText(img, f'{maxVal:5.2f} >.54', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                                (255, 255, 255), 1, cv2.LINE_AA)
+                    cv2.imshow('7Seconds', img)
+                    # cv2.imshow('tt', scr_reg.templates.template['target']['image'])
+                    cv2.moveWindow('7Seconds', self.cv_view_x + 500, self.cv_view_y + 250)
+                except Exception as e:
+                    print("exception in getdest: " + str(e))
+                cv2.waitKey(30)
+
+            result = True
+
+        else:
+            result = False
+
+        return result
+
+
     # Performs menu action to undock from Station
     #  
     def undock(self):
@@ -1410,6 +1460,13 @@ class EDAutopilot:
                 sleep(1)  # wait another sec
                 self.keys.send('HyperSuperCombination', hold=0.001)
                 break
+
+            # check for 7 Seconds Steve
+            #if (self.have_7seconds(scr_reg) == True):
+            #    sleep(1)  # wait another sec
+            #    self.ap_ckb('log', "7 Seconds")
+                # self.keys.send('HyperSuperCombination', hold=0.001)
+                # break
 
         # if no error, we must have gotten disengage
         if align_failed == False and do_docking == True:

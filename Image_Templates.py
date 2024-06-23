@@ -26,7 +26,8 @@ class Image_Templates:
                           'interdicted' : {'image': None, 'width': 1, 'height': 1},
                           'missions'  : {'image': None, 'width': 1, 'height': 1},
                           'dest_sirius' : {'image': None, 'width': 1, 'height': 1},
-                          'sirius_atmos' : {'image': None, 'width': 1, 'height': 1}                                            
+                          'sirius_atmos' : {'image': None, 'width': 1, 'height': 1},
+                          '7Seconds': {'image': None, 'width': 1, 'height': 1}
                         }
  
         # load the templates and scale them.  Default templates assumed 3440x1440 screen resolution
@@ -58,6 +59,7 @@ class Image_Templates:
         self.template['dest_sirius'] = self.load_template("templates/dest-sirius-atmos-HL.png", scaleX, scaleY)
         self.template['robigo_mines']  = self.load_template("templates/robigo-mines-selected.png", scaleX, scaleY) 
         self.template['sirius_atmos']  = self.load_template("templates/sirius-atmos-selected.png", scaleX, scaleY)        
+        self.template['7Seconds']  = self.load_template("templates/7Seconds.png", scaleX, scaleY)
         
 
     def resource_path(self,relative_path):
