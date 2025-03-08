@@ -10,8 +10,8 @@ Note: Some of this file comes from EDMarketConnector's edmc_data.py file
 """
 
 # Status.json / Dashboard Flags constants
-FlagsDocked = 1 << 0             # on a landing pad
-FlagsLanded = 1 << 1             # on planet surface
+FlagsDocked = 1 << 0             # on a landing pad in space or planet
+FlagsLanded = 1 << 1             # on planet surface (not planet landing pad)
 FlagsLandingGearDown = 1 << 2
 FlagsShieldsUp = 1 << 3
 FlagsSupercruise = 1 << 4         # While in super-cruise
@@ -31,7 +31,7 @@ FlagsFsdCharging = 1 << 17       # While charging and jumping for super-cruise o
 FlagsFsdCooldown = 1 << 18       # Following super-cruise or jump
 FlagsLowFuel = 1 << 19           # < 25%
 FlagsOverHeating = 1 << 20       # > 100%, or is this 80% now ?
-FlagsHasLatLong = 1 << 21
+FlagsHasLatLong = 1 << 21        # On when altimeter is visible (either OC/DRP mode or 2Km/SURF mode).
 FlagsIsInDanger = 1 << 22
 FlagsBeingInterdicted = 1 << 23
 FlagsInMainShip = 1 << 24
@@ -39,14 +39,14 @@ FlagsInFighter = 1 << 25
 FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
-FlagsAverageAltitude = 1 << 29   # Altitude from Average radius
-FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump
+FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
+FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump. See also Flags2FsdHyperdriveCharging.
 FlagsSrvHighBeam = 1 << 31
 
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
 Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
-Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
+Flags2InMulticrew = 1 << 2  # (ie in someone elseâ€™s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4
 Flags2AimDownSight = 1 << 5
@@ -64,9 +64,21 @@ Flags2BreathableAtmosphere = 1 << 16
 Flags2TelepresenceMulticrew = 1 << 17
 Flags2PhysicalMulticrew = 1 << 18
 Flags2FsdHyperdriveCharging = 1 << 19       # While charging and jumping for system jump
+Flags2Future20 = 1 << 20
+Flags2Future21 = 1 << 21
+Flags2Future22 = 1 << 22
+Flags2Future23 = 1 << 23
+Flags2Future24 = 1 << 24
+Flags2Future25 = 1 << 25
+Flags2Future26 = 1 << 26
+Flags2Future27 = 1 << 27
+Flags2Future28 = 1 << 28
+Flags2Future29 = 1 << 29
+Flags2Future30 = 1 << 30
+Flags2Future31 = 1 << 31
 
 # Status.json Dashboard GuiFocus constants
-GuiFocusNoFocus = 0
+GuiFocusNoFocus = 0              # ship view
 GuiFocusInternalPanel = 1        # right hand side
 GuiFocusExternalPanel = 2        # left hand (nav) panel
 GuiFocusCommsPanel = 3		     # top
@@ -86,8 +98,9 @@ ship_name_map = {
     'asp':                          'Asp Explorer',
     'asp_scout':                    'Asp Scout',
     'belugaliner':                  'Beluga Liner',
-    'cobramkiii':                   'Cobra MkIII',
-    'cobramkiv':                    'Cobra MkIV',
+    'cobramkiii':                   'Cobra Mk III',
+    'cobramkiv':                    'Cobra Mk IV',
+    'cobramkv':                     'Cobra Mk V',
     'clipper':                      'Panther Clipper',
     'cutter':                       'Imperial Cutter',
     'diamondback':                  'Diamondback Scout',
@@ -107,9 +120,10 @@ ship_name_map = {
     'hauler':                       'Hauler',
     'independant_trader':           'Keelback',
     'independent_fighter':          'Taipan Fighter',
-    'krait_mkii':                   'Krait MkII',
+    'krait_mkii':                   'Krait Mk II',
     'krait_light':                  'Krait Phantom',
     'mamba':                        'Mamba',
+    'mandalay':                     'Mandalay',
     'orca':                         'Orca',
     'python':                       'Python',
     'python_nx':                    'Python Mk II',
@@ -124,8 +138,8 @@ ship_name_map = {
     'typex':                        'Alliance Chieftain',
     'typex_2':                      'Alliance Crusader',
     'typex_3':                      'Alliance Challenger',
-    'viper':                        'Viper MkIII',
-    'viper_mkiv':                   'Viper MkIV',
+    'viper':                        'Viper Mk III',
+    'viper_mkiv':                   'Viper Mk IV',
     'vulture':                      'Vulture',
 }
 
@@ -138,6 +152,7 @@ ship_size_map = {
     'belugaliner':                   'L',
     'cobramkiii':                    'S',
     'cobramkiv':                     'S',
+    'cobramkv':                      'S',
     'clipper':                       '',
     'cutter':                        'L',
     'diamondback':                   'S',
@@ -160,6 +175,7 @@ ship_size_map = {
     'krait_mkii':                    'M',
     'krait_light':                   'M',
     'mamba':                         'M',
+    'mandalay':                      'M',
     'orca':                          'L',
     'python':                        'M',
     'python_nx':                     'M',

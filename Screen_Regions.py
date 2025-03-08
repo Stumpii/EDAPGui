@@ -24,23 +24,25 @@ class Screen_Regions:
         self.target_thresh = 0.54
         self.target_occluded_thresh = 0.75
         self.sun_threshold = 125
-        self.disengage_thresh = 0.45
+        self.disengage_thresh = 0.25
 
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
         self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 212])]
-        self.blue_color_range     = [array([0, 28, 170]),   array([180, 100, 255])]
+        self.blue_color_range     = [array([0, 28, 170]), array([180, 100, 255])]
+        self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
         self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
 
         self.reg = {}
         # regions with associated filter and color ranges
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 0.97], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
         self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
         self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range} 
         self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
-        self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_color_range}
+        self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
+        self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
         self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
         self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}    
         self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
@@ -70,11 +72,11 @@ class Screen_Regions:
             # return the screen region in the format returned by the filter.
             return self.reg[region_name]['filterCB'] (scr, self.reg[region_name]['filter'])          
 
-    def match_template_in_region(self, region_name, templ):
+    def match_template_in_region(self, region_name, templ_name):
         """ Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask. """
         img_region = self.capture_region_filtered(self.screen, region_name)    # which would call, reg.capture_region('compass') and apply defined filter
-        match = cv2.matchTemplate(img_region, self.templates.template[templ]['image'], cv2.TM_CCOEFF_NORMED)
+        match = cv2.matchTemplate(img_region, self.templates.template[templ_name]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match 
     
@@ -101,7 +103,7 @@ class Screen_Regions:
         their original color, otherwise black."""
         # converting from BGR to HSV color space
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        # filte passed in color low, high
+        # filter passed in color low, high
         filtered = cv2.inRange(hsv, color_range[0], color_range[1])
 
         return filtered

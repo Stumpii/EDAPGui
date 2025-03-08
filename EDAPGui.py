@@ -79,9 +79,9 @@ class APGui():
             'Robigo Assist': "",
             'ELW Scanner': "Will perform FSS scans while FSD Assist is traveling between stars. \nIf the FSS shows a signal in the region of Earth, \nWater or Ammonia type worlds, it will announce that discovery.",
             'AFK Combat Assist': "Used with a AFK Combat ship in a Rez Zone.",
-            'RollRate': "Roll rate your ship has.",
-            'PitchRate': "Pitch (up/down) rate your ship has.",
-            'YawRate': "Yaw rate (rudder) your ship has.",
+            'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
+            'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
+            'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -113,11 +113,14 @@ class APGui():
         self.radiobuttonvar = {}
         self.entries = {}
         self.lab_ck = {}
+        self.single_waypoint_system = StringVar()
+        self.single_waypoint_station = StringVar()
 
         self.FSD_A_running = False
         self.SC_A_running = False
         self.WP_A_running = False
         self.RO_A_running = False
+        self.SWP_A_running = False
 
         self.cv_view = False
 
@@ -189,20 +192,20 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'],  self.callback, args=('robigo_start',  None))
 
-        # load default ship config file if specified
-        try:
-            if self.ed_ap.config['ShipConfigFile']:
-                self.open_ship_file(self.ed_ap.config['ShipConfigFile'])
-        except FileNotFoundError:
-            logger.warning(f"Ship Config File {self.ed_ap.config['ShipConfigFile']} not found")
-
         # check for updates
         self.check_updates()
+
+        self.ed_ap.gui_loaded = True
 
     # callback from the EDAP, to configure GUI items
     def callback(self, key, body=None):
         if key == 'log':
             self.log_msg(body)
+        elif key == 'log+vce':
+            self.log_msg(body)
+            self.ed_ap.vce.say(body)
+        elif key == 'statusline':
+            self.update_statusline(body)
         elif key == 'fsd_stop':
             logger.debug("Detected 'fsd_stop' key")
             self.checkboxvar['FSD Route Assist'].set(0)
@@ -232,19 +235,32 @@ class APGui():
             logger.debug("Detected 'afk_stop' key")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
+        elif key == 'single_waypoint_stop':
+            logger.debug("Detected 'single_waypoint_stop'")
+            self.checkboxvar['Single Waypoint Assist'].set(0)
+            self.check_cb('Single Waypoint Assist')
         elif key == 'jumpcount':
             self.update_jumpcount(body)
-        elif key == 'statusline':
-            self.update_statusline(body)
+        elif key == 'update_ship_cfg':
+            self.update_ship_cfg()
+
+    def update_ship_cfg(self):
+        # load up the display with what we read from ED_AP for the current ship
+        self.entries['ship']['PitchRate'].delete(0, END)
+        self.entries['ship']['RollRate'].delete(0, END)
+        self.entries['ship']['YawRate'].delete(0, END)
+        self.entries['ship']['SunPitchUp+Time'].delete(0, END)
+
+        self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
+        self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
+        self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
+        self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
 
     def calibrate_callback(self):
-        msg = 'Select OK to begin Calibration. You must be in space and have a valid station targeted in center screen.'
-        ans = messagebox.askokcancel('Calibration', msg)
-        if not ans:
-            return
-
-        self.log_msg('Calibration starting')
         self.ed_ap.calibrate()
+
+    def calibrate_compass_callback(self):
+        self.ed_ap.calibrate_compass()
 
     def mouse_coord_callback(self):
         ans = messagebox.askyesno('Mouse XY', 'Select OK\nYour next Mouse click should be on the Station')
@@ -284,12 +300,14 @@ class APGui():
         self.ed_ap.set_fsd_assist(True)
         self.FSD_A_running = True
         self.log_msg("FSD Route Assist start")
+        self.ed_ap.vce.say("FSD Route Assist On")
 
     def stop_fsd(self):
         logger.debug("Entered: stop_fsd")
         self.ed_ap.set_fsd_assist(False)
         self.FSD_A_running = False
         self.log_msg("FSD Route Assist stop")
+        self.ed_ap.vce.say("FSD Route Assist Off")
         self.update_statusline("Idle")
 
     def start_sc(self):
@@ -297,12 +315,14 @@ class APGui():
         self.ed_ap.set_sc_assist(True)
         self.SC_A_running = True
         self.log_msg("SC Assist start")
+        self.ed_ap.vce.say("Supercruise Assist On")
 
     def stop_sc(self):
         logger.debug("Entered: stop_sc")
         self.ed_ap.set_sc_assist(False)
         self.SC_A_running = False
         self.log_msg("SC Assist stop")
+        self.ed_ap.vce.say("Supercruise Assist Off")
         self.update_statusline("Idle")
 
     def start_waypoint(self):
@@ -310,12 +330,14 @@ class APGui():
         self.ed_ap.set_waypoint_assist(True)
         self.WP_A_running = True
         self.log_msg("Waypoint Assist start")
+        self.ed_ap.vce.say("Waypoint Assist On")
 
     def stop_waypoint(self):
         logger.debug("Entered: stop_waypoint")
         self.ed_ap.set_waypoint_assist(False)
         self.WP_A_running = False
         self.log_msg("Waypoint Assist stop")
+        self.ed_ap.vce.say("Waypoint Assist Off")
         self.update_statusline("Idle")
 
     def start_robigo(self):
@@ -323,12 +345,35 @@ class APGui():
         self.ed_ap.set_robigo_assist(True)
         self.RO_A_running = True
         self.log_msg("Robigo Assist start")
+        self.ed_ap.vce.say("Robigo Assist On")
 
     def stop_robigo(self):
         logger.debug("Entered: stop_robigo")
         self.ed_ap.set_robigo_assist(False)
         self.RO_A_running = False
         self.log_msg("Robigo Assist stop")
+        self.ed_ap.vce.say("Robigo Assist Off")
+        self.update_statusline("Idle")
+
+    def start_single_waypoint_assist(self):
+        """ The debug command to go to a system or station or both."""
+        logger.debug("Entered: start_single_waypoint_assist")
+        system = self.single_waypoint_system.get()
+        station = self.single_waypoint_station.get()
+
+        if system != "" or station != "":
+            self.ed_ap.set_single_waypoint_assist(system, station, True)
+            self.SWP_A_running = True
+            self.log_msg("Single Waypoint Assist start")
+            self.ed_ap.vce.say("Single Waypoint Assist On")
+
+    def stop_single_waypoint_assist(self):
+        """ The debug command to go to a system or station or both."""
+        logger.debug("Entered: stop_single_waypoint_assist")
+        self.ed_ap.set_single_waypoint_assist("", "", False)
+        self.SWP_A_running = False
+        self.log_msg("Single Waypoint Assist stop")
+        self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
 
     def about(self):
@@ -364,6 +409,15 @@ class APGui():
     def update_statusline(self, txt):
         self.status.configure(text="Status: " + txt)
         self.log_msg(f"Status update: {txt}")
+
+    def ship_tst_pitch(self):
+        self.ed_ap.ship_tst_pitch()
+
+    def ship_tst_roll(self):
+        self.ed_ap.ship_tst_roll()
+
+    def ship_tst_yaw(self):
+        self.ed_ap.ship_tst_yaw()
 
     def open_ship_file(self, filename=None):
         # if a filename was not provided, then prompt user for one
@@ -401,39 +455,6 @@ class APGui():
         self.ed_ap.sunpitchuptime = float(f_details['SunPitchUp+Time'])
 
         self.ship_filelabel.set("loaded: " + Path(filename).name)
-        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
-        self.ed_ap.update_config()
-
-    def save_ship_file(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
-
-        self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
-        self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
-        self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
-        self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
-
-        f_details = {
-            'rollrate': self.ed_ap.rollrate,
-            'pitchrate': self.ed_ap.pitchrate,
-            'yawrate': self.ed_ap.yawrate,
-            'SunPitchUp+Time': self.ed_ap.sunpitchuptime
-        }
-        filename = fd.asksaveasfilename(
-            title='Save a file',
-            initialdir='.', initialfile="ship-",
-            filetypes=filetypes)
-
-        if not filename:
-            return
-
-        with open(filename, 'w') as json_file:
-            json.dump(f_details, json_file)
-
-        self.ship_filelabel.set("loaded: " + Path(filename).name)
-        self.ed_ap.config['ShipConfigFile'] = os.path.relpath(filename)  # save ship config file path
         self.ed_ap.update_config()
 
     def open_wp_file(self):
@@ -457,6 +478,8 @@ class APGui():
     def save_settings(self):
         self.entry_update()
         self.ed_ap.update_config()
+        self.ed_ap.update_ship_configs()
+
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event=''):
@@ -542,7 +565,7 @@ class APGui():
                 self.lab_ck['Waypoint Assist'].config(state='disabled')
                 self.start_robigo()
 
-            elif self.checkboxvar['Waypoint Assist'].get() == 0 and self.RO_A_running == True:
+            elif self.checkboxvar['Robigo Assist'].get() == 0 and self.RO_A_running == True:
                 self.stop_robigo()
                 self.lab_ck['FSD Route Assist'].config(state='active')
                 self.lab_ck['Supercruise Assist'].config(state='active')
@@ -611,6 +634,11 @@ class APGui():
         elif self.radiobuttonvar['debug_mode'].get() == "Info":
             self.ed_ap.set_log_info(True)
 
+        if field == 'Single Waypoint Assist':
+            if self.checkboxvar['Single Waypoint Assist'].get() == 1 and self.SWP_A_running == False:
+                self.start_single_waypoint_assist()
+            elif self.checkboxvar['Single Waypoint Assist'].get() == 0 and self.SWP_A_running == True:
+                self.stop_single_waypoint_assist()
 
     def makeform(self, win, ftype, fields, r=0, inc=1, rfrom=0, rto=1000):
         entries = {}
@@ -656,10 +684,8 @@ class APGui():
         #
         menubar = Menu(win, background='#ff8000', foreground='black', activebackground='white', activeforeground='black')
         file = Menu(menubar, tearoff=0)
-        file.add_command(label="Open", command=self.open_ship_file)
-        file.add_command(label="Save as", command=self.save_ship_file)
-        file.add_separator()
-        file.add_command(label="Calibrate", command=self.calibrate_callback)
+        file.add_command(label="Calibrate Target", command=self.calibrate_callback)
+        file.add_command(label="Calibrate Compass", command=self.calibrate_compass_callback)
         self.checkboxvar['Enable CV View'] = IntVar()
         self.checkboxvar['Enable CV View'].set(int(self.ed_ap.config['Enable_CV_View']))  # set IntVar value to the one from config
         file.add_checkbutton(label='Enable CV View', onvalue=1, offvalue=0, variable=self.checkboxvar['Enable CV View'], command=(lambda field='Enable CV View': self.check_cb(field)))
@@ -702,12 +728,18 @@ class APGui():
         blk_ship = LabelFrame(blk_main, text="SHIP")
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
+        btn_tst_roll = Button(blk_ship, text='Test Roll', command=self.ship_tst_roll)
+        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_tst_pitch = Button(blk_ship, text='Test Pitch', command=self.ship_tst_pitch)
+        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_tst_yaw = Button(blk_ship, text='Test Yaw', command=self.ship_tst_yaw)
+        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # profile load / info button in ship values block
         self.ship_filelabel = StringVar()
         self.ship_filelabel.set("<no config loaded>")
         btn_ship_file = Button(blk_ship, textvariable=self.ship_filelabel, command=self.open_ship_file)
-        btn_ship_file.grid(row=4, column=0, padx=2, pady=2, sticky=(N, E, W))
+        btn_ship_file.grid(row=8, column=0, padx=2, pady=2, sticky=(N, E, W))
         tip_ship_file = Hovertip(btn_ship_file, self.tooltips['Ship Config Button'], hover_delay=1000)
 
         # waypoints button block
@@ -804,27 +836,43 @@ class APGui():
 
         # debug block
         blk_debug = tk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
+        blk_debug.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky=(E, W))
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
         blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
-        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
+        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
         self.radiobuttonvar['debug_mode'] = StringVar()
         rb_debug_debug = Radiobutton(blk_debug_settings, pady=3, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_debug.grid(row=0, column=1, sticky=(W))
+        rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(W))
         rb_debug_info = Radiobutton(blk_debug_settings, pady=3, text="Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Info", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_info.grid(row=1, column=1, sticky=(W))
+        rb_debug_info.grid(row=1, column=1, columnspan=2, sticky=(W))
         rb_debug_error = Radiobutton(blk_debug_settings, pady=3, text="Errors only (default)", variable=self.radiobuttonvar['debug_mode'], value="Error", command=(lambda field='debug_mode': self.check_cb(field)))
-        rb_debug_error.grid(row=2, column=1, sticky=(W))
+        rb_debug_error.grid(row=2, column=1, columnspan=2, sticky=(W))
         btn_open_logfile = Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
         btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         blk_debug_buttons = tk.Frame(page2)
-        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, sticky=(N, S, E, W))
+        blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
+
+        # debug settings block
+        blk_debug_buttons_settings = LabelFrame(blk_debug, text="Single Waypoint Assist")
+        blk_debug_buttons_settings.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
+
+        lbl_system = tk.Label(blk_debug_buttons_settings, text='System:')
+        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_system = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_system)
+        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        lbl_station = tk.Label(blk_debug_buttons_settings, text='Station (future):')
+        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_station = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_station)
+        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        self.checkboxvar['Single Waypoint Assist'] = BooleanVar()
+        cb_single_waypoint = Checkbutton(blk_debug_buttons_settings, text='Single Waypoint Assist', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
+        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        btn_save.grid(row=3, column=0, padx=2, pady=20, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
         statusbar = Frame(win)

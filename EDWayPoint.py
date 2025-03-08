@@ -2,7 +2,7 @@ from time import sleep
 from EDlogger import logger
 import json
 from pyautogui import typewrite, keyUp, keyDown
-from  MousePt import MousePoint
+from MousePt import MousePoint
 from pathlib import Path
 
 
@@ -82,6 +82,18 @@ class EDWayPoint:
         self.waypoints[key]['Completed'] = True
         self.write_waypoints(data=None, fileName='./waypoints/' + Path(self.filename).name)  
 
+    def set_next_system(self, ap, target_system) -> bool:
+        """ Sets the next system to jump to, or the final system to jump to.
+        If the system is already selected or is selected correctly, returns True,
+        otherwise False.
+        """
+        # Call sequence to select route
+        if self.set_waypoint_target(ap, target_system, None):
+            return True
+        else:
+            # Error setting target
+            logger.warning("Error setting waypoint, breaking")
+            return False
 
     def waypoint_next(self, ap, target_select_cb=None) -> str:
         dest_key = "REPEAT"
@@ -212,54 +224,50 @@ class EDWayPoint:
     # This sequence for the Odyssey
  
     def set_waypoint_target_odyssey(self, ap, target_name, target_select_cb=None) -> bool:
-        
-        x = ap.scr.screen_width / 2
-        y = ap.scr.screen_height / 2
- 
+
         ap.keys.send('GalaxyMapOpen')
         sleep(2)
+
+        # navigate to and select: search field
         ap.keys.send('UI_Up')
-        sleep(.5)
+        sleep(0.05)
         ap.keys.send('UI_Select')
-        sleep(.5)
- 
+        sleep(0.05)
+
         #print("Target:"+target_name)       
         # type in the System name
         typewrite(target_name, interval=0.25)
-        sleep(1)         
-  
-        # send enter key
-        ap.keys.send_key('Down', 28)
-        sleep(0.15)
-        ap.keys.send_key('Up', 28)
+        sleep(0.05)
 
-        sleep(1)
-        self.mouse.do_click(x, y)
-        sleep(0.1)
-        ap.keys.send('UI_Right', repeat=4) 
-     
-        sleep(0.1)       
+        # send enter key (removes focus out of input field)
+        ap.keys.send_key('Down', 28)  # 28=ENTER
+        sleep(0.05)
+        ap.keys.send_key('Up', 28)  # 28=ENTER
+        sleep(0.05)
 
-        # go down 6x's to plot to target
-        for i in range(7):    # ED 4.0 update, since have new menu item
-            ap.keys.send('UI_Down') 
-            sleep(0.05)
-  
-        sleep(0.1)
-               
-        # select Plot course       
+        # navigate to and select: search button
+        ap.keys.send('UI_Right')
+        sleep(0.05)
         ap.keys.send('UI_Select')
-  
+
+        # zoom camera which puts focus back on the map
+        ap.keys.send('CamZoomIn')
+        sleep(0.05)
+
+        # plot route. Not that once the system has been selected, as shown in the info panel
+        # and the gal map has focus, there is no need to wait for the map to bring the system
+        # to the center screen, the system can be selected while the map is moving.
+        ap.keys.send('UI_Select', hold=0.75)
+
+        sleep(0.05)
+
         # if got passed through the ship() object, lets call it to see if a target has been
-        # selected yet.. otherwise we wait.  If long route, it may take a few seconds      
+        # selected yet.. otherwise we wait.  If long route, it may take a few seconds
         if target_select_cb != None:
             while not target_select_cb()['target']:
-                sleep(1)        
-        
-        sleep(1)
- 
+                sleep(1)
+
         ap.keys.send('GalaxyMapOpen')
-        sleep(1)
         
         return True
     
