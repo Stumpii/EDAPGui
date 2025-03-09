@@ -62,6 +62,11 @@ FORM_TYPE_CHECKBOX = 0
 FORM_TYPE_SPINBOX = 1
 FORM_TYPE_ENTRY = 2
 
+
+def hyperlink_callback(url):
+    webbrowser.open_new(url)
+
+
 class APGui():
     def __init__(self, root):
         self.root = root
@@ -115,6 +120,7 @@ class APGui():
         self.lab_ck = {}
         self.single_waypoint_system = StringVar()
         self.single_waypoint_station = StringVar()
+        self.TCE_Destination_Filepath = StringVar()
 
         self.FSD_A_running = False
         self.SC_A_running = False
@@ -123,6 +129,8 @@ class APGui():
         self.SWP_A_running = False
 
         self.cv_view = False
+
+        self.TCE_Destination_Filepath.set(self.ed_ap.config['TCEDestinationFilepath'])
 
         self.msgList = self.gui_gen(root)
 
@@ -198,50 +206,72 @@ class APGui():
         self.ed_ap.gui_loaded = True
 
     # callback from the EDAP, to configure GUI items
-    def callback(self, key, body=None):
-        if key == 'log':
+    def callback(self, msg, body=None):
+        if msg == 'log':
             self.log_msg(body)
-        elif key == 'log+vce':
+        elif msg == 'log+vce':
             self.log_msg(body)
             self.ed_ap.vce.say(body)
-        elif key == 'statusline':
+        elif msg == 'statusline':
             self.update_statusline(body)
-        elif key == 'fsd_stop':
-            logger.debug("Detected 'fsd_stop' key")
+        elif msg == 'fsd_stop':
+            logger.debug("Detected 'fsd_stop' callback msg")
             self.checkboxvar['FSD Route Assist'].set(0)
             self.check_cb('FSD Route Assist')
-        elif key == 'fsd_start':
+        elif msg == 'fsd_start':
             self.checkboxvar['FSD Route Assist'].set(1)
             self.check_cb('FSD Route Assist')
-        elif key == 'sc_stop':
-            logger.debug("Detected 'sc_stop' key")
+        elif msg == 'sc_stop':
+            logger.debug("Detected 'sc_stop' callback msg")
             self.checkboxvar['Supercruise Assist'].set(0)
             self.check_cb('Supercruise Assist')
-        elif key == 'sc_start':
+        elif msg == 'sc_start':
             self.checkboxvar['Supercruise Assist'].set(1)
             self.check_cb('Supercruise Assist')
-        elif key == 'waypoint_stop':
-            logger.debug("Detected 'waypoint_stop' key")
+        elif msg == 'waypoint_stop':
+            logger.debug("Detected 'waypoint_stop' callback msg")
             self.checkboxvar['Waypoint Assist'].set(0)
             self.check_cb('Waypoint Assist')
-        elif key == 'robigo_stop':
-            logger.debug("Detected 'robigo_stop' key")
+        elif msg == 'robigo_stop':
+            logger.debug("Detected 'robigo_stop' callback msg")
             self.checkboxvar['Robigo Assist'].set(0)
             self.check_cb('Robigo Assist')
-        elif key == 'robigo_start':
+        elif msg == 'robigo_start':
             self.checkboxvar['Robigo Assist'].set(1)
             self.check_cb('Robigo Assist')
-        elif key == 'afk_stop':
-            logger.debug("Detected 'afk_stop' key")
+        elif msg == 'afk_stop':
+            logger.debug("Detected 'afk_stop' callback msg")
             self.checkboxvar['AFK Combat Assist'].set(0)
             self.check_cb('AFK Combat Assist')
-        elif key == 'single_waypoint_stop':
-            logger.debug("Detected 'single_waypoint_stop'")
+        elif msg == 'single_waypoint_stop':
+            logger.debug("Detected 'single_waypoint_stop' callback msg")
             self.checkboxvar['Single Waypoint Assist'].set(0)
             self.check_cb('Single Waypoint Assist')
-        elif key == 'jumpcount':
+
+        elif msg == 'stop_all_assists':
+            logger.debug("Detected 'stop_all_assists' callback msg")
+
+            self.checkboxvar['FSD Route Assist'].set(0)
+            self.check_cb('FSD Route Assist')
+
+            self.checkboxvar['Supercruise Assist'].set(0)
+            self.check_cb('Supercruise Assist')
+
+            self.checkboxvar['Waypoint Assist'].set(0)
+            self.check_cb('Waypoint Assist')
+
+            self.checkboxvar['Robigo Assist'].set(0)
+            self.check_cb('Robigo Assist')
+
+            self.checkboxvar['AFK Combat Assist'].set(0)
+            self.check_cb('AFK Combat Assist')
+
+            self.checkboxvar['Single Waypoint Assist'].set(0)
+            self.check_cb('Single Waypoint Assist')
+
+        elif msg == 'jumpcount':
             self.update_jumpcount(body)
-        elif key == 'update_ship_cfg':
+        elif msg == 'update_ship_cfg':
             self.update_ship_cfg()
 
     def update_ship_cfg(self):
@@ -289,11 +319,7 @@ class APGui():
     # this routine is to stop any current autopilot activity
     def stop_all_assists(self):
         logger.debug("Entered: stop_all_assists")
-        self.callback('fsd_stop')
-        self.callback('sc_stop')
-        self.callback('afk_stop')
-        self.callback('waypoint_stop')
-        self.callback('robigo_stop')
+        self.callback('stop_all_assists')
 
     def start_fsd(self):
         logger.debug("Entered: start_fsd")
@@ -480,6 +506,14 @@ class APGui():
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
 
+    def load_tce_dest(self):
+        filename = self.ed_ap.config['TCEDestinationFilepath']
+        if os.path.exists(filename):
+            with open(filename, 'r') as json_file:
+                f_details = json.load(json_file)
+
+            self.single_waypoint_system.set(f_details['StarSystem'])
+            self.single_waypoint_station.set(f_details['Station'])
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event=''):
@@ -504,6 +538,7 @@ class APGui():
             self.ed_ap.config['HotKey_StartRobigo'] = str(self.entries['buttons']['Start Robigo'].get())
             self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
+            self.ed_ap.config['TCEDestinationFilepath'] = str(self.TCE_Destination_Filepath.get())
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
@@ -836,12 +871,12 @@ class APGui():
 
         # debug block
         blk_debug = tk.Frame(page2)
-        blk_debug.grid(row=0, column=0, padx=10, pady=5, columnspan=2, sticky=(E, W))
+        blk_debug.grid(row=0, column=0, padx=10, pady=5, sticky=(E, W))
         blk_debug.columnconfigure([0, 1], weight=1, minsize=100, uniform="group2")
 
         # debug settings block
         blk_debug_settings = LabelFrame(blk_debug, text="DEBUG")
-        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
+        blk_debug_settings.grid(row=0, column=0, padx=2, pady=2, sticky=(N, S, E, W))
         self.radiobuttonvar['debug_mode'] = StringVar()
         rb_debug_debug = Radiobutton(blk_debug_settings, pady=3, text="Debug + Info + Errors", variable=self.radiobuttonvar['debug_mode'], value="Debug", command=(lambda field='debug_mode': self.check_cb(field)))
         rb_debug_debug.grid(row=0, column=1, columnspan=2, sticky=(W))
@@ -852,27 +887,42 @@ class APGui():
         btn_open_logfile = Button(blk_debug_settings, text='Open Log File', command=self.open_logfile)
         btn_open_logfile.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
+        # debug settings block
+        blk_single_waypoint_asst = LabelFrame(page2, text="Single Waypoint Assist")
+        blk_single_waypoint_asst.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
+        blk_single_waypoint_asst.columnconfigure(0, weight=1, minsize=10, uniform="group1")
+        blk_single_waypoint_asst.columnconfigure(1, weight=3, minsize=10, uniform="group1")
+
+        lbl_system = tk.Label(blk_single_waypoint_asst, text='System:')
+        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_system = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_system)
+        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        lbl_station = tk.Label(blk_single_waypoint_asst, text='Station:')
+        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_station = Entry(blk_single_waypoint_asst, textvariable=self.single_waypoint_station)
+        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        self.checkboxvar['Single Waypoint Assist'] = BooleanVar()
+        cb_single_waypoint = Checkbutton(blk_single_waypoint_asst, text='Single Waypoint Assist', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
+        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+
+        lbl_tce = tk.Label(blk_single_waypoint_asst, text='Trade Computer Extension (TCE)', fg="blue", cursor="hand2")
+        lbl_tce.bind("<Button-1>", lambda e: hyperlink_callback("https://forums.frontier.co.uk/threads/trade-computer-extension-mk-ii.223056/"))
+        lbl_tce.grid(row=3, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+        lbl_tce_dest = tk.Label(blk_single_waypoint_asst, text='TCE Dest json:')
+        lbl_tce_dest.grid(row=4, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        txt_tce_dest = Entry(blk_single_waypoint_asst, textvariable=self.TCE_Destination_Filepath)
+        txt_tce_dest.bind('<FocusOut>', self.entry_update)
+        txt_tce_dest.grid(row=4, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+
+        btn_load_tce = Button(blk_single_waypoint_asst, text='Load TCE Destination', command=self.load_tce_dest)
+        btn_load_tce.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
+
         blk_debug_buttons = tk.Frame(page2)
         blk_debug_buttons.grid(row=3, column=0, padx=10, pady=5, columnspan=2, sticky=(N, S, E, W))
         blk_debug_buttons.columnconfigure([0, 1], weight=1, minsize=100)
 
-        # debug settings block
-        blk_debug_buttons_settings = LabelFrame(blk_debug, text="Single Waypoint Assist")
-        blk_debug_buttons_settings.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, S, E, W))
-
-        lbl_system = tk.Label(blk_debug_buttons_settings, text='System:')
-        lbl_system.grid(row=0, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_system = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_system)
-        txt_system.grid(row=0, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        lbl_station = tk.Label(blk_debug_buttons_settings, text='Station (future):')
-        lbl_station.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        txt_station = Entry(blk_debug_buttons_settings, textvariable=self.single_waypoint_station)
-        txt_station.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        self.checkboxvar['Single Waypoint Assist'] = BooleanVar()
-        cb_single_waypoint = Checkbutton(blk_debug_buttons_settings, text='Single Waypoint Assist', onvalue=1, offvalue=0, anchor='w', pady=3, justify=LEFT, variable=self.checkboxvar['Single Waypoint Assist'], command=(lambda field='Single Waypoint Assist': self.check_cb(field)))
-        cb_single_waypoint.grid(row=2, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         btn_save = Button(blk_debug_buttons, text='Save All Settings', command=self.save_settings)
-        btn_save.grid(row=3, column=0, padx=2, pady=20, columnspan=2, sticky=(N, E, W, S))
+        btn_save.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
 
         # Statusbar
         statusbar = Frame(win)

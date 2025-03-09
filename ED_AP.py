@@ -74,9 +74,10 @@ class EDAutopilot:
             "ElwScannerEnable": False,
             "LogDEBUG": False,             # enable for debug messages
             "LogINFO": True,
-            "Enable_CV_View": 0,  # Should CV View be enabled by default
-            "ShipConfigFile": None,  # Ship config to load on start - deprecated
-            "TargetScale": 1.0,  # Scaling of the target when a system is selected
+            "Enable_CV_View": 0,           # Should CV View be enabled by default
+            "ShipConfigFile": None,        # Ship config to load on start - deprecated
+            "TargetScale": 1.0,            # Scaling of the target when a system is selected
+            "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
         }
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
@@ -102,6 +103,8 @@ class EDAutopilot:
                     cnf['SunBrightThreshold'] = 125
                 if 'TargetScale' not in cnf:
                     cnf['TargetScale'] = 1.0
+                if 'TCEDestinationFilepath' not in cnf:
+                    cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -969,7 +972,7 @@ class EDAutopilot:
 
         if ocr_textlist is not None:
             sim = self.ocr.string_similarity(f"SUPERCRUISE OVERCHARGE ACTIVE", str(ocr_textlist))
-            logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
+            #logger.info(f"SCO similarity with {str(ocr_textlist)} is {sim}")
 
         if self.cv_view:
             image = cv2.rectangle(image, (0, 0), (1000, 30), (0, 0, 0), -1)
@@ -1165,7 +1168,7 @@ class EDAutopilot:
 
         close = 10  # in degrees
         if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-            logger.error('align=err1')
+            logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
         self.vce.say("Navigation Align")
@@ -1323,7 +1326,7 @@ class EDAutopilot:
             self.ap_ckb('log', 'Target not found, terminating SC Assist')
             return False
 
-        logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
+        #logger.debug("sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
         while (abs(off['x']) > close) or \
                 (abs(off['y']) > close):
@@ -1338,7 +1341,7 @@ class EDAutopilot:
             else:
                 hold_pitch = 0.075
 
-            logger.debug("  sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
+            #logger.debug("  sc_target_align x: "+str(off['x'])+" y:"+str(off['y']))
 
             if off['x'] > close:
                 self.keys.send('YawRightButton', hold=hold_yaw)
@@ -1363,7 +1366,7 @@ class EDAutopilot:
                 off = new
 
             # Check if target is outside the target region (behind us) and break loop
-            if new == None:
+            if new is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target lost, attempting re-alignment.')
                 return False
@@ -1386,18 +1389,7 @@ class EDAutopilot:
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')
 
-    # position() happens afer a refuel and performs
-    #   - accelerate past sun
-    #   - perform Discovery scan
-    #   - perform fss (if enabled) 
-    def position(self, scr_reg, did_refuel=True):
-        logger.debug('position')
-        add_time = 5
-
-        self.vce.say("Maneuvering")
-
-        self.keys.send('SetSpeed100')
-
+    def honk(self):
         # Do the Discovery Scan (Honk)
 
         if self.status.get_flag(FlagsAnalysisMode):
@@ -1419,6 +1411,18 @@ class EDAutopilot:
                 self.keys.send('SecondaryFire', state=0)
         else:
             self.ap_ckb('log', 'Not in analysis mode. Skipping discovery scan (honk).')
+
+    # position() happens after a refuel and performs
+    #   - accelerate past sun
+    #   - perform Discovery scan
+    #   - perform fss (if enabled) 
+    def position(self, scr_reg, did_refuel=True):
+        logger.debug('position')
+        add_time = 5
+
+        self.vce.say("Maneuvering")
+
+        self.keys.send('SetSpeed100')
 
         # Need time to move past Sun, account for slowed ship if refuled
         pause_time = add_time
@@ -1457,20 +1461,31 @@ class EDAutopilot:
             logger.debug('jump= start fsd')
             
             self.keys.send('HyperSuperCombination', hold=1)
-            sleep(16)
 
-            if self.jn.ship_state()['status'] != 'starting_hyperspace':
+            res = self.status.wait_for_flag_on(FlagsFsdCharging, 5)
+            if not res:
+                logger.error('FSD failed to charge.')
+                continue
+
+            res = self.status.wait_for_flag_on(FlagsFsdJump, 30)
+            if not res:
+                logger.warning('FSD failure to start jump timeout.')
                 self.mnvr_to_target(scr_reg)  # attempt realign to target
-            else:
-                logger.debug('jump= in jump')
-                while self.jn.ship_state()['status'] != 'in_supercruise':
-                    sleep(1)
-                logger.debug('jump= speed 0')
-                self.jump_cnt = self.jump_cnt+1
-                self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
-                sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
-                logger.debug('jump=complete')
-                return True
+                continue
+
+            logger.debug('jump= in jump')
+            # Wait for jump to complete. Should never err
+            res = self.status.wait_for_flag_off(FlagsFsdJump, 60)
+            if not res:
+                logger.error('FSD failure to complete jump timeout.')
+                continue
+
+            logger.debug('jump= speed 0')
+            self.jump_cnt = self.jump_cnt+1
+            self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
+            sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
+            logger.debug('jump=complete')
+            return True
 
         logger.error(f'FSD Jump failed {jump_tries} times. jump=err2')
         raise Exception("FSD Jump failure")
@@ -1808,6 +1823,11 @@ class EDAutopilot:
                             "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)+"  @{}s/j".format(int(avg_time_jump))+
                             "  Fu#: "+str(self.refuel_cnt))
 
+                # Do the Discovery Scan (Honk)
+                honk_thread = threading.Thread(target=self.honk, daemon=True)
+                honk_thread.start()
+
+                # Refuel
                 refueled = self.refuel(scr_reg)
 
                 self.update_ap_status("Maneuvering")
@@ -1958,10 +1978,11 @@ class EDAutopilot:
             if res is False:
                 return False
 
-        if self._single_waypoint_station != "":
-            res = self.supercruise_to_station(self.scrReg, self._single_waypoint_station)
-            if res is False:
-                return False
+        # Disabled until SC to station enabled.
+        # if self._single_waypoint_station != "":
+        #     res = self.supercruise_to_station(self.scrReg, self._single_waypoint_station)
+        #     if res is False:
+        #         return False
 
     # raising an exception to the engine loop thread, so we can terminate its execution
     #  if thread was in a sleep, the exception seems to not be delivered
