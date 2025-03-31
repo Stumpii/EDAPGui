@@ -1731,6 +1731,10 @@ class EDAutopilot:
                     if (cur_station_type == 'SurfaceStation'.upper() and
                             'ColonisationShip'.upper() in cur_station.upper()):
                         docked_at_stn = True
+                elif next_station.startswith('Orbital Construction Site'.upper()):
+                    if (cur_station_type == 'SurfaceStation'.upper() and
+                            'ColonisationShip'.upper() in cur_station.upper()):
+                        docked_at_stn = True
                 else:
                     docked_at_stn = cur_station == next_station
 

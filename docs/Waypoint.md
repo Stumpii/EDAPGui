@@ -89,6 +89,12 @@ Enter system and station data, leave commodity data blank. For travel within the
 
 ### Transfer to/from Fleet Carrier
 Need to be on the INVENTORY tab in the right hand panel.
+### System Colonisation Ship
+Named: System Colonisation Ship
+Bookmarked in Galaxy Map only, under Stations
+### Orbital Construction Site
+Named: Orbital Construction Site: xxx xxx 
+Bookmarked in Galaxy Map only, under Stations
 
 Example below:
 ```py

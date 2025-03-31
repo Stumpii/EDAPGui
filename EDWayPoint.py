@@ -456,11 +456,17 @@ class EDWayPoint:
 
         # Determine type of station we are at
         colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
+        orbital_construction_site = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
         fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
 
-        if colonisation_ship:
-            # Colonisation Ship
-            logger.debug(f"Execute Trade: On Colonisation Ship")
+        if colonisation_ship or orbital_construction_site:
+            if colonisation_ship:
+                # Colonisation Ship
+                logger.debug(f"Execute Trade: On Colonisation Ship")
+            if orbital_construction_site:
+                # Colonisation Ship
+                logger.debug(f"Execute Trade: On Orbital Construction Site")
+
             # We start off on the Main Menu in the Station
             ap.keys.send('UI_Up', repeat=3)  # make sure at the top
             ap.keys.send('UI_Down')
