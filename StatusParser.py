@@ -424,19 +424,38 @@ class StatusParser:
         else:
             return False
 
+    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
+        """ Waits for the file to change.
+        Returns True if the file changes or False on a time-out.
+        @param start_timestamp: The initial timestamp from 'timestamp' value.
+        @param timeout: Timeout in seconds.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            # Check file and read now data
+            self.get_cleaned_data()
+            # Check if internal timestamp changed
+            if self.current_data['timestamp'] != start_timestamp:
+                return True
+
+            sleep(0.5)
+
+        return False
+
+
 # Usage Example
 if __name__ == "__main__":
     parser = StatusParser()
 
     while True:
-        start_time = time.time()
+        start_time_1 = time.time()
         data = parser.get_cleaned_data()
         sleep(1)
         #docked = parser.get_flag(FlagsDocked, False)
         #landed = parser.get_flag(FlagsLanded, False)
 
         inmainship = parser.get_flag(FlagsInMainShip)
-        print(f"Time: {(time.time() - start_time)}")
+        print(f"Time: {(time.time() - start_time_1)}")
         #sc = parser.get_flag(FlagsSupercruise, False)
 
         #print(json.dumps(data, indent=4))

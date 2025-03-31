@@ -1,5 +1,74 @@
 {
-    "ICZ DV-Y b3": {"DockWithStation": "System Colonisation Ship", "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-    "Yab Yum":     {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false},
-    "Autrimpe":    {"DockWithStation": "Leberecht Tempel Vision", "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": 18, "Completed": false}
+    "GlobalShoppingList": {
+        "BuyCommodities": {
+            "Ceramic Composites": 14,
+            "CMM Composite": 3029,
+            "Insulating Membrane": 324,
+            "Liquid Oxygen": 1516,
+            "Steel": 6106,
+            "Titanium": 5042,
+            "Water": 318
+        },
+        "UpdateCommodityCount": true,
+        "Skip": true,
+        "Completed": false
+    },
+    "1": {
+        "SystemName": "Hillaunges",
+        "GalaxyBookmarkType": "Sys",
+        "GalaxyBookmarkNumber": 6,
+        "StationName": "",
+        "SystemBookmarkType": "Fav",
+        "SystemBookmarkNumber": 1,
+        "SellCommodities": {},
+        "BuyCommodities": {},
+        "UpdateCommodityCount": true,
+        "FleetCarrierTransfer": false,
+        "Skip": true,
+        "Completed": false
+    },
+    "1a": {
+        "SystemName": "Orgen",
+        "GalaxyBookmarkType": "Sys",
+        "GalaxyBookmarkNumber": 7,
+        "StationName": "Trailblazer Song",
+        "SystemBookmarkType": "Nav",
+        "SystemBookmarkNumber": 2,
+        "SellCommodities": {},
+        "BuyCommodities": {},
+        "UpdateCommodityCount": true,
+        "FleetCarrierTransfer": false,
+        "Skip": false,
+        "Completed": true
+    },
+    "2": {
+        "SystemName": "Synuefe ZX-M b54-1",
+        "GalaxyBookmarkType": "Sys",
+        "GalaxyBookmarkNumber": 1,
+        "StationName": "System Colonisation Ship",
+        "SystemBookmarkType": "",
+        "SystemBookmarkNumber": -1,
+        "SellCommodities": {
+            "ALL": 0
+        },
+        "BuyCommodities": {},
+        "FleetCarrierTransfer": false,
+        "UpdateCommodityCount": true,
+        "Skip": false,
+        "Completed": false
+    },
+    "rep": {
+        "SystemName": "REPEAT",
+        "GalaxyBookmarkType": "",
+        "GalaxyBookmarkNumber": -1,
+        "StationName": "",
+        "SystemBookmarkType": "",
+        "SystemBookmarkNumber": -1,
+        "SellCommodities": {},
+        "BuyCommodities": {},
+        "FleetCarrierTransfer": false,
+        "UpdateCommodityCount": false,
+        "Skip": false,
+        "Completed": false
+    }
 }

@@ -292,18 +292,6 @@ class APGui():
     def calibrate_compass_callback(self):
         self.ed_ap.calibrate_compass()
 
-    def mouse_coord_callback(self):
-        ans = messagebox.askyesno('Mouse XY', 'Select OK\nYour next Mouse click should be on the Station')
-
-        x, y = self.mouse.get_location()
-
-        # can we auto paste into clipboard?
-        xy_str = '[' + str(x) + ',' + str(y) + ']'
-        self.root.clipboard_clear()
-        self.root.clipboard_append(xy_str)
-        self.root.update()  # it stays on the clipboard
-        messagebox.showinfo('Mouse XY', 'Values: ' + xy_str + '\n has been place in your clipboard')
-
     def quit(self):
         logger.debug("Entered: quit")
         self.close_window()
@@ -788,12 +776,8 @@ class APGui():
         btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         tip_wp_file = Hovertip(btn_wp_file, self.tooltips['Waypoint List Button'], hover_delay=1000)
 
-        btn_coord = Button(blk_wp_buttons, text='Cap Mouse X,Y', command=self.mouse_coord_callback)
-        btn_coord.grid(row=1, column=0, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
-        tip_coord = Hovertip(btn_coord, self.tooltips['Cap Mouse XY'], hover_delay=1000)
-
         btn_reset = Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
-        btn_reset.grid(row=1, column=1, padx=2, pady=2, columnspan=1, sticky=(N, E, W, S))
+        btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         tip_reset = Hovertip(btn_reset, self.tooltips['Reset Waypoint List'], hover_delay=1000)
 
         # log window
