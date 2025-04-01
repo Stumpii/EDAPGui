@@ -13,6 +13,36 @@ Author: sumzer0@yahoo.com
 """
 
 
+def size_scale_for_station(width: int, height: int, w: int, h: int) -> (int, int):
+    """ Scale an item in the station services region based on the target resolution.
+    This is performed because the tables on the station services screen do
+    not increase proportionally with the screen size. The width changes with
+    the screen size, the height does not change based on the screen size
+    height, but on the screen width and the position stays consistent to the
+    center of the screen.
+    To calculate the new region height, we take the initial region defined at
+    1920x1080 and scale up the height based on the target width and apply the
+    new proportion against the center line.
+    @param width: The width of the item in pixels
+    @param height: The height of the item in pixels
+    @param h: The screen height in pixels
+    @param w: The screen width in pixels
+    """
+    ref_w = 1920
+    ref_h = 1080
+
+    # Calc the x and y scaling.
+    x_scale = w / ref_w
+    y_scale = h / ref_h
+
+    # Increase the height by the ratio of the width
+    new_width = width * x_scale
+    new_height = height * x_scale
+
+    # Return the new height in pixels.
+    return new_width, new_height
+
+
 class Screen_Regions:
     def __init__(self, screen, templ):
         self.screen = screen

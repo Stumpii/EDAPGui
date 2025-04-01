@@ -629,27 +629,30 @@ class EDWayPoint:
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
         # get to the Right Panel menu: Inventory, must initial set to inventory tab
-        ap.keys.send("UI_Back", repeat=5)
-        ap.keys.send("HeadLookReset")
-        sleep(0.5)
-        ap.keys.send("UIFocus", state=1)
-        sleep(0.2)
-        ap.keys.send("UI_Right", hold=0.5)
-        sleep(1)
-        ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
-        sleep(0.5)
+        #ap.keys.send("UI_Back", repeat=5)
+        #ap.keys.send("HeadLookReset")
+        #sleep(0.5)
+        #ap.keys.send("UIFocus", state=1)
+        #sleep(0.2)
+        #ap.keys.send("UI_Right", hold=0.5)
+        #sleep(1)
+        #ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
+        #sleep(0.5)
 
         # print("Quitting")
         # quit()
 
-        # unload
+        # Go to the internal (right) panel inventory tab
+        res = ap.internal_panel.show_inventory_tab()
+
+        # Assumes on the INVENTORY tab
         ap.keys.send('UI_Right')
         sleep(0.1)
-        ap.keys.send('UI_Up')
+        ap.keys.send('UI_Up')  # To FILTERS
         sleep(0.1)
-        ap.keys.send('UI_Right')
+        ap.keys.send('UI_Right')  # To TRANSFER >>
         sleep(0.1)
-        ap.keys.send('UI_Select')
+        ap.keys.send('UI_Select')  # Click TRANSFER >>
         sleep(0.1)
         ap.keys.send('UI_Up', hold=3)
         sleep(0.1)
@@ -669,18 +672,21 @@ class EDWayPoint:
     def transfer_from_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
         # get to the Right Panel menu: Inventory, must initial set to inventory tab
-        ap.keys.send("UI_Back", repeat=5)
-        ap.keys.send("HeadLookReset")
-        sleep(0.5)
-        ap.keys.send("UIFocus", state=1)
-        sleep(0.2)
-        ap.keys.send("UI_Right", hold=0.5)
-        sleep(1)
-        ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
-        sleep(0.5)
+        # ap.keys.send("UI_Back", repeat=5)
+        # ap.keys.send("HeadLookReset")
+        # sleep(0.5)
+        # ap.keys.send("UIFocus", state=1)
+        # sleep(0.2)
+        # ap.keys.send("UI_Right", hold=0.5)
+        # sleep(1)
+        # ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
+        # sleep(0.5)
 
         # print("Quitting")
         # quit()
+
+        # Go to the internal (right) panel inventory tab
+        res = ap.internal_panel.show_inventory_tab()
 
         # Assumes on the INVENTORY tab
         ap.keys.send('UI_Right')

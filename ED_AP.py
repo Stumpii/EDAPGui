@@ -18,6 +18,7 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
+from InternalStatusPanel import InternalStatusPanel
 from OCR import OCR
 from Overlay import *
 from StatusParser import StatusParser
@@ -176,6 +177,7 @@ class EDAutopilot:
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
+        self.internal_panel = InternalStatusPanel(self.scr, self.keys, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -1701,9 +1703,9 @@ class EDAutopilot:
         # Loop until complete, or error
         while 1:
             # Current location
-            cur_star_system = self.jn.ship_state().get('cur_star_system').upper()
-            cur_station = self.jn.ship_state().get('cur_station', "").upper()
-            cur_station_type = self.jn.ship_state().get('cur_station_type', "").upper()
+            cur_star_system = self.jn.ship_state()['cur_star_system'].upper()
+            cur_station = self.jn.ship_state()['cur_station'].upper()
+            cur_station_type = self.jn.ship_state()['cur_station_type'].upper()
 
             # Current in game destination
             status = self.status.get_cleaned_data()
