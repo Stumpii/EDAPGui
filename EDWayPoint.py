@@ -1,4 +1,5 @@
-from operator import itemgetter
+from __future__ import annotations
+
 from time import sleep
 
 from EDKeys import EDKeys
@@ -110,7 +111,7 @@ class EDWayPoint:
             logger.warning("Error setting waypoint, breaking")
             return False
 
-    def waypoint_next(self, ap, target_select_cb=None) -> (str, str):
+    def waypoint_next(self, ap, target_select_cb=None) -> tuple[str, str]:
         """ Process the next waypoint and set destination. Returns the system name of the destination.
         The system name may also be REPEAT."""
         dest_system = "REPEAT"
@@ -158,6 +159,7 @@ class EDWayPoint:
             else:
                 dest_key = ""
                 dest_system = ""   # End of list, return empty string
+        
         logger.debug(f"waypoint_next: Next system: {dest_key} | {dest_system}")
         return dest_key, dest_system
 
@@ -181,7 +183,7 @@ class EDWayPoint:
 
         return True
 
-    def get_waypoint(self):
+    def get_waypoint(self) -> tuple[str, dict] | tuple[None, None]:
         """ Returns the next waypoint list or None if we are at the end of the waypoints.
         """
         dest_key = "-1"
@@ -213,8 +215,14 @@ class EDWayPoint:
         return dest_key, self.waypoints[dest_key]
 
     def mark_all_waypoints_not_complete(self):
-        for j, tkey in enumerate(self.waypoints):  
-            self.waypoints[tkey]['Completed'] = False   
+        for j, tkey in enumerate(self.waypoints):
+            # Ensure 'Completed' key exists before trying to set it
+            if 'Completed' in self.waypoints[tkey]:
+                self.waypoints[tkey]['Completed'] = False
+            else:
+                # Handle legacy format where 'Completed' might be missing
+                # Or log a warning if the structure is unexpected
+                logger.warning(f"Waypoint {tkey} missing 'Completed' key during reset.")
             self.step = 0 
         self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
     
@@ -229,6 +237,8 @@ class EDWayPoint:
         return False
 
     def set_station_target(self, ap, dest_key):
+        """ Sets the target in the System Map. Can be a station, body, etc.
+        """
         # check if SystemBookmarkNumber exists to get the transition compatibility with old waypoint lists
         if "SystemBookmarkNumber" in self.waypoints[dest_key]:
             bookmark = self.waypoints[dest_key]['SystemBookmarkNumber']
@@ -750,7 +760,7 @@ class EDWayPoint:
         keys.send('UI_Right')  # Go to top of commodities list
         return True
 
-    def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> (bool, int):
+    def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> tuple[bool, int]:
         """ Buy qty of commodity. If qty >= 9999 then buy as much as possible.
         Assumed to be in the commodities buy screen in the list. """
 
@@ -796,6 +806,8 @@ class EDWayPoint:
 
             sleep(0.5)  # give time to popup
             keys.send('UI_Up', repeat=2)  # go up to quantity to buy (may not default to this)
+            # Log the planned quantity
+            logger.info(f"Attempting to buy {act_qty} units of {name}")
             # Increment count
             if qty >= 9999 or qty >= stock or qty >= free_cargo:
                 keys.send("UI_Right", hold=4)
@@ -808,7 +820,7 @@ class EDWayPoint:
 
         return True, act_qty
 
-    def sell_commodity(self, keys, name: str, qty: int) -> (bool, int):
+    def sell_commodity(self, keys, name: str, qty: int) -> tuple[bool, int]:
         """ Sell qty of commodity. If qty >= 9999 then sell as much as possible.
         Assumed to be in the commodities sell screen in the list. """
 
@@ -846,6 +858,9 @@ class EDWayPoint:
 
             sleep(0.5)  # give time for popup
             keys.send('UI_Up', repeat=2)  # make sure at top
+            
+            # Log the planned quantity
+            logger.info(f"Attempting to sell {act_qty} units of {name}")
             if qty >= 9999:
                 keys.send("UI_Right", hold=4)
             else:
@@ -876,8 +891,8 @@ def main():
     keys = EDKeys()
     keys.activate_window = True
     wp.select_buy(keys)
-    wp.buy_commodity(keys,"Steel", 100)
-    wp.buy_commodity(keys,"Titanium", 5)
+    wp.buy_commodity(keys,"Steel", 100, 200)
+    wp.buy_commodity(keys,"Titanium", 5, 200)
     #wp.sell_commodity(keys,"Gold", 1)
 
 

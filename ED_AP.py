@@ -1,16 +1,13 @@
 import math
 import traceback
 from math import atan, degrees
-import json
 import random
 from tkinter import messagebox
 
 import cv2
-from PIL import Image
-from pathlib import Path
 
 from EDAP_data import *
-from EDlogger import logger, logging
+from EDlogger import logging
 import Image_Templates
 import Screen
 import Screen_Regions
@@ -36,9 +33,11 @@ Ideas taken from: https://github.com/skai2/EDAutopilot
 Author: sumzer0@yahoo.com
 """
 
+
 # Exception class used to unroll the call tree to to stop execution
 class EDAP_Interrupt(Exception):
     pass
+
 
 class EDAutopilot:
 
@@ -1724,11 +1723,13 @@ class EDAutopilot:
                 break
 
             # Flag if we are using bookmarks
-            gal_bookmark = next_waypoint['GalaxyBookmarkNumber'] > 0
-            sys_bookmark = next_waypoint['SystemBookmarkNumber'] > 0
+            gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
+            sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
 
-            next_system = next_waypoint['SystemName'].upper()
-            next_station = next_waypoint['StationName'].upper()
+            next_system = next_waypoint.get('SystemName', '').upper()
+            next_station = next_waypoint.get('StationName', '')
+            if next_station is not None:
+                next_station = next_station.upper()
 
             self.ap_ckb('log', f"Next Waypoint: {next_system} | {next_station}")
 
