@@ -29,7 +29,7 @@ Assist will start from the top jumping through the defined Systems until the use
 ```
 
 ## Docking with a Station
-When entering a System via Waypoint Assist, if the DockWithStation is not null and StationCoord are not [0,0], the Waypoint Assist
+When entering a System via Waypoint Assist, if the DockWithStation is not null, the Waypoint Assist
 will go into **SystemMap** and select the Station at the StationCoord X, Y location (i.e. mouse click) to select and plot route to that 
 Station. Alternatively and with Odyssey you can set a bookmark for the desired station instead of the x,y coordinates and then enter 
 the position of the bookmark in the station list of the **System Map** from top to bottom and starting at 0 in StationBookmark. 
@@ -79,6 +79,8 @@ the needed data to fill in the waypoints file.
 
 If you try to Sell a Commodity you do not have, the system currently will get stuck as the Sell button is not highlighted.
 
+# New Waypoints  Notes
+
 Following actions:
 
 ### Travel to distant System
@@ -110,7 +112,8 @@ Example below:
         "Completed": false                  # Ignored for shopping list
     },
     "1": {                                  # System key. May be changed to something useful, but must be unique.
-        "SystemName": "Hillaunges",         # The target system name. Should be actual system name. 
+        "SystemName": "Hillaunges",         # The target system name as is mandatory. Should be actual system name. 
+                                            #   Required to determine if you are already in the desired system because ED's bookmark system does not change the destination when using a bookmark to the current system.  
                                             #   If GalaxyBookmarkNumber is o, this is name searched for in the galaxy map.
         "GalaxyBookmarkType": "Sys",        # The Galaxy Map bookmark type. May be:
                                             #   'Fav' or '' - Favorites
