@@ -22,8 +22,8 @@ Author: sumzer0@yahoo.com
 
 
 class EDWayPoint:
-    def __init__(self, is_odyssey=True):
-        
+    def __init__(self, ed_ap, is_odyssey=True):
+        self.ap = ed_ap
         self.is_odyssey = is_odyssey
         self.filename = './waypoints.json'
 
@@ -50,23 +50,34 @@ class EDWayPoint:
         self.mouse = MousePoint()
         self.market_parser = MarketParser()
 
-    def load_waypoint_file(self, filename=None):
+    def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:
-            return
+            return False
         
         ss = self.read_waypoints(filename)
         
         if ss is not None:
             self.waypoints = ss
             self.filename = filename
-            logger.debug("EDWayPoint: read json:"+str(ss))            
+            logger.debug("EDWayPoint: read json:"+str(ss))
+            return True
 
-    @staticmethod
-    def read_waypoints(filename='./waypoints/waypoints.json'):
+        return False
+
+    def read_waypoints(self, filename='./waypoints/waypoints.json'):
         s = None
         try:
             with open(filename,"r") as fp:
                 s = json.load(fp)
+
+            # Perform any checks on the data returned
+            # Check if the waypoint data contains the 'GlobalShoppingList' (new requirement)
+            if 'GlobalShoppingList' not in s:
+                # self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
+                logger.warning(f"Waypoint file {filename} is invalid or old version. "
+                               f"It does not contain a 'GlobalShoppingList' waypoint.")
+                s = None
+
         except Exception as e:
             logger.warning("EDWayPoint.py read_waypoints error :" + str(e))
 
@@ -860,7 +871,7 @@ class temp:
 def main():
     
     #keys   = temp()
-    wp = EDWayPoint(True)  # False = Horizons
+    wp = EDWayPoint(None, True)  # False = Horizons
     wp.step = 0   #start at first waypoint
     keys = EDKeys()
     keys.activate_window = True

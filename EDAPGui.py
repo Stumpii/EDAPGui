@@ -508,8 +508,12 @@ class APGui():
         )
         filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
         if filename != "":
-            self.ed_ap.waypoint.load_waypoint_file(filename)
-            self.wp_filelabel.set("loaded: " + Path(filename).name)
+            res = self.ed_ap.waypoint.load_waypoint_file(filename)
+            if res:
+                self.wp_filelabel.set("loaded: " + Path(filename).name)
+            else:
+                self.callback('log', f"Waypoint file is invalid. Check log file for details.")
+                self.wp_filelabel.set("<no list loaded>")
 
     def reset_wp_file(self):
         if self.WP_A_running != True:

@@ -44,7 +44,6 @@ class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
 
-        self.honk_thread = None
         # NOTE!!! When adding a new config value below, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
         self.config = {
@@ -97,6 +96,7 @@ class EDAutopilot:
         self._single_waypoint_station = None
         self._single_waypoint_system = None
         self._prev_star_system = None
+        self.honk_thread = None
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -174,7 +174,7 @@ class EDAutopilot:
         self.keys = EDKeys()
         self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
-        self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
+        self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.internal_panel = InternalStatusPanel(self.scr, self.keys, cb)
@@ -1696,7 +1696,11 @@ class EDAutopilot:
     def waypoint_assist(self, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
         also can then perform trades if specific in the waypoints file."""
-        # TODO - Move this to EDWayPoint class
+        # TODO - Move this function to EDWayPoint class
+        if len(self.waypoint.waypoints) == 0:
+            self.ap_ckb('log', "No Waypoint file loaded. Exiting Waypoint Assist.")
+            return
+
         self.waypoint.step = 0  # start at first waypoint
         self.ap_ckb('log', "Waypoint file: "+str(Path(self.waypoint.filename).name))
 
