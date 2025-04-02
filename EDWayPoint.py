@@ -789,7 +789,7 @@ class EDWayPoint:
             if qty >= 9999 or qty >= stock or qty >= free_cargo:
                 keys.send("UI_Right", hold=4)
             else:
-                keys.send("UI_Right", hold=0.02, repeat=act_qty)
+                keys.send("UI_Right", hold=0.04, repeat=act_qty)
             keys.send('UI_Down')
             keys.send('UI_Select')  # Select Buy
             sleep(0.5)
@@ -839,7 +839,7 @@ class EDWayPoint:
                 keys.send("UI_Right", hold=4)
             else:
                 keys.send('UI_Left', hold=4.0)  # Clear quantity to 0
-                keys.send("UI_Right", hold=0.02, repeat=act_qty)
+                keys.send("UI_Right", hold=0.04, repeat=act_qty)
             keys.send('UI_Down')  # Down to the Sell button (already assume sell all)
             keys.send('UI_Select')  # Select to Sell all
             sleep(0.5)
