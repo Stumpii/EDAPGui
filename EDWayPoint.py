@@ -79,6 +79,59 @@ class EDWayPoint:
                                f"It does not contain a 'GlobalShoppingList' waypoint.")
                 s = None
 
+            # Check the
+            err = False
+            for key, value in s.items():
+                if key == 'GlobalShoppingList':
+                    # Special case
+                    if 'BuyCommodities' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
+                        err = True
+                    if 'UpdateCommodityCount' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
+                        err = True
+                else:
+                    # All other cases
+                    if 'SystemName' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemName'.")
+                        err = True
+                    if 'StationName' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'StationName'.")
+                        err = True
+                    if 'GalaxyBookmarkType' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkType'.")
+                        err = True
+                    if 'GalaxyBookmarkNumber' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'GalaxyBookmarkNumber'.")
+                        err = True
+                    if 'SystemBookmarkType' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkType'.")
+                        err = True
+                    if 'SystemBookmarkNumber' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'SystemBookmarkNumber'.")
+                        err = True
+                    if 'SellCommodities' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'SellCommodities'.")
+                        err = True
+                    if 'BuyCommodities' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'BuyCommodities'.")
+                        err = True
+                    if 'UpdateCommodityCount' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
+                        err = True
+                    if 'FleetCarrierTransfer' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'FleetCarrierTransfer'.")
+                        err = True
+                    if 'Skip' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
+                        err = True
+                    if 'Completed' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'Completed'.")
+                        err = True
+
+            if err:
+                s = None
+
         except Exception as e:
             logger.warning("EDWayPoint.py read_waypoints error :" + str(e))
 
@@ -110,78 +163,6 @@ class EDWayPoint:
             # Error setting target
             logger.warning("Error setting waypoint, breaking")
             return False
-
-    def waypoint_next(self, ap, target_select_cb=None) -> tuple[str, str]:
-        """ Process the next waypoint and set destination. Returns the system name of the destination.
-        The system name may also be REPEAT."""
-        dest_system = "REPEAT"
-        dest_key = "-1"
-
-        # loop back to beginning if last record is "REPEAT"
-        while dest_system == "REPEAT":
-            for i, key in enumerate(self.waypoints):
-                # skip records we already processed
-                if i < self.step:  
-                    continue
-
-                # if this step is marked to skip.. i.e. completed, go to next step
-                if (key == "GlobalShoppingList" or self.waypoints[key]['Completed']
-                        or self.waypoints[key]['Skip']):
-                    continue
-
-                system = self.waypoints[key]['SystemName']
-
-                # if this entry is REPEAT, loop through all and mark them all as Completed = False
-                if system == "REPEAT":
-                    self.mark_all_waypoints_not_complete()             
-                else:
-                    # check if Galaxy bookmark exists
-                    if "GalaxyBookmarkNumber" in self.waypoints[key]:
-                        bookmark = self.waypoints[key]['GalaxyBookmarkNumber']
-                    else:
-                        bookmark = -1
-
-                    # Check if bookmark is specified
-                    if bookmark != -1:
-                        # Select destination in galaxy map based on bookmark
-                        self.set_gal_map_destination_bookmark(ap, key)
-                    else:
-                        # Select destination in galaxy map based on name
-                        if not self.set_gal_map_destination_text(ap, system, target_select_cb):
-                            # Error setting target
-                            logger.warning("Error setting waypoint, breaking")
-
-                    self.step = i
-                dest_key = key
-                dest_system = system
-
-                break
-            else:
-                dest_key = ""
-                dest_system = ""   # End of list, return empty string
-        
-        logger.debug(f"waypoint_next: Next system: {dest_key} | {dest_system}")
-        return dest_key, dest_system
-
-    def set_galaxy_map_target(self, ap, key, target_select_cb=None):
-        # check if Galaxy bookmark exists
-        if "GalaxyBookmarkNumber" in self.waypoints[key]:
-            bookmark = self.waypoints[key]['GalaxyBookmarkNumber']
-        else:
-            bookmark = -1
-
-        # Check if bookmark is specified
-        if bookmark != -1:
-            # Select destination in galaxy map based on bookmark
-            self.set_gal_map_destination_bookmark(ap, key)
-        else:
-            # Select destination in galaxy map based on name
-            if not self.set_gal_map_destination_text(ap, self.waypoints[key]['SystemName'], target_select_cb):
-                # Error setting target
-                logger.warning("Error setting waypoint, breaking")
-                return False
-
-        return True
 
     def get_waypoint(self) -> tuple[str, dict] | tuple[None, None]:
         """ Returns the next waypoint list or None if we are at the end of the waypoints.

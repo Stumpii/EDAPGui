@@ -1,7 +1,7 @@
 {
     "GlobalShoppingList": {
         "BuyCommodities": {
-            "CMM Composite": 3029,
+            "CMM Composite": 2309,
             "Insulating Membrane": 324,
             "Liquid Oxygen": 1516,
             "Steel": 6106,
@@ -14,9 +14,9 @@
     },
     "1": {
         "SystemName": "Hillaunges",
+        "StationName": "",
         "GalaxyBookmarkType": "Sys",
         "GalaxyBookmarkNumber": 6,
-        "StationName": "",
         "SystemBookmarkType": "Fav",
         "SystemBookmarkNumber": 1,
         "SellCommodities": {},
@@ -28,25 +28,25 @@
     },
     "1a": {
         "SystemName": "Orgen",
+        "StationName": "Trailblazer Song",
         "GalaxyBookmarkType": "Sys",
         "GalaxyBookmarkNumber": 7,
-        "StationName": "Trailblazer Song",
         "SystemBookmarkType": "Nav",
-        "SystemBookmarkNumber": 2,
+        "SystemBookmarkNumber": 1,
         "SellCommodities": {},
         "BuyCommodities": {},
         "UpdateCommodityCount": true,
         "FleetCarrierTransfer": false,
         "Skip": false,
-        "Completed": true
+        "Completed": false
     },
     "2": {
         "SystemName": "Synuefe ZX-M b54-1",
+        "StationName": "System Colonisation Ship",
         "GalaxyBookmarkType": "Sys",
         "GalaxyBookmarkNumber": 1,
-        "StationName": "System Colonisation Ship",
         "SystemBookmarkType": "",
-        "SystemBookmarkNumber": -1,
+        "SystemBookmarkNumber": 0,
         "SellCommodities": {
             "ALL": 0
         },
