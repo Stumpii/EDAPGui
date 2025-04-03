@@ -112,9 +112,9 @@ Example below:
         "Completed": false                  # Ignored for shopping list
     },
     "1": {                                  # System key. May be changed to something useful, but must be unique.
-        "SystemName": "Hillaunges",         # The target system name as is mandatory. Should be actual system name. 
-                                            #   Required to determine if you are already in the desired system because ED's bookmark system does not change the destination when using a bookmark to the current system.  
-                                            #   If GalaxyBookmarkNumber is o, this is name searched for in the galaxy map.
+        "SystemName": "Hillaunges",         # The target system name used to find the system in the Galaxy Map. If the system name is blank, then the current system is assumed to be the target.
+        "StationName": "",                  # The destination name (station name, FC name etc). 
+                                            #   If blank and no bookmark is set, then the waypoint is complete when reaching the system.
         "GalaxyBookmarkType": "Sys",        # The Galaxy Map bookmark type. May be:
                                             #   'Fav' or '' - Favorites
                                             #   'Sys' - System
@@ -124,8 +124,6 @@ Example below:
                                             # Note: System Colonisation Ships are bookmarked at the Gal Map level, so would be 'Sta' above.
         "GalaxyBookmarkNumber": 6,          # The bookmark index within the type specified above.
                                             #   Set to 0 or -1 if bookmarks are not used.
-        "StationName": "",                  # The destination name (station name, FC name etc. 
-                                            #   If blank and no bookmark is set, then the waypoint is complete when reaching the system.
         "SystemBookmarkType": "Fav",        # The System Map bookmark type. May be:
                                             #   'Fav' or '' - Favorites
                                             #   'Bod' - Body
@@ -152,9 +150,9 @@ Example below:
     },
     "2": {
         "SystemName": "Synuefe ZX-M b54-1",
+        "StationName": "System Colonisation Ship",
         "GalaxyBookmarkType": "Sys",
         "GalaxyBookmarkNumber": 1,
-        "StationName": "System Colonisation Ship",
         "SystemBookmarkType": "",
         "SystemBookmarkNumber": -1,
         "SellCommodities": {
@@ -169,9 +167,9 @@ Example below:
     "rep": {
         "SystemName": "REPEAT",             # System name of REPEAT causes the waypoints to be repeated.
                                             # None of the other info below is used. 
+        "StationName": "",
         "GalaxyBookmarkType": "",
         "GalaxyBookmarkNumber": -1,
-        "StationName": "",
         "SystemBookmarkType": "",
         "SystemBookmarkNumber": -1,
         "SellCommodities": {},
