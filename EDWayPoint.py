@@ -409,7 +409,6 @@ class EDWayPoint:
         ap.keys.send('UI_Select')
         sleep(0.05)
 
-        #print("Target:"+target_name)       
         # type in the System name
         typewrite(target_name, interval=0.25)
         sleep(0.05)
@@ -428,32 +427,46 @@ class EDWayPoint:
         sleep(0.05)
 
         # navigate to and select: search button
-        ap.keys.send('UI_Right')
-        sleep(0.05)
-        ap.keys.send('UI_Select')
-
-        # zoom camera which puts focus back on the map
-        ap.keys.send('CamZoomIn')
+        ap.keys.send('UI_Right')  # to >| button
         sleep(0.05)
 
-        # plot route. Not that once the system has been selected, as shown in the info panel
-        # and the gal map has focus, there is no need to wait for the map to bring the system
-        # to the center screen, the system can be selected while the map is moving.
-        ap.keys.send('UI_Select', hold=0.75)
+        correct_route = False
+        while not correct_route:
+            # Select first (or next) system
+            ap.keys.send('UI_Select')  # Select >| button
 
-        sleep(0.05)
+            # zoom camera which puts focus back on the map
+            ap.keys.send('CamZoomIn')
+            sleep(0.05)
 
-        # if got passed through the ship() object, lets call it to see if a target has been
-        # selected yet.. otherwise we wait.  If long route, it may take a few seconds
-        if ap.nav_route is not None:
-            while 1:
-                last_nav_route_sys = ap.nav_route.get_last_system()
-                if last_nav_route_sys.upper() == target_name.upper():
-                    break
-                sleep(1)
+            # plot route. Not that once the system has been selected, as shown in the info panel
+            # and the gal map has focus, there is no need to wait for the map to bring the system
+            # to the center screen, the system can be selected while the map is moving.
+            ap.keys.send('UI_Select', hold=0.75)
+
+            sleep(0.05)
+
+            # if got passed through the ship() object, lets call it to see if a target has been
+            # selected yet.. otherwise we wait.  If long route, it may take a few seconds
+            if ap.nav_route is not None:
+                while 1:
+                    curr_nav_route_sys = ap.nav_route.get_last_system()
+                    # Check if the nav route has been changed (right or wrong)
+                    if curr_nav_route_sys.upper() != last_nav_route_sys.upper():
+                        # Check if this nav route is correct
+                        if curr_nav_route_sys.upper() == target_name.upper():
+                            # Break loop and exit
+                            correct_route = True
+                            break
+                        else:
+                            # Try the next system, go back to the search bar
+                            ap.keys.send('UI_Up')
+                            break
+            else:
+                # Cannot check route, so assume right
+                correct_route = True
 
         ap.keys.send('GalaxyMapOpen')
-        
         return True
 
     def execute_trade(self, ap, dest_key):
