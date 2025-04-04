@@ -95,18 +95,18 @@ class NavRouteParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_last_system(self) -> str | None:
-        """ Gets the final destination (system name) or None.
+    def get_last_system(self) -> str:
+        """ Gets the final destination (system name) or empty string.
         """
         # Get latest data
         self.get_nav_route_data()
 
         # Check if there is a route
         if self.current_data['event'] == "NavRouteClear":
-            return None
+            return ''
 
         if self.current_data['Route'] is None:
-            return None
+            return ''
 
         # Find last system in route
         last_system = self.current_data['Route'][-1]

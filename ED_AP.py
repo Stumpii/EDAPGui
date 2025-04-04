@@ -16,6 +16,7 @@ from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
 from InternalStatusPanel import InternalStatusPanel
+from NavRouteParser import NavRouteParser
 from OCR import OCR
 from Overlay import *
 from StatusParser import StatusParser
@@ -176,6 +177,7 @@ class EDAutopilot:
         self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
+        self.nav_route = NavRouteParser()
         self.internal_panel = InternalStatusPanel(self.scr, self.keys, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
@@ -1695,142 +1697,144 @@ class EDAutopilot:
     def waypoint_assist(self, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
         also can then perform trades if specific in the waypoints file."""
-        # TODO - Move this function to EDWayPoint class
-        if len(self.waypoint.waypoints) == 0:
-            self.ap_ckb('log', "No Waypoint file loaded. Exiting Waypoint Assist.")
-            return
+        self.waypoint.waypoint_assist(scr_reg)
 
-        self.waypoint.step = 0  # start at first waypoint
-        self.ap_ckb('log', "Waypoint file: "+str(Path(self.waypoint.filename).name))
-
-        # Loop until complete, or error
-        while 1:
-            # Current location
-            cur_star_system = self.jn.ship_state()['cur_star_system'].upper()
-            cur_station = self.jn.ship_state()['cur_station'].upper()
-            cur_station_type = self.jn.ship_state()['cur_station_type'].upper()
-
-            # Current in game destination
-            status = self.status.get_cleaned_data()
-            destination_system = status['Destination_System']  # The system ID
-            destination_body = status['Destination_Body']  # The body number (0 for prim star)
-            destination_name = status['Destination_Name']  # The system/body/station/settlement name
-
-            # ====================================
-            # Get next Waypoint
-            # ====================================
-
-            # Get the waypoint details
-            dest_key, next_waypoint = self.waypoint.get_waypoint()
-            if dest_key is None:
-                self.ap_ckb('log', "Waypoint list complete.")
-                break
-
-            # Flag if we are using bookmarks
-            gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
-            sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
-
-            next_system = next_waypoint.get('SystemName', '').upper()
-            next_station = next_waypoint.get('StationName', '').upper()
-
-            self.ap_ckb('log', f"Next Waypoint: {next_system} | {next_station}")
-
-            # ====================================
-            # Target and travel to a System
-            # ====================================
-
-            # Check current system and go to next system if different
-            if cur_star_system != next_system:
-                # Select destination in galaxy map based on name
-                if not self.waypoint.set_gal_map_destination_text(self, next_system, self.jn.ship_state):
-                    self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
-
-                    # Jump to the system
-                    res = self.jump_to_system(scr_reg, next_system)
-
-                continue
-            else:
-                self.update_ap_status(f"Already in target System: {next_system}")
-                self.ap_ckb('log', f"Already in target System: {next_system}")
-
-            # ====================================
-            # Target and travel to a local Station
-            # ====================================
-
-            # If we are in the right system, check if we are already docked.
-            docked_at_stn = False
-            is_docked = self.status.get_flag(FlagsDocked)
-            if is_docked:
-                # Check if we are at the correct station. Note that for FCs, the station name
-                # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
-                # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
-                if cur_station_type == 'FleetCarrier'.upper():
-                    docked_at_stn = next_station.endswith(cur_station)
-                elif next_station == 'System Colonisation Ship'.upper():
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
-                        docked_at_stn = True
-                elif next_station.startswith('Orbital Construction Site'.upper()):
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
-                        docked_at_stn = True
-                else:
-                    docked_at_stn = cur_station == next_station
-
-            # Check current station and go to it if different
-            if not docked_at_stn:
-                # Check if we need to travel to a station, else we are done.
-                # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text
-                if sys_bookmark or gal_bookmark or next_station != "":
-                    # If waypoint file has a Station Name associated then attempt targeting it
-                    self.update_ap_status(f"Targeting Station: {next_station}")
-
-                    if gal_bookmark:
-                        # Set destination via gal bookmark, not system bookmark
-                        res = self.waypoint.set_gal_map_destination_bookmark(self, dest_key)
-                        if not res:
-                            self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
-
-                    elif sys_bookmark:
-                        # Set destination via system bookmark
-                        res = self.waypoint.set_sys_map_destination_bookmark(self, dest_key)
-                        if not res:
-                            self.ap_ckb('log', f"Waypoint Assist: Unable to set System Map target")
-
-                    elif next_station != "":
-                        # Need OCR added in for this (WIP)
-                        need_ocr = True
-                        # res = self.nav_panel.lock_destination(station_name)
-
-                    # Jump to the station by name
-                    res = self.supercruise_to_station(scr_reg, next_station)
-                    continue
-                else:
-                    self.update_ap_status(f"Arrived at target System: {next_system}")
-                    self.ap_ckb('log', f"Arrived at target System: {next_system}")
-            else:
-                self.update_ap_status(f"Already at target Station: {next_station}")
-                self.ap_ckb('log', f"Already at target Station: {next_station}")
-
-            # ====================================
-            # Dock and Trade at Station
-            # ====================================
-
-            # Are we at the correct station to trade?
-            if docked_at_stn:  # and (next_station != "" or sys_bookmark):
-                # Docked - let do trade
-                self.ap_ckb('log', f"Execute trade at Station: {next_station}")
-                self.waypoint.execute_trade(self, dest_key)
-
-            # Mark this waypoint as completed
-            self.waypoint.mark_waypoint_complete(dest_key)
-
-            self.update_ap_status("Setting route to next waypoint")
-            self.update_ap_status("Setting route to next waypoint")
-
-        # Done with waypoints
-        self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
-        self.update_ap_status("Idle")
+        # # TODO - Move this function to EDWayPoint class
+        # if len(self.waypoint.waypoints) == 0:
+        #     self.ap_ckb('log', "No Waypoint file loaded. Exiting Waypoint Assist.")
+        #     return
+        #
+        # self.waypoint.step = 0  # start at first waypoint
+        # self.ap_ckb('log', "Waypoint file: "+str(Path(self.waypoint.filename).name))
+        #
+        # # Loop until complete, or error
+        # while 1:
+        #     # Current location
+        #     cur_star_system = self.jn.ship_state()['cur_star_system'].upper()
+        #     cur_station = self.jn.ship_state()['cur_station'].upper()
+        #     cur_station_type = self.jn.ship_state()['cur_station_type'].upper()
+        #
+        #     # Current in game destination
+        #     status = self.status.get_cleaned_data()
+        #     destination_system = status['Destination_System']  # The system ID
+        #     destination_body = status['Destination_Body']  # The body number (0 for prim star)
+        #     destination_name = status['Destination_Name']  # The system/body/station/settlement name
+        #
+        #     # ====================================
+        #     # Get next Waypoint
+        #     # ====================================
+        #
+        #     # Get the waypoint details
+        #     dest_key, next_waypoint = self.waypoint.get_waypoint()
+        #     if dest_key is None:
+        #         self.ap_ckb('log', "Waypoint list complete.")
+        #         break
+        #
+        #     # Flag if we are using bookmarks
+        #     gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
+        #     sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
+        #
+        #     next_system = next_waypoint.get('SystemName', '').upper()
+        #     next_station = next_waypoint.get('StationName', '').upper()
+        #
+        #     self.ap_ckb('log', f"Next Waypoint: {next_system} | {next_station}")
+        #
+        #     # ====================================
+        #     # Target and travel to a System
+        #     # ====================================
+        #
+        #     # Check current system and go to next system if different
+        #     if cur_star_system != next_system:
+        #         # Select destination in galaxy map based on name
+        #         if not self.waypoint.set_gal_map_destination_text(self, next_system, self.jn.ship_state):
+        #             self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
+        #
+        #             # Jump to the system
+        #             res = self.jump_to_system(scr_reg, next_system)
+        #
+        #         continue
+        #     else:
+        #         self.update_ap_status(f"Already in target System: {next_system}")
+        #         self.ap_ckb('log', f"Already in target System: {next_system}")
+        #
+        #     # ====================================
+        #     # Target and travel to a local Station
+        #     # ====================================
+        #
+        #     # If we are in the right system, check if we are already docked.
+        #     docked_at_stn = False
+        #     is_docked = self.status.get_flag(FlagsDocked)
+        #     if is_docked:
+        #         # Check if we are at the correct station. Note that for FCs, the station name
+        #         # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
+        #         # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
+        #         if cur_station_type == 'FleetCarrier'.upper():
+        #             docked_at_stn = next_station.endswith(cur_station)
+        #         elif next_station == 'System Colonisation Ship'.upper():
+        #             if (cur_station_type == 'SurfaceStation'.upper() and
+        #                     'ColonisationShip'.upper() in cur_station.upper()):
+        #                 docked_at_stn = True
+        #         elif next_station.startswith('Orbital Construction Site'.upper()):
+        #             if (cur_station_type == 'SurfaceStation'.upper() and
+        #                     'ColonisationShip'.upper() in cur_station.upper()):
+        #                 docked_at_stn = True
+        #         else:
+        #             docked_at_stn = cur_station == next_station
+        #
+        #     # Check current station and go to it if different
+        #     if not docked_at_stn:
+        #         # Check if we need to travel to a station, else we are done.
+        #         # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text
+        #         if sys_bookmark or gal_bookmark or next_station != "":
+        #             # If waypoint file has a Station Name associated then attempt targeting it
+        #             self.update_ap_status(f"Targeting Station: {next_station}")
+        #
+        #             if gal_bookmark:
+        #                 # Set destination via gal bookmark, not system bookmark
+        #                 res = self.waypoint.set_gal_map_destination_bookmark(self, dest_key)
+        #                 if not res:
+        #                     self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
+        #
+        #             elif sys_bookmark:
+        #                 # Set destination via system bookmark
+        #                 res = self.waypoint.set_sys_map_destination_bookmark(self, dest_key)
+        #                 if not res:
+        #                     self.ap_ckb('log', f"Waypoint Assist: Unable to set System Map target")
+        #
+        #             elif next_station != "":
+        #                 # Need OCR added in for this (WIP)
+        #                 need_ocr = True
+        #                 # res = self.nav_panel.lock_destination(station_name)
+        #
+        #             # Jump to the station by name
+        #             res = self.supercruise_to_station(scr_reg, next_station)
+        #             continue
+        #         else:
+        #             self.update_ap_status(f"Arrived at target System: {next_system}")
+        #             self.ap_ckb('log', f"Arrived at target System: {next_system}")
+        #     else:
+        #         self.update_ap_status(f"Already at target Station: {next_station}")
+        #         self.ap_ckb('log', f"Already at target Station: {next_station}")
+        #
+        #     # ====================================
+        #     # Dock and Trade at Station
+        #     # ====================================
+        #
+        #     # Are we at the correct station to trade?
+        #     if docked_at_stn:  # and (next_station != "" or sys_bookmark):
+        #         # Docked - let do trade
+        #         self.ap_ckb('log', f"Execute trade at Station: {next_station}")
+        #         self.waypoint.execute_trade(self, dest_key)
+        #
+        #     # Mark this waypoint as completed
+        #     self.waypoint.mark_waypoint_complete(dest_key)
+        #
+        #     self.update_ap_status("Setting route to next waypoint")
+        #     self.update_ap_status("Setting route to next waypoint")
+        #
+        # # Done with waypoints
+        # self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
+        # self.update_ap_status("Idle")
 
     def jump_to_system(self, scr_reg, system_name: str) -> bool:
         """ Jumps to the specified system. Returns True if in the system already,

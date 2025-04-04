@@ -1,7 +1,7 @@
 {
     "GlobalShoppingList": {
         "BuyCommodities": {
-            "CMM Composite": 2309,
+            "CMM Composite": 1589,
             "Insulating Membrane": 324,
             "Liquid Oxygen": 1516,
             "Steel": 6106,
@@ -29,16 +29,16 @@
     "1a": {
         "SystemName": "Orgen",
         "StationName": "Trailblazer Song",
-        "GalaxyBookmarkType": "Sys",
-        "GalaxyBookmarkNumber": 7,
+        "GalaxyBookmarkType": "",
+        "GalaxyBookmarkNumber": 0,
         "SystemBookmarkType": "Nav",
-        "SystemBookmarkNumber": 1,
+        "SystemBookmarkNumber": 2,
         "SellCommodities": {},
         "BuyCommodities": {},
         "UpdateCommodityCount": true,
         "FleetCarrierTransfer": false,
         "Skip": false,
-        "Completed": false
+        "Completed": true
     },
     "2": {
         "SystemName": "Synuefe ZX-M b54-1",
