@@ -76,6 +76,7 @@ class EDKeys:
             'Supercruise',
             'UpThrustButton',
             'LandingGearToggle',
+            'TargetNextRouteSystem',  # Target next system in route
         ]
         self.keys = self.get_bindings()
         self.activate_window = False

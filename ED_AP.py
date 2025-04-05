@@ -1694,10 +1694,10 @@ class EDAutopilot:
 
         self.keys.send('SetSpeed50')
 
-    def waypoint_assist(self, scr_reg):
+    def waypoint_assist(self, keys, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
         also can then perform trades if specific in the waypoints file."""
-        self.waypoint.waypoint_assist(scr_reg)
+        self.waypoint.waypoint_assist(keys, scr_reg)
 
         # # TODO - Move this function to EDWayPoint class
         # if len(self.waypoint.waypoints) == 0:
@@ -1880,10 +1880,10 @@ class EDAutopilot:
         sleep(3)  # Wait for compass to stop flashing blue!
         if self.have_destination(scr_reg):
             self.ap_ckb('log', " - Station: " + station_name)
-            self.update_ap_status("SC to Station")
+            self.update_ap_status(f"SC to Station: {station_name}")
             self.sc_assist(scr_reg)
         else:
-            self.ap_ckb('log', " - Could not target station: " + station_name)
+            self.ap_ckb('log', f" - Could not target station: {station_name}")
             return False
 
         return True
@@ -2311,7 +2311,7 @@ class EDAutopilot:
                 self.total_dist_jumped = 0
                 self.total_jumps = 0
                 try:
-                    self.waypoint_assist(self.scrReg)
+                    self.waypoint_assist(self.keys, self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
                 except Exception as e:
