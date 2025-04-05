@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from time import sleep
 import cv2
 from EDAP_data import *
@@ -8,7 +9,7 @@ from OCR import OCR
 from Screen import Screen
 from Screen_Regions import size_scale_for_station
 from StatusParser import StatusParser
-
+from EDlogger import logger
 
 def goto_ship_view(keys, status_parser) -> bool:
     """ Goto ship view. """
@@ -48,6 +49,8 @@ class InternalStatusPanel:
         """ Shows the Internal (Right) Panel. Opens the Internal Panel if not already open.
         Returns True if successful, else False.
         """
+        logger.debug("show_right_panel: entered")
+
         # Is nav panel active?
         active, active_tab_name = self.is_right_panel_active()
         if active:
@@ -57,6 +60,7 @@ class InternalStatusPanel:
             return active, active_tab_name
         else:
             print("Open Internal Panel")
+            logger.debug("show_right_panel: Open Internal Panel")
             goto_ship_view(self.keys, self.status_parser)
             self.keys.send("HeadLookReset")
 
@@ -79,6 +83,8 @@ class InternalStatusPanel:
         """ Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
         Returns True if successful, else False.
         """
+        logger.debug("show_inventory_tab: entered")
+
         # Show nav panel
         active, active_tab_name = self.show_right_panel()
         if active is None:
@@ -109,10 +115,14 @@ class InternalStatusPanel:
         """ Determine if the Nav Panel is open and if so, which tab is active.
             Returns True if active, False if not and also the string of the tab name.
         """
+        logger.debug("is_right_panel_active: entered")
+
         # Check if nav panel is open
-        status = self.status_parser.get_cleaned_data()
-        if status['GuiFocus'] != GuiFocusInternalPanel:
+        if not self.status_parser.wait_for_gui_focus(GuiFocusInternalPanel, 3):
+            logger.debug("is_right_panel_active: right panel not focused")
             return False, ""
+
+        logger.debug("is_right_panel_active: right panel is focused")
 
         # Try this 'n' times before giving up
         for i in range(10):
@@ -128,6 +138,8 @@ class InternalStatusPanel:
 
             img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
             if img_selected is not None:
+                logger.debug("is_right_panel_active: image selected")
+                logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")
                 if self.modules_tab_text in str(ocr_textlist):
                     return True, self.modules_tab_text
                 if self.fire_groups_tab_text in str(ocr_textlist):
@@ -140,11 +152,13 @@ class InternalStatusPanel:
                     return True, self.storage_tab_text
                 if self.status_tab_text in str(ocr_textlist):
                     return True, self.status_tab_text
+            else:
+                logger.debug("is_right_panel_active: no image selected")
 
             # Wait and retry
             sleep(1)
 
-            # In case we are on a picture tab, cycle to the next tab
+            # In case we are on a picture tab, cycle to the next tabeee
             self.keys.send('CycleNextPanel')
 
         # Did not find anything
@@ -157,14 +171,14 @@ class InternalStatusPanel:
         # if active is not None:
 
         # Is nav panel active?
-        status = self.status_parser.get_cleaned_data()
-        if status['GuiFocus'] == GuiFocusInternalPanel:
+        if self.status_parser.get_gui_focus() == GuiFocusInternalPanel:
             self.keys.send("UI_Back")
             self.keys.send("HeadLookReset")
 
 
 # Usage Example
 if __name__ == "__main__":
+    logger.setLevel(logging.DEBUG)  # Default to log all debug when running this file.
     scr = Screen()
     mykeys = EDKeys()
     mykeys.activate_window = True  # Helps with single steps testing

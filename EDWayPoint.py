@@ -653,6 +653,7 @@ class EDWayPoint:
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
+        logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
         res = ap.internal_panel.show_inventory_tab()
 
@@ -682,6 +683,7 @@ class EDWayPoint:
 
     def transfer_from_fleetcarrier(self, ap, buy_commodities):
         """ Transfer specific good from Fleet Carrier to ship"""
+        logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
         res = ap.internal_panel.show_inventory_tab()
 

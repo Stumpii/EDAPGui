@@ -330,6 +330,21 @@ class StatusParser:
         self.get_cleaned_data()
         return self.current_data.get('GuiFocus', 0)
 
+    def wait_for_gui_focus(self, gui_focus_flag: int, timeout: float = 15) -> bool:
+        """ Waits for the GUI Focus flag to change to the provided value.
+        Returns True if the flag turns true or False on a time-out.
+        The Flag constants are defined in 'EDAP_data.py'.
+        @param timeout: Timeout in seconds.
+        @param gui_focus_flag: The flag to check for.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            self.get_cleaned_data()
+            if self.current_data['GuiFocus'] == gui_focus_flag:
+                return True
+            sleep(0.5)
+        return False
+
     def wait_for_flag_on(self, flag: int, timeout: float = 15) -> bool:
         """ Waits for the of the selected flag to turn true.
         Returns True if the flag turns true or False on a time-out.
