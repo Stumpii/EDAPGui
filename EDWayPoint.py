@@ -435,6 +435,9 @@ class EDWayPoint:
 
         correct_route = False
         while not correct_route:
+            # Store the current nav route system
+            last_nav_route_sys = ap.nav_route.get_last_system()
+
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
 
@@ -917,7 +920,7 @@ class EDWayPoint:
             next_wp_station = next_waypoint.get('StationName', '').upper()
 
             if new_waypoint:
-                self.ap.ap_ckb('log+vce', f"Next Waypoint: '{next_wp_station}' in '{next_wp_system}'")
+                self.ap.ap_ckb('log+vce', f"Next Waypoint: {next_wp_station} in {next_wp_system}")
 
             # ====================================
             # Target and travel to a System
@@ -926,7 +929,7 @@ class EDWayPoint:
             # Check current system and go to next system if different and not blank
             if next_wp_system == "" or (cur_star_system == next_wp_system):
                 if new_waypoint:
-                    self.ap.ap_ckb('log+vce', f"Already in target System: {next_wp_system}")
+                    self.ap.ap_ckb('log+vce', f"Already in target System.")
             else:
                 # Check if the current nav route is to the target system
                 last_nav_route_sys = self.ap.nav_route.get_last_system().upper()
@@ -935,13 +938,13 @@ class EDWayPoint:
                 if ((last_nav_route_sys == next_wp_system) and
                         (destination_body == 0 and destination_name != "")):
                     # No need to target system
-                    self.ap.ap_ckb('log+vce', f"System {next_wp_system} already targeted.")
+                    self.ap.ap_ckb('log+vce', f"System already targeted.")
                 else:
-                    self.ap.ap_ckb('log+vce', f"targeting system: {next_wp_system}.")
+                    self.ap.ap_ckb('log+vce', f"Targeting system.")
                     # Select destination in galaxy map based on name
                     res = self.set_gal_map_destination_text(self.ap, next_wp_system, self.ap.jn.ship_state)
                     if res:
-                        self.ap.ap_ckb('log+vce', f"{next_wp_system} has been targeted.")
+                        self.ap.ap_ckb('log+vce', f"System has been targeted.")
                     else:
                         self.ap.ap_ckb('log+vce', f"Unable to target {next_wp_system} in Galaxy Map.")
                         # TODO determine what to do here. Stop all waypoints?
