@@ -527,7 +527,7 @@ class EDWayPoint:
 
             # --------- BUY ----------
             if len(buy_commodities) > 0:
-                self.transfer_from_fleetcarrier(ap)
+                self.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
             # Regular Station or Fleet Carrier in Buy/Sell mode
@@ -653,20 +653,6 @@ class EDWayPoint:
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
-        # get to the Right Panel menu: Inventory, must initial set to inventory tab
-        #ap.keys.send("UI_Back", repeat=5)
-        #ap.keys.send("HeadLookReset")
-        #sleep(0.5)
-        #ap.keys.send("UIFocus", state=1)
-        #sleep(0.2)
-        #ap.keys.send("UI_Right", hold=0.5)
-        #sleep(1)
-        #ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
-        #sleep(0.5)
-
-        # print("Quitting")
-        # quit()
-
         # Go to the internal (right) panel inventory tab
         res = ap.internal_panel.show_inventory_tab()
 
@@ -694,22 +680,8 @@ class EDWayPoint:
         print("End of unload FC")
         # quit()
 
-    def transfer_from_fleetcarrier(self, ap):
-        """ Transfer all goods to Fleet Carrier """
-        # get to the Right Panel menu: Inventory, must initial set to inventory tab
-        # ap.keys.send("UI_Back", repeat=5)
-        # ap.keys.send("HeadLookReset")
-        # sleep(0.5)
-        # ap.keys.send("UIFocus", state=1)
-        # sleep(0.2)
-        # ap.keys.send("UI_Right", hold=0.5)
-        # sleep(1)
-        # ap.keys.send("UIFocus", state=0)  # this gets us over to the right panel
-        # sleep(0.5)
-
-        # print("Quitting")
-        # quit()
-
+    def transfer_from_fleetcarrier(self, ap, buy_commodities):
+        """ Transfer specific good from Fleet Carrier to ship"""
         # Go to the internal (right) panel inventory tab
         res = ap.internal_panel.show_inventory_tab()
 
@@ -718,24 +690,29 @@ class EDWayPoint:
         sleep(0.1)
         ap.keys.send('UI_Up')  # To FILTERS
         sleep(0.1)
-        ap.keys.send('UI_Left')  # To << TRANSFER
+        ap.keys.send('UI_Right')  # To >> TRANSFER
         sleep(0.1)
-        ap.keys.send('UI_Select')  # Click << TRANSFER
+        ap.keys.send('UI_Select')  # Click >> TRANSFER
         sleep(0.1)
-        ap.keys.send('UI_Up', hold=3)
+        ap.keys.send('UI_Up', hold=3)  # go to top of list
         sleep(0.1)
-        ap.keys.send('UI_Up')
-        sleep(0.1)
-        ap.keys.send('UI_Select')
 
-        ap.keys.send('UI_Select')
+        index = buy_commodities['Down']
+
+        ap.keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
+        sleep(0.5)
+        ap.keys.send('UI_Left', hold=10)  # Transfer commodity, wait 10 sec to xfer
+
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Take us down to "Confirm Item Transfer"
+
+        ap.keys.send('UI_Select')  # Click Transfer
         sleep(0.1)
 
         ap.keys.send("UI_Back", repeat=4)
         sleep(0.2)
         ap.keys.send("HeadLookReset")
-        print("End of unload FC")
-        # quit()
+        print("End of transfer from FC")
 
     def select_buy(self, keys) -> bool:
         """ Select Buy. Assumes on Commodities Market screen. """
