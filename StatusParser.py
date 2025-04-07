@@ -465,17 +465,7 @@ if __name__ == "__main__":
     parser = StatusParser()
 
     while True:
-        start_time_1 = time.time()
-        data = parser.get_cleaned_data()
+        parser.get_cleaned_data()
+        parser.log_flag_diffs()
+        parser.last_data = parser.current_data
         sleep(1)
-        #docked = parser.get_flag(FlagsDocked, False)
-        #landed = parser.get_flag(FlagsLanded, False)
-
-        inmainship = parser.get_flag(FlagsInMainShip)
-        print(f"Time: {(time.time() - start_time_1)}")
-        #sc = parser.get_flag(FlagsSupercruise, False)
-
-        #print(json.dumps(data, indent=4))
-        #print(f"Supercruise: {sc}")
-        time.sleep(1)
-        #print("\n" * 10)
