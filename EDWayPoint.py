@@ -28,7 +28,7 @@ class EDWayPoint:
         self.ap = ed_ap
         self.is_odyssey = is_odyssey
         self.filename = './waypoints.json'
-
+        self.stats_log = {'Colonisation': 0, 'Construction': 0, 'Fleet Carrier': 0, 'Station': 0}
         self.waypoints = {}
         #  { "Ninabin": {"DockWithTarget": false, "TradeSeq": None, "Completed": false} }
         # for i, key in enumerate(self.waypoints):
@@ -486,6 +486,7 @@ class EDWayPoint:
             return
 
         # Determine type of station we are at
+
         colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
         orbital_construction_site = "OrbitalConstructionShip".upper() in ap.jn.ship_state()['cur_station'].upper()
         fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
@@ -493,10 +494,12 @@ class EDWayPoint:
         if colonisation_ship or orbital_construction_site:
             if colonisation_ship:
                 # Colonisation Ship
+                self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
                 self.ap.ap_ckb('log+vce', f"Executing trade with Colonisation Ship.")
                 logger.debug(f"Execute Trade: On Colonisation Ship")
             if orbital_construction_site:
-                # Colonisation Ship
+                # Construction Ship
+                self.stats_log['Construction'] = self.stats_log['Construction'] + 1
                 self.ap.ap_ckb('log+vce', f"Executing trade with Orbital Construction Ship.")
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
@@ -528,6 +531,7 @@ class EDWayPoint:
 
         elif fleet_carrier and fleetcarrier_transfer:
             # Fleet Carrier in Tranfer mode
+            self.stats_log['Fleet Carrier'] += 1
             # --------- SELL ----------
             if len(sell_commodities) > 0:
                 # Transfer to Fleet Carrier
@@ -538,6 +542,7 @@ class EDWayPoint:
                 self.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
+            self.stats_log['Station'] += 1
             # Regular Station or Fleet Carrier in Buy/Sell mode
             self.ap.ap_ckb('log+vce', "Executing trade.")
             logger.debug(f"Execute Trade: On Regular Station")

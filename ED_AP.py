@@ -1,6 +1,7 @@
 import math
 import traceback
 from math import atan, degrees
+import psutil
 import random
 from tkinter import messagebox
 
@@ -201,6 +202,7 @@ class EDAutopilot:
         self.gui_loaded = False
 
         self.ap_ckb = cb
+        self.system_services()
 
         # Overlay vars
         self.ap_state = "Idle"
@@ -777,11 +779,8 @@ class EDAutopilot:
             #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            #cv2.circle(icompass_image_display, (pt[0]+n_pt[0], pt[1]+n_pt[1]), 5, (0, 255, 0), 3)
             cv2.imshow('compass', icompass_image_d)
-            #cv2.imshow('nav', navpt_image)
             cv2.moveWindow('compass', self.cv_view_x - 400, self.cv_view_y + 600)
-            #cv2.moveWindow('nav', self.cv_view_x, self.cv_view_y)
             cv2.waitKey(30)
 
         return result
@@ -2227,6 +2226,70 @@ class EDAutopilot:
         self.config["LogDEBUG"] = False
         self.config["LogINFO"] = True
         logger.setLevel(logging.INFO)
+
+    def system_services(self):
+        # Monitor system resources (CPU utilisation for OCR etc.)
+        # Which may effect game performance
+        threading.Thread(target=self._system_resource_monitor, daemon=True).start()
+
+    def _system_resource_monitor(self):
+        """Monitor system resources and optimize performance"""
+
+        # Monitor various stats of the CPU and memory
+        last_check = time.time()
+        resource_stats = {"cpu_usage": [], "memory_usage": [], "network_latency": 0, "page_errs": 0}
+
+        while True:
+            print("_system_resource_monitor")
+            logger.debug("_system_resource_monitor")
+
+            # Make sure EDAP tasks are not taking too much memory which will cause
+            # ED to drag
+            current_memory = psutil.virtual_memory().percent
+            resource_stats["memory_usage"].append(current_memory)
+            # Determine network latency from network status log
+            resource_stats["network_latency"] = self.col_stat()
+            print(f"network_latency: {resource_stats['network_latency']}")
+            logger.debug(f"network_latency: {resource_stats['network_latency']}")
+            # Determine memory paging errors
+            resource_stats["page_errs"] = self.con_stat()
+            print(f"page_errs: {resource_stats['page_errs']}")
+            logger.debug(f"page_errs: {resource_stats['page_errs']}")
+
+            # Determine elapsed time. Do not want this to run too often and
+            # cause its own issues.
+            current_time = time.time()
+            elapsed_hours = (current_time - last_check) / 3600
+
+            # Clear diagnostic buffers cyclically
+            if elapsed_hours >= 4:
+                resource_stats["cpu_usage"] = {}
+                resource_stats["memory_usage"] = {}
+                resource_stats["page_errs"] = 0
+                resource_stats["network_latency"] = {}
+                last_check = time.time()
+
+            # Log excessive stat numbers
+            if len(resource_stats["memory_usage"]) > 100:
+                self.ap_ckb('memory_usage', 'memory_usage > 100.')
+                resource_stats["memory_usage"] = resource_stats["memory_usage"][-100:]
+            if len(resource_stats["cpu_usage"]) > 100:
+                self.ap_ckb('cpu_usage', 'cpu_usage > 100.')
+                resource_stats["cpu_usage"] = resource_stats["cpu_usage"][-100:]
+            if resource_stats["page_errs"] > 50:
+                self.ap_ckb('diag', 'page_errs > 50.')
+                resource_stats["page_errs"] = resource_stats["page_errs"]
+            if resource_stats["network_latency"] > 50:
+                self.ap_ckb('diag', 'network_latency > 50.')
+                resource_stats["network_latency"] = resource_stats["network_latency"]
+
+            time.sleep(60)  # Check every minute
+
+    def col_stat(self):
+        return self.waypoint.stats_log['Colonisation']
+
+    def con_stat(self):
+        return self.waypoint.stats_log['Construction']
 
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
