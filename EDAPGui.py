@@ -218,8 +218,6 @@ class APGui():
             self.ed_ap.vce.say(body)
         elif msg == 'statusline':
             self.update_statusline(body)
-        elif msg == 'diag':
-            self.stop_diag()
         elif msg == 'fsd_stop':
             logger.debug("Detected 'fsd_stop' callback msg")
             self.checkboxvar['FSD Route Assist'].set(0)
@@ -421,15 +419,6 @@ class APGui():
         self.log_msg("Single Waypoint Assist stop")
         self.ed_ap.vce.say("Single Waypoint Assist Off")
         self.update_statusline("Idle")
-
-    def stop_diag(self):
-        """ Stop all assists as a diagnostic error. """
-        self.ed_ap.set_fsd_assist(False)
-        self.ed_ap.set_sc_assist(False)
-        self.ed_ap.set_waypoint_assist(False)
-        self.ed_ap.set_robigo_assist(False)
-        self.ed_ap.set_dss_assist(False)
-        self.ed_ap.set_single_waypoint_assist("", "", False)
 
     def about(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui")

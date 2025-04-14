@@ -11,26 +11,17 @@ from Screen_Regions import size_scale_for_station
 from StatusParser import StatusParser
 from EDlogger import logger
 
-def goto_ship_view(keys, status_parser) -> bool:
-    """ Goto ship view. """
-    # Go down to ship view
-    while not status_parser.get_gui_focus() == GuiFocusNoFocus:
-        keys.send("UI_Back")  # make sure back in ship view
 
-    # self.keys.send("UI_Back", repeat=5)  # make sure back in ship view
-    keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
-
-    return True
-
-
-class InternalStatusPanel:
+class EDInternalStatusPanel:
     """ The Internal (Right hand) Ship Status Panel. """
-    def __init__(self, screen, keys, cb):
+
+    def __init__(self, screen, keys, cb, ship_control):
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
+        self.ship_control = ship_control
 
         self.modules_tab_text = "MODULES"
         self.fire_groups_tab_text = "FIRE GROUPS"
@@ -61,7 +52,7 @@ class InternalStatusPanel:
         else:
             print("Open Internal Panel")
             logger.debug("show_right_panel: Open Internal Panel")
-            goto_ship_view(self.keys, self.status_parser)
+            self.ship_control.goto_ship_view(self.keys, self.status_parser)
             self.keys.send("HeadLookReset")
 
             self.keys.send('UIFocus', state=1)
@@ -182,5 +173,5 @@ if __name__ == "__main__":
     scr = Screen()
     mykeys = EDKeys()
     mykeys.activate_window = True  # Helps with single steps testing
-    nav_pnl = InternalStatusPanel(scr, mykeys, None)
+    nav_pnl = EDInternalStatusPanel(scr, mykeys, None)
     nav_pnl.show_inventory_tab()

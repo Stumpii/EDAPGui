@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from time import sleep
-
 from EDAP_data import FlagsDocked
 from EDKeys import EDKeys
 from EDlogger import logger
 import json
-from pyautogui import typewrite
-
 from MarketParser import MarketParser
 from MousePt import MousePoint
 from pathlib import Path
@@ -36,32 +33,32 @@ class EDWayPoint:
         # self.waypoints[target]['Completed'] == True
         # if docked and self.waypoints[target]['Completed'] == False
         #    execute_seq(self.waypoints[target]['TradeSeq'])
- 
+
         ss = self.read_waypoints()
 
         # if we read it then point to it, otherwise use the default table above
         if ss is not None:
             self.waypoints = ss
-            logger.debug("EDWayPoint: read json:"+str(ss))    
-            
+            logger.debug("EDWayPoint: read json:" + str(ss))
+
         self.num_waypoints = len(self.waypoints)
-     
+
         #print("waypoints: "+str(self.waypoints))
         self.step = 0
-        
+
         self.mouse = MousePoint()
         self.market_parser = MarketParser()
 
     def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:
             return False
-        
+
         ss = self.read_waypoints(filename)
-        
+
         if ss is not None:
             self.waypoints = ss
             self.filename = filename
-            logger.debug("EDWayPoint: read json:"+str(ss))
+            logger.debug("EDWayPoint: read json:" + str(ss))
             return True
 
         return False
@@ -69,7 +66,7 @@ class EDWayPoint:
     def read_waypoints(self, filename='./waypoints/waypoints.json'):
         s = None
         try:
-            with open(filename,"r") as fp:
+            with open(filename, "r") as fp:
                 s = json.load(fp)
 
             # Perform any checks on the data returned
@@ -136,34 +133,20 @@ class EDWayPoint:
         except Exception as e:
             logger.warning("EDWayPoint.py read_waypoints error :" + str(e))
 
-        return s    
+        return s
 
     def write_waypoints(self, data, filename='./waypoints/waypoints.json'):
         if data is None:
             data = self.waypoints
         try:
-            with open(filename,"w") as fp:
-                json.dump(data,fp, indent=4)
+            with open(filename, "w") as fp:
+                json.dump(data, fp, indent=4)
         except Exception as e:
             logger.warning("EDWayPoint.py write_waypoints error:" + str(e))
 
     def mark_waypoint_complete(self, key):
         self.waypoints[key]['Completed'] = True
         self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
-
-    def set_next_system(self, ap, target_system) -> bool:
-        """ Sets the next system to jump to, or the final system to jump to.
-        If the system is already selected or is selected correctly, returns True,
-        otherwise False.
-        """
-        # TODO - Move to ED_AP.py
-        # Call sequence to select route
-        if self.set_gal_map_destination_text(ap, target_system, None):
-            return True
-        else:
-            # Error setting target
-            logger.warning("Error setting waypoint, breaking")
-            return False
 
     def get_waypoint(self) -> tuple[str, dict] | tuple[None, None]:
         """ Returns the next waypoint list or None if we are at the end of the waypoints.
@@ -177,12 +160,13 @@ class EDWayPoint:
                 if i < self.step:
                     continue
 
-                # if this entry is REPEAT, mark them all as Completed = False
-                if self.waypoints[key].get('SystemName', "") == "REPEAT":
+                # if this entry is REPEAT (and not skipped), mark them all as Completed = False
+                if ((self.waypoints[key].get('SystemName', "").upper() == "REPEAT")
+                        and not self.waypoints[key]['Skip']):
                     self.mark_all_waypoints_not_complete()
                     break
 
-                # if this step is marked to skip.. i.e. completed, go to next step
+                # if this step is marked to skip... i.e. completed, go to next step
                 if (key == "GlobalShoppingList" or self.waypoints[key]['Completed']
                         or self.waypoints[key]['Skip']):
                     continue
@@ -205,9 +189,10 @@ class EDWayPoint:
                 # Handle legacy format where 'Completed' might be missing
                 # Or log a warning if the structure is unexpected
                 logger.warning(f"Waypoint {tkey} missing 'Completed' key during reset.")
-            self.step = 0 
+            self.step = 0
         self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
-    
+        self.log_stats()
+
     def is_station_targeted(self, dest_key) -> bool:
         """ Check if a station is specified in the waypoint by name or by bookmark."""
         if self.waypoints[dest_key]['StationName'] is not None:
@@ -218,262 +203,14 @@ class EDWayPoint:
                 return True
         return False
 
-    def set_station_target(self, ap, dest_key):
-        """ Sets the target in the System Map. Can be a station, body, etc.
-        """
-        # check if SystemBookmarkNumber exists to get the transition compatibility with old waypoint lists
-        if "SystemBookmarkNumber" in self.waypoints[dest_key]:
-            bookmark = self.waypoints[dest_key]['SystemBookmarkNumber']
-        else:
-            bookmark = -1
-
-        # Set destination via bookmark
-        if bookmark != -1:
-            self.set_sys_map_destination_bookmark(ap, dest_key)
-
-    def set_sys_map_destination_bookmark(self, ap, dest_key) -> bool:
-        """ Set the sys map destination using a bookmark. """
-        # TODO - Move this to System Map class
-        # Get bookmark type
-        if "SystemBookmarkType" in self.waypoints[dest_key]:
-            bookmark_type = self.waypoints[dest_key]['SystemBookmarkType']
-        else:
-            bookmark_type = "Fav"
-
-        # check if SystemBookmarkNumber exists to get the transition compatibility with old waypoint lists
-        if "SystemBookmarkNumber" in self.waypoints[dest_key]:
-            bookmark = self.waypoints[dest_key]['SystemBookmarkNumber']
-        else:
-            bookmark = -1
-
-        if self.is_odyssey and bookmark != -1:
-            # Check if this is a nav-panel bookmark
-            if not bookmark_type.lower().startswith("nav"):
-                ap.keys.send('SystemMapOpen')
-                sleep(3.5)
-
-                ap.keys.send('UI_Left')  # Go to BOOKMARKS
-                sleep(.5)
-                ap.keys.send('UI_Select')  # Select BOOKMARKS
-                sleep(.25)
-                ap.keys.send('UI_Right')  # Go to FAVORITES
-                sleep(.25)
-
-                # If bookmark type is Fav, do nothing as this is the first item
-                if bookmark_type.lower().startswith("bod"):
-                    ap.keys.send('UI_Down', repeat=1)  # Go to BODIES
-                elif bookmark_type.lower().startswith("sta"):
-                    ap.keys.send('UI_Down', repeat=2)  # Go to STATIONS
-                elif bookmark_type.lower().startswith("set"):
-                    ap.keys.send('UI_Down', repeat=3)  # Go to SETTLEMENTS
-
-                sleep(.25)
-                ap.keys.send('UI_Select')  # Select bookmark type, moves you to bookmark list
-                sleep(.25)
-                ap.keys.send('UI_Down', repeat=bookmark - 1)
-                sleep(.25)
-                ap.keys.send('UI_Select', hold=3.0)
-
-                ap.keys.send('SystemMapOpen')
-                sleep(0.5)
-                return True
-
-            elif bookmark_type.lower().startswith("nav"):
-                # This is a nav-panel bookmark
-                # get to the Left Panel menu: Navigation
-                ap.keys.send("UI_Back", repeat=2)
-                ap.keys.send("HeadLookReset")
-                ap.keys.send("UIFocus", state=1)
-                ap.keys.send("UI_Left")
-                ap.keys.send("UIFocus", state=0)  # this gets us over to the Nav panel
-                ap.keys.send('UI_Up', hold=4)
-                ap.keys.send('UI_Down', repeat=bookmark - 1)
-                sleep(1.0)
-                ap.keys.send('UI_Select')
-                sleep(0.25)
-                ap.keys.send('UI_Select')
-                ap.keys.send("UI_Back")
-                ap.keys.send("HeadLookReset")
-                return True
-
-        return False
-
-    def set_gal_map_destination_bookmark(self, ap, dest_key) -> bool:
-        """ Set the gal map destination using a bookmark. """
-        # TODO - Move this to Gal Map class
-
-        # Get bookmark type
-        if "GalaxyBookmarkType" in self.waypoints[dest_key]:
-            bookmark_type = self.waypoints[dest_key]['GalaxyBookmarkType']
-        else:
-            bookmark_type = "Fav"
-
-        # check if GalaxyBookmarkNumber exists to get the transition compatibility with old waypoint lists
-        if "GalaxyBookmarkNumber" in self.waypoints[dest_key]:
-            bookmark = self.waypoints[dest_key]['GalaxyBookmarkNumber']
-        else:
-            bookmark = -1
-
-        if self.is_odyssey and bookmark != -1:
-            ap.keys.send('GalaxyMapOpen')
-            sleep(2)
-
-            ap.keys.send('UI_Left')  # Go to BOOKMARKS
-            sleep(.5)
-            ap.keys.send('UI_Select')  # Select BOOKMARKS
-            sleep(.25)
-            ap.keys.send('UI_Right')  # Go to FAVORITES
-            sleep(.25)
-
-            # If bookmark type is Fav, do nothing as this is the first item
-            if bookmark_type.lower().startswith("sys"):
-                ap.keys.send('UI_Down')  # Go to SYSTEMS
-            elif bookmark_type.lower().startswith("bod"):
-                ap.keys.send('UI_Down', repeat=2)  # Go to BODIES
-            elif bookmark_type.lower().startswith("sta"):
-                ap.keys.send('UI_Down', repeat=3)  # Go to STATIONS
-            elif bookmark_type.lower().startswith("set"):
-                ap.keys.send('UI_Down', repeat=4)  # Go to SETTLEMENTS
-
-            sleep(.25)
-            ap.keys.send('UI_Select')  # Select bookmark type, moves you to bookmark list
-            sleep(.25)
-            ap.keys.send('UI_Down', repeat=bookmark - 1)
-            sleep(.25)
-            ap.keys.send('UI_Select', hold=3.0)
-
-            ap.keys.send('GalaxyMapOpen')
-            sleep(0.5)
-            return True
-
-        return False
-
-    def set_gal_map_destination_text(self, ap, target_name, target_select_cb=None) -> bool:
-        """ Call either the Odyssey or Horizons version of the Galactic Map sequence. """
-        # TODO - Move this to Gal Map class
-        if not self.is_odyssey:
-            return self.set_gal_map_destination_text_horizons(ap, target_name, target_select_cb)
-        else:
-            return self.set_gal_map_destination_text_odyssey(ap, target_name, target_select_cb)
-
-    @staticmethod
-    def set_gal_map_destination_text_horizons(ap, target_name, target_select_cb=None) -> bool:
-        """ This sequence for the Horizons. """
-        # TODO - Move this to Gal Map class
-        ap.keys.send('GalaxyMapOpen')
-        sleep(2)
-        ap.keys.send('CycleNextPanel')
-        sleep(1)
-        ap.keys.send('UI_Select')
-        sleep(2)
-              
-        typewrite(target_name, interval=0.25)
-        sleep(1)         
-  
-        # send enter key
-        ap.keys.send_key('Down', 28)
-        sleep(0.05)
-        ap.keys.send_key('Up', 28)
-        
-        sleep(7)
-        ap.keys.send('UI_Right')
-        sleep(1)
-        ap.keys.send('UI_Select')   
-        
-        # if got passed through the ship() object, lets call it to see if a target has been
-        # selected yet.. otherwise we wait.  If long route, it may take a few seconds      
-        if target_select_cb is not None:
-            while not target_select_cb()['target']:
-                sleep(1)
-                
-        ap.keys.send('GalaxyMapOpen')
-        sleep(2)
-        return True
-
-    @staticmethod
-    def set_gal_map_destination_text_odyssey(ap, target_name, target_select_cb=None) -> bool:
-        """ This sequence for the Odyssey. """
-        # TODO - Move this to Gal Map class
-
-        ap.keys.send('GalaxyMapOpen')
-        # TODO - check this to OCR check
-        sleep(2)
-
-        # Check if the current nav route is to the target system
-        last_nav_route_sys = ap.nav_route.get_last_system()
-        if last_nav_route_sys.upper() == target_name.upper():
-            # Close Galaxy Map
-            ap.keys.send('GalaxyMapOpen')
-            return True
-
-        # navigate to and select: search field
-        ap.keys.send('UI_Up')
-        sleep(0.05)
-        ap.keys.send('UI_Select')
-        sleep(0.05)
-
-        # type in the System name
-        typewrite(target_name, interval=0.25)
-        sleep(0.05)
-
-        # send enter key (removes focus out of input field)
-        ap.keys.send_key('Down', 28)  # 28=ENTER
-        sleep(0.05)
-        ap.keys.send_key('Up', 28)  # 28=ENTER
-        sleep(0.05)
-
-        # According to some reports, the ENTER key does not always reselect the text
-        # box, so this down and up will reselect the text box.
-        ap.keys.send('UI_Down')
-        sleep(0.05)
-        ap.keys.send('UI_Up')
-        sleep(0.05)
-
-        # navigate to and select: search button
-        ap.keys.send('UI_Right')  # to >| button
-        sleep(0.05)
-
-        correct_route = False
-        while not correct_route:
-            # Store the current nav route system
-            last_nav_route_sys = ap.nav_route.get_last_system()
-
-            # Select first (or next) system
-            ap.keys.send('UI_Select')  # Select >| button
-
-            # zoom camera which puts focus back on the map
-            ap.keys.send('CamZoomIn')
-            sleep(0.05)
-
-            # plot route. Not that once the system has been selected, as shown in the info panel
-            # and the gal map has focus, there is no need to wait for the map to bring the system
-            # to the center screen, the system can be selected while the map is moving.
-            ap.keys.send('UI_Select', hold=0.75)
-
-            sleep(0.05)
-
-            # if got passed through the ship() object, lets call it to see if a target has been
-            # selected yet.. otherwise we wait.  If long route, it may take a few seconds
-            if ap.nav_route is not None:
-                while 1:
-                    curr_nav_route_sys = ap.nav_route.get_last_system()
-                    # Check if the nav route has been changed (right or wrong)
-                    if curr_nav_route_sys.upper() != last_nav_route_sys.upper():
-                        # Check if this nav route is correct
-                        if curr_nav_route_sys.upper() == target_name.upper():
-                            # Break loop and exit
-                            correct_route = True
-                            break
-                        else:
-                            # Try the next system, go back to the search bar
-                            ap.keys.send('UI_Up')
-                            break
-            else:
-                # Cannot check route, so assume right
-                correct_route = True
-
-        ap.keys.send('GalaxyMapOpen')
-        return True
+    def log_stats(self):
+        calc1 = 1.5 ** self.stats_log['Colonisation']
+        print(f'Colonisation delay: {calc1}')
+        # calc2 = 1.5 ** self.stats_log['Construction']
+        # print(f'Construction delay: {calc2}')
+        calc2 = 1.5 ** self.stats_log['Station']
+        print(f'Station delay: {calc2}')
+        sleep(max(calc1, calc2))
 
     def execute_trade(self, ap, dest_key):
         # Get trade commodities from waypoint
@@ -495,12 +232,12 @@ class EDWayPoint:
             if colonisation_ship:
                 # Colonisation Ship
                 self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
-                self.ap.ap_ckb('log+vce', f"Executing trade with Colonisation Ship.")
+                self.ap.ap_ckb('log', f"Executing trade with Colonisation Ship.")
                 logger.debug(f"Execute Trade: On Colonisation Ship")
             if orbital_construction_site:
                 # Construction Ship
                 self.stats_log['Construction'] = self.stats_log['Construction'] + 1
-                self.ap.ap_ckb('log+vce', f"Executing trade with Orbital Construction Ship.")
+                self.ap.ap_ckb('log', f"Executing trade with Orbital Construction Ship.")
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
             # We start off on the Main Menu in the Station
@@ -531,7 +268,7 @@ class EDWayPoint:
 
         elif fleet_carrier and fleetcarrier_transfer:
             # Fleet Carrier in Tranfer mode
-            self.stats_log['Fleet Carrier'] += 1
+            self.stats_log['Fleet Carrier'] = self.stats_log['Fleet Carrier'] + 1
             # --------- SELL ----------
             if len(sell_commodities) > 0:
                 # Transfer to Fleet Carrier
@@ -542,9 +279,10 @@ class EDWayPoint:
                 self.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
-            self.stats_log['Station'] += 1
+            self.stats_log['Station'] = self.stats_log['Station'] + 1
+            print(f'Station: {self.stats_log["Station"]}')
             # Regular Station or Fleet Carrier in Buy/Sell mode
-            self.ap.ap_ckb('log+vce', "Executing trade.")
+            self.ap.ap_ckb('log', "Executing trade.")
             logger.debug(f"Execute Trade: On Regular Station")
             self.market_parser.get_market_data()
             market_time_old = self.market_parser.current_data['timestamp']
@@ -554,10 +292,18 @@ class EDWayPoint:
             ap.keys.send('UI_Down')
             ap.keys.send('UI_Select')  # Select StarPort Services
 
-            sleep(8)   # wait for new menu to finish rendering
+            sleep(8)  # wait for new menu to finish rendering
 
-            ap.keys.send('UI_Down')
-            ap.keys.send('UI_Select')  # Select Commodities
+            # CONNECTED TO menu is different between stations and fleet carriers
+            if not fleet_carrier:
+                # COMMODITIES MARKET location bottom left
+                ap.keys.send('UI_Down')
+                ap.keys.send('UI_Select')  # Select Commodities
+            else:
+                # COMMODITIES MARKET location top right, with:
+                # uni cart, redemption, trit depot, shipyard, crew lounge
+                ap.keys.send('UI_Right', repeat=2)
+                ap.keys.send('UI_Select')  # Select Commodities
 
             # Wait for market to update
             self.market_parser.get_market_data()
@@ -565,7 +311,7 @@ class EDWayPoint:
             while market_time_new == market_time_old:
                 self.market_parser.get_market_data()
                 market_time_new = self.market_parser.current_data['timestamp']
-                sleep(1)   # wait for new menu to finish rendering
+                sleep(1)  # wait for new menu to finish rendering
 
             cargo_capacity = ap.jn.ship_state()['cargo_capacity']
             logger.info(f"Execute trade: Current cargo capacity: {cargo_capacity}")
@@ -592,7 +338,7 @@ class EDWayPoint:
             sleep(1)
 
             # --------- BUY ----------
-            if len(buy_commodities) > 0 or len(global_buy_commodities):
+            if len(buy_commodities) > 0 or len(global_buy_commodities) > 0:
                 self.select_buy(ap.keys)
 
                 # Go through buy commodities list
@@ -655,15 +401,18 @@ class EDWayPoint:
                 self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
 
             sleep(1.5)  # give time to popdown
-            ap.keys.send('UI_Left')    # back to left menu
-            ap.keys.send('UI_Down', repeat=8)    # go down 4x to highlight Exit
-            ap.keys.send('UI_Select')  # Select Exit, back to StartPort Menu
-            sleep(1) # give time to get back to menu
-            if self.is_odyssey:
-                ap.keys.send('UI_Down', repeat=4)    # go down 4x to highlight Exit
-
-            ap.keys.send('UI_Select')  # Select Exit, back to top menu
-            sleep(2)  # give time to popdown menu
+            # Go to ship view
+            ap.ship_control.goto_ship_view()
+            #
+            # ap.keys.send('UI_Left')    # back to left menu
+            # ap.keys.send('UI_Down', repeat=8)    # go down 4x to highlight Exit
+            # ap.keys.send('UI_Select')  # Select Exit, back to StartPort Menu
+            # sleep(1) # give time to get back to menu
+            # if self.is_odyssey:
+            #     ap.keys.send('UI_Down', repeat=4)    # go down 4x to highlight Exit
+            #
+            # ap.keys.send('UI_Select')  # Select Exit, back to top menu
+            # sleep(2)  # give time to popdown menu
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """
@@ -770,7 +519,8 @@ class EDWayPoint:
         # Determine if station sells the commodity!
         self.market_parser.get_market_data()
         if not self.market_parser.can_buy_item(name):
-            self.ap.ap_ckb('log+vce', f"'{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
+            self.ap.ap_ckb('log+vce',
+                           f"'{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
             logger.debug(f"Item '{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
             return False, 0
 
@@ -860,15 +610,18 @@ class EDWayPoint:
 
             sleep(0.5)  # give time for popup
             keys.send('UI_Up', repeat=2)  # make sure at top
-            
+
             # Log the planned quantity
-            self.ap.ap_ckb('log+vce', f"Selling {act_qty} units of {name}.")
-            logger.info(f"Attempting to sell {act_qty} units of {name}")
             if qty >= 9999:
+                self.ap.ap_ckb('log+vce', f"Selling all our units of {name}.")
+                logger.info(f"Attempting to sell all our units of {name}")
                 keys.send("UI_Right", hold=4)
             else:
+                self.ap.ap_ckb('log+vce', f"Selling {act_qty} units of {name}.")
+                logger.info(f"Attempting to sell {act_qty} units of {name}")
                 keys.send('UI_Left', hold=4.0)  # Clear quantity to 0
                 keys.send("UI_Right", hold=0.04, repeat=act_qty)
+
             keys.send('UI_Down')  # Down to the Sell button (already assume sell all)
             keys.send('UI_Select')  # Select to Sell all
             sleep(0.5)
@@ -878,17 +631,19 @@ class EDWayPoint:
 
     def waypoint_assist(self, keys, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
-        also can then perform trades if specific in the waypoints file."""
-        # TODO - Move this function to EDWayPoint class
+        also can then perform trades if specific in the waypoints file.
+        """
         if len(self.waypoints) == 0:
             self.ap.ap_ckb('log+vce', "No Waypoint file loaded. Exiting Waypoint Assist.")
             return
 
         self.step = 0  # start at first waypoint
-        self.ap.ap_ckb('log', "Waypoint file: "+str(Path(self.filename).name))
+        self.ap.ap_ckb('log', "Waypoint file: " + str(Path(self.filename).name))
+        self.reset_stats()
 
         # Loop until complete, or error
-        while 1:
+        _abort = False
+        while not _abort:
             # Current location
             cur_star_system = self.ap.jn.ship_state()['cur_star_system'].upper()
             cur_station = self.ap.jn.ship_state()['cur_station'].upper()
@@ -920,6 +675,10 @@ class EDWayPoint:
             # Flag if we are using bookmarks
             gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
             sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
+            gal_bookmark_type = next_waypoint.get('GalaxyBookmarkType', '')
+            gal_bookmark_num = next_waypoint.get('GalaxyBookmarkNumber', 0)
+            sys_bookmark_type = next_waypoint.get('SystemBookmarkType', '')
+            sys_bookmark_num = next_waypoint.get('SystemBookmarkNumber', 0)
 
             next_wp_system = next_waypoint.get('SystemName', '').upper()
             next_wp_station = next_waypoint.get('StationName', '').upper()
@@ -947,12 +706,14 @@ class EDWayPoint:
                 else:
                     self.ap.ap_ckb('log+vce', f"Targeting system.")
                     # Select destination in galaxy map based on name
-                    res = self.set_gal_map_destination_text(self.ap, next_wp_system, self.ap.jn.ship_state)
+                    res = self.ap.galaxy_map.set_gal_map_destination_text(self.ap, next_wp_system,
+                                                                          self.ap.jn.ship_state)
                     if res:
-                        self.ap.ap_ckb('log+vce', f"System has been targeted.")
+                        self.ap.ap_ckb('log', f"System has been targeted.")
                     else:
                         self.ap.ap_ckb('log+vce', f"Unable to target {next_wp_system} in Galaxy Map.")
-                        # TODO determine what to do here. Stop all waypoints?
+                        _abort = True
+                        break
 
                 # Select next target system
                 # TODO should this be in before every jump?
@@ -963,6 +724,7 @@ class EDWayPoint:
                 res = self.ap.jump_to_system(scr_reg, next_wp_system)
                 if not res:
                     self.ap.ap_ckb('log', f"Failed to jump to {next_wp_system}.")
+                    _abort = True
                     break
 
                 continue
@@ -1004,23 +766,31 @@ class EDWayPoint:
 
                     if gal_bookmark:
                         # Set destination via gal bookmark, not system bookmark
-                        res = self.set_gal_map_destination_bookmark(self.ap, dest_key)
+                        res = self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, gal_bookmark_type, gal_bookmark_num)
                         if not res:
                             self.ap.ap_ckb('log+vce', f"Unable to set Galaxy Map bookmark.")
+                            _abort = True
+                            break
 
                     elif sys_bookmark:
                         # Set destination via system bookmark
-                        res = self.set_sys_map_destination_bookmark(self.ap, dest_key)
+                        res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
                         if not res:
                             self.ap.ap_ckb('log+vce', f"Unable to set System Map bookmark.")
+                            _abort = True
+                            break
 
                     elif next_wp_station != "":
                         # Need OCR added in for this (WIP)
                         need_ocr = True
+                        self.ap.ap_ckb('log+vce', f"No bookmark defined. Target by Station text not supported.")
                         # res = self.nav_panel.lock_destination(station_name)
+                        _abort = True
+                        break
 
                     # Jump to the station by name
                     res = self.ap.supercruise_to_station(scr_reg, next_wp_station)
+                    sleep(1)  # Allow status log to update
                     continue
                 else:
                     self.ap.ap_ckb('log+vce', f"Arrived at target System: {next_wp_system}")
@@ -1040,37 +810,37 @@ class EDWayPoint:
             self.ap.ap_ckb('log+vce', f"Current Waypoint complete.")
 
         # Done with waypoints
-        self.ap.ap_ckb('log+vce', "Waypoint Route Complete, total distance jumped: "+str(self.ap.total_dist_jumped)+"LY")
-        self.ap.update_ap_status("Idle")
+        if not _abort:
+            self.ap.ap_ckb('log+vce',
+                           "Waypoint Route Complete, total distance jumped: " + str(self.ap.total_dist_jumped) + "LY")
+            self.ap.update_ap_status("Idle")
+        else:
+            self.ap.ap_ckb('log+vce', "Waypoint Route was aborted.")
+            self.ap.update_ap_status("Idle")
 
-# this import the temp class needed for unit testing
-"""
-from EDKeys import *       
-class temp:
-    def __init__(self):
-        self.keys = EDKeys()
-"""
+    def reset_stats(self):
+        # Clear stats
+        self.stats_log['Colonisation'] = 0
+        self.stats_log['Construction'] = 0
+        self.stats_log['Fleet Carrier'] = 0
+        self.stats_log['Station'] = 0
+
 
 def main():
-    
-    #keys   = temp()
     wp = EDWayPoint(None, True)  # False = Horizons
-    wp.step = 0   #start at first waypoint
+    wp.step = 0  # start at first waypoint
     keys = EDKeys()
     keys.activate_window = True
     wp.select_buy(keys)
-    wp.buy_commodity(keys,"Steel", 100, 200)
-    wp.buy_commodity(keys,"Titanium", 5, 200)
+    wp.buy_commodity(keys, "Steel", 100, 200)
+    wp.buy_commodity(keys, "Titanium", 5, 200)
     #wp.sell_commodity(keys,"Gold", 1)
 
-
-    
     #dest = 'Enayex'
     #print(dest)
-    
+
     #print("In waypoint_assist, at:"+str(dest))
 
-    
     # already in doc config, test the trade
     #wp.execute_trade(keys, dest)    
 
@@ -1079,19 +849,17 @@ def main():
 
     #while dest != "":
 
-      #  print("Doing: "+str(dest))
-      #  print(wp.waypoints[dest])
-       # print("Dock w/station: "+  str(wp.is_station_targeted(dest)))
-        
-        #wp.set_station_target(None, dest)
-        
-        # Mark this waypoint as complated
-        #wp.mark_waypoint_complete(dest)
-        
-        # set target to next waypoint and loop)::@
-        #dest = wp.waypoint_next(ap=None)
+    #  print("Doing: "+str(dest))
+    #  print(wp.waypoints[dest])
+    # print("Dock w/station: "+  str(wp.is_station_targeted(dest)))
 
+    #wp.set_station_target(None, dest)
 
+    # Mark this waypoint as complated
+    #wp.mark_waypoint_complete(dest)
+
+    # set target to next waypoint and loop)::@
+    #dest = wp.waypoint_next(ap=None)
 
 
 if __name__ == "__main__":

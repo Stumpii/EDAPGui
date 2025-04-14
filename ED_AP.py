@@ -1,13 +1,15 @@
 import math
 import traceback
 from math import atan, degrees
-import psutil
 import random
 from tkinter import messagebox
 
 import cv2
 
 from EDAP_data import *
+from EDGalaxyMap import EDGalaxyMap
+from EDShipControl import EDShipControl
+from EDSystemMap import EDSystemMap
 from EDlogger import logging
 import Image_Templates
 import Screen
@@ -16,7 +18,7 @@ from EDWayPoint import *
 from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
-from InternalStatusPanel import InternalStatusPanel
+from EDInternalStatusPanel import EDInternalStatusPanel
 from NavRouteParser import NavRouteParser
 from OCR import OCR
 from Overlay import *
@@ -179,7 +181,10 @@ class EDAutopilot:
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
-        self.internal_panel = InternalStatusPanel(self.scr, self.keys, cb)
+        self.ship_control = EDShipControl(self.scr, self.keys, cb)
+        self.internal_panel = EDInternalStatusPanel(self.scr, self.keys, cb, self.ship_control)
+        self.galaxy_map = EDGalaxyMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.system_map = EDSystemMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -202,7 +207,6 @@ class EDAutopilot:
         self.gui_loaded = False
 
         self.ap_ckb = cb
-        self.system_services()
 
         # Overlay vars
         self.ap_state = "Idle"
@@ -1059,6 +1063,7 @@ class EDAutopilot:
         # if we get docking granted ED's docking computer will take over
         self.keys.send('SetSpeedZero', repeat=2)
 
+        self.ap_ckb('log+vce', "Initiating Docking Procedure")
         self.request_docking(1)
         sleep(1)
 
@@ -1698,143 +1703,6 @@ class EDAutopilot:
         also can then perform trades if specific in the waypoints file."""
         self.waypoint.waypoint_assist(keys, scr_reg)
 
-        # # TODO - Move this function to EDWayPoint class
-        # if len(self.waypoint.waypoints) == 0:
-        #     self.ap_ckb('log', "No Waypoint file loaded. Exiting Waypoint Assist.")
-        #     return
-        #
-        # self.waypoint.step = 0  # start at first waypoint
-        # self.ap_ckb('log', "Waypoint file: "+str(Path(self.waypoint.filename).name))
-        #
-        # # Loop until complete, or error
-        # while 1:
-        #     # Current location
-        #     cur_star_system = self.jn.ship_state()['cur_star_system'].upper()
-        #     cur_station = self.jn.ship_state()['cur_station'].upper()
-        #     cur_station_type = self.jn.ship_state()['cur_station_type'].upper()
-        #
-        #     # Current in game destination
-        #     status = self.status.get_cleaned_data()
-        #     destination_system = status['Destination_System']  # The system ID
-        #     destination_body = status['Destination_Body']  # The body number (0 for prim star)
-        #     destination_name = status['Destination_Name']  # The system/body/station/settlement name
-        #
-        #     # ====================================
-        #     # Get next Waypoint
-        #     # ====================================
-        #
-        #     # Get the waypoint details
-        #     dest_key, next_waypoint = self.waypoint.get_waypoint()
-        #     if dest_key is None:
-        #         self.ap_ckb('log', "Waypoint list complete.")
-        #         break
-        #
-        #     # Flag if we are using bookmarks
-        #     gal_bookmark = next_waypoint.get('GalaxyBookmarkNumber', -1) > 0
-        #     sys_bookmark = next_waypoint.get('SystemBookmarkNumber', -1) > 0
-        #
-        #     next_system = next_waypoint.get('SystemName', '').upper()
-        #     next_station = next_waypoint.get('StationName', '').upper()
-        #
-        #     self.ap_ckb('log', f"Next Waypoint: {next_system} | {next_station}")
-        #
-        #     # ====================================
-        #     # Target and travel to a System
-        #     # ====================================
-        #
-        #     # Check current system and go to next system if different
-        #     if cur_star_system != next_system:
-        #         # Select destination in galaxy map based on name
-        #         if not self.waypoint.set_gal_map_destination_text(self, next_system, self.jn.ship_state):
-        #             self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
-        #
-        #             # Jump to the system
-        #             res = self.jump_to_system(scr_reg, next_system)
-        #
-        #         continue
-        #     else:
-        #         self.update_ap_status(f"Already in target System: {next_system}")
-        #         self.ap_ckb('log', f"Already in target System: {next_system}")
-        #
-        #     # ====================================
-        #     # Target and travel to a local Station
-        #     # ====================================
-        #
-        #     # If we are in the right system, check if we are already docked.
-        #     docked_at_stn = False
-        #     is_docked = self.status.get_flag(FlagsDocked)
-        #     if is_docked:
-        #         # Check if we are at the correct station. Note that for FCs, the station name
-        #         # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
-        #         # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
-        #         if cur_station_type == 'FleetCarrier'.upper():
-        #             docked_at_stn = next_station.endswith(cur_station)
-        #         elif next_station == 'System Colonisation Ship'.upper():
-        #             if (cur_station_type == 'SurfaceStation'.upper() and
-        #                     'ColonisationShip'.upper() in cur_station.upper()):
-        #                 docked_at_stn = True
-        #         elif next_station.startswith('Orbital Construction Site'.upper()):
-        #             if (cur_station_type == 'SurfaceStation'.upper() and
-        #                     'ColonisationShip'.upper() in cur_station.upper()):
-        #                 docked_at_stn = True
-        #         else:
-        #             docked_at_stn = cur_station == next_station
-        #
-        #     # Check current station and go to it if different
-        #     if not docked_at_stn:
-        #         # Check if we need to travel to a station, else we are done.
-        #         # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text
-        #         if sys_bookmark or gal_bookmark or next_station != "":
-        #             # If waypoint file has a Station Name associated then attempt targeting it
-        #             self.update_ap_status(f"Targeting Station: {next_station}")
-        #
-        #             if gal_bookmark:
-        #                 # Set destination via gal bookmark, not system bookmark
-        #                 res = self.waypoint.set_gal_map_destination_bookmark(self, dest_key)
-        #                 if not res:
-        #                     self.ap_ckb('log', f"Waypoint Assist: Unable to set Galaxy Map target")
-        #
-        #             elif sys_bookmark:
-        #                 # Set destination via system bookmark
-        #                 res = self.waypoint.set_sys_map_destination_bookmark(self, dest_key)
-        #                 if not res:
-        #                     self.ap_ckb('log', f"Waypoint Assist: Unable to set System Map target")
-        #
-        #             elif next_station != "":
-        #                 # Need OCR added in for this (WIP)
-        #                 need_ocr = True
-        #                 # res = self.nav_panel.lock_destination(station_name)
-        #
-        #             # Jump to the station by name
-        #             res = self.supercruise_to_station(scr_reg, next_station)
-        #             continue
-        #         else:
-        #             self.update_ap_status(f"Arrived at target System: {next_system}")
-        #             self.ap_ckb('log', f"Arrived at target System: {next_system}")
-        #     else:
-        #         self.update_ap_status(f"Already at target Station: {next_station}")
-        #         self.ap_ckb('log', f"Already at target Station: {next_station}")
-        #
-        #     # ====================================
-        #     # Dock and Trade at Station
-        #     # ====================================
-        #
-        #     # Are we at the correct station to trade?
-        #     if docked_at_stn:  # and (next_station != "" or sys_bookmark):
-        #         # Docked - let do trade
-        #         self.ap_ckb('log', f"Execute trade at Station: {next_station}")
-        #         self.waypoint.execute_trade(self, dest_key)
-        #
-        #     # Mark this waypoint as completed
-        #     self.waypoint.mark_waypoint_complete(dest_key)
-        #
-        #     self.update_ap_status("Setting route to next waypoint")
-        #     self.update_ap_status("Setting route to next waypoint")
-        #
-        # # Done with waypoints
-        # self.ap_ckb('log', "Waypoint Route Complete, total distance jumped: "+str(self.total_dist_jumped)+"LY")
-        # self.update_ap_status("Idle")
-
     def jump_to_system(self, scr_reg, system_name: str) -> bool:
         """ Jumps to the specified system. Returns True if in the system already,
         or we successfully travel there, else False. """
@@ -2005,6 +1873,7 @@ class EDAutopilot:
                     self.nav_align(scr_reg) # Align to target
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
+                logger.debug("Gliding")
                 self.status.wait_for_flag2_off(Flags2GlideMode, 30)
                 break
             else:
@@ -2047,16 +1916,15 @@ class EDAutopilot:
                     skip_docking = True
 
             if not skip_docking:
-                self.update_ap_status("Initiating Docking Procedure")
                 self.dock()  # go into docking sequence
-                self.vce.say("Docking complete, Refueled")
+                self.ap_ckb('log+vce', "Docking complete, refueled, repaired and rearmed")
                 self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
-        self.vce.say("Supercruise Assist complete")
+        self.ap_ckb('log+vce', "Supercruise Assist complete")
 
     def robigo_assist(self):
         self.robigo.loop(self)
@@ -2226,70 +2094,6 @@ class EDAutopilot:
         self.config["LogDEBUG"] = False
         self.config["LogINFO"] = True
         logger.setLevel(logging.INFO)
-
-    def system_services(self):
-        # Monitor system resources (CPU utilisation for OCR etc.)
-        # Which may effect game performance
-        threading.Thread(target=self._system_resource_monitor, daemon=True).start()
-
-    def _system_resource_monitor(self):
-        """Monitor system resources and optimize performance"""
-
-        # Monitor various stats of the CPU and memory
-        last_check = time.time()
-        resource_stats = {"cpu_usage": [], "memory_usage": [], "network_latency": 0, "page_errs": 0}
-
-        while True:
-            print("_system_resource_monitor")
-            logger.debug("_system_resource_monitor")
-
-            # Make sure EDAP tasks are not taking too much memory which will cause
-            # ED to drag
-            current_memory = psutil.virtual_memory().percent
-            resource_stats["memory_usage"].append(current_memory)
-            # Determine network latency from network status log
-            resource_stats["network_latency"] = self.col_stat()
-            print(f"network_latency: {resource_stats['network_latency']}")
-            logger.debug(f"network_latency: {resource_stats['network_latency']}")
-            # Determine memory paging errors
-            resource_stats["page_errs"] = self.con_stat()
-            print(f"page_errs: {resource_stats['page_errs']}")
-            logger.debug(f"page_errs: {resource_stats['page_errs']}")
-
-            # Determine elapsed time. Do not want this to run too often and
-            # cause its own issues.
-            current_time = time.time()
-            elapsed_hours = (current_time - last_check) / 3600
-
-            # Clear diagnostic buffers cyclically
-            if elapsed_hours >= 4:
-                resource_stats["cpu_usage"] = {}
-                resource_stats["memory_usage"] = {}
-                resource_stats["page_errs"] = 0
-                resource_stats["network_latency"] = {}
-                last_check = time.time()
-
-            # Log excessive stat numbers
-            if len(resource_stats["memory_usage"]) > 100:
-                self.ap_ckb('memory_usage', 'memory_usage > 100.')
-                resource_stats["memory_usage"] = resource_stats["memory_usage"][-100:]
-            if len(resource_stats["cpu_usage"]) > 100:
-                self.ap_ckb('cpu_usage', 'cpu_usage > 100.')
-                resource_stats["cpu_usage"] = resource_stats["cpu_usage"][-100:]
-            if resource_stats["page_errs"] > 50:
-                self.ap_ckb('diag', 'page_errs > 50.')
-                resource_stats["page_errs"] = resource_stats["page_errs"]
-            if resource_stats["network_latency"] > 50:
-                self.ap_ckb('diag', 'network_latency > 50.')
-                resource_stats["network_latency"] = resource_stats["network_latency"]
-
-            time.sleep(60)  # Check every minute
-
-    def col_stat(self):
-        return self.waypoint.stats_log['Colonisation']
-
-    def con_stat(self):
-        return self.waypoint.stats_log['Construction']
 
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
