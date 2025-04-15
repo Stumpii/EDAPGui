@@ -149,7 +149,7 @@ class EDInternalStatusPanel:
             # Wait and retry
             sleep(1)
 
-            # In case we are on a picture tab, cycle to the next tabeee
+            # In case we are on a picture tab, cycle to the next tab
             self.keys.send('CycleNextPanel')
 
         # Did not find anything
@@ -166,6 +166,73 @@ class EDInternalStatusPanel:
             self.keys.send("UI_Back")
             self.keys.send("HeadLookReset")
 
+    def transfer_to_fleetcarrier(self, ap):
+        """ Transfer all goods to Fleet Carrier """
+        self.ap_ckb('log+vce', "Executing transfer to Fleet Carrier.")
+        logger.debug("transfer_to_fleetcarrier: entered")
+        # Go to the internal (right) panel inventory tab
+        res = self.show_inventory_tab()
+
+        # Assumes on the INVENTORY tab
+        ap.keys.send('UI_Right')
+        sleep(0.1)
+        ap.keys.send('UI_Up')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Right')  # To TRANSFER >>
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Click TRANSFER >>
+        sleep(0.1)
+        ap.keys.send('UI_Up', hold=3)
+        sleep(0.1)
+        ap.keys.send('UI_Up')
+        sleep(0.1)
+        ap.keys.send('UI_Select')
+
+        ap.keys.send('UI_Select')
+        sleep(0.1)
+
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        print("End of unload FC")
+        # quit()
+
+    def transfer_from_fleetcarrier(self, ap, buy_commodities):
+        """ Transfer specific good from Fleet Carrier to ship"""
+        self.ap_ckb('log+vce', f"Executing transfer from Fleet Carrier.")
+        logger.debug("transfer_to_fleetcarrier: entered")
+        # Go to the internal (right) panel inventory tab
+        res = self.show_inventory_tab()
+
+        # Assumes on the INVENTORY tab
+        ap.keys.send('UI_Right')
+        sleep(0.1)
+        ap.keys.send('UI_Up')  # To FILTERS
+        sleep(0.1)
+        ap.keys.send('UI_Right')  # To >> TRANSFER
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Click >> TRANSFER
+        sleep(0.1)
+        ap.keys.send('UI_Up', hold=3)  # go to top of list
+        sleep(0.1)
+
+        index = buy_commodities['Down']
+
+        ap.keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
+        sleep(0.5)
+        ap.keys.send('UI_Left', hold=10)  # Transfer commodity, wait 10 sec to xfer
+
+        sleep(0.1)
+        ap.keys.send('UI_Select')  # Take us down to "Confirm Item Transfer"
+
+        ap.keys.send('UI_Select')  # Click Transfer
+        sleep(0.1)
+
+        ap.keys.send("UI_Back", repeat=4)
+        sleep(0.2)
+        ap.keys.send("HeadLookReset")
+        print("End of transfer from FC")
+
 
 # Usage Example
 if __name__ == "__main__":
@@ -173,5 +240,5 @@ if __name__ == "__main__":
     scr = Screen()
     mykeys = EDKeys()
     mykeys.activate_window = True  # Helps with single steps testing
-    nav_pnl = EDInternalStatusPanel(scr, mykeys, None)
+    nav_pnl = EDInternalStatusPanel(scr, mykeys, None, None)
     nav_pnl.show_inventory_tab()

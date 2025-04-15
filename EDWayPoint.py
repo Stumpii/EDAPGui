@@ -43,7 +43,7 @@ class EDWayPoint:
 
         self.num_waypoints = len(self.waypoints)
 
-        #print("waypoints: "+str(self.waypoints))
+        # print("waypoints: "+str(self.waypoints))
         self.step = 0
 
         self.mouse = MousePoint()
@@ -241,42 +241,28 @@ class EDWayPoint:
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
             # We start off on the Main Menu in the Station
-            ap.keys.send('UI_Up', repeat=3)  # make sure at the top
-            ap.keys.send('UI_Down')
-            ap.keys.send('UI_Select')  # Select StarPort Services
-
-            sleep(5)  # wait for new menu to finish rendering
+            # ap.keys.send('UI_Up', repeat=3)  # make sure at the top
+            # ap.keys.send('UI_Down')
+            # ap.keys.send('UI_Select')  # Select StarPort Services
+            # sleep(5)  # wait for new menu to finish rendering
+            self.ap.stn_svcs_in_ship.goto_station_services()
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
-                ap.keys.send('UI_Left', repeat=3)  # Go to table
-                ap.keys.send('UI_Down', hold=2)  # Go to bottom
-                ap.keys.send('UI_Up')  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
-                ap.keys.send('UI_Left', repeat=2)  # Go to RESET
-                ap.keys.send('UI_Right', repeat=2)  # Go to TRANSFER ALL
-                ap.keys.send('UI_Select')  # Select TRANSFER ALL
-                sleep(0.5)
-
-                ap.keys.send('UI_Left')  # Go to CONFIRM TRANSFER
-                ap.keys.send('UI_Select')  # Select CONFIRM TRANSFER
-                sleep(2)
-
-                ap.keys.send('UI_Down')  # Go to EXIT
-                ap.keys.send('UI_Select')  # Select EXIT
-
-                sleep(2)  # give time to popdown menu
+                # Sell all to colonisation/construction ship
+                self.sell_to_colonisation_ship(ap)
 
         elif fleet_carrier and fleetcarrier_transfer:
-            # Fleet Carrier in Tranfer mode
+            # Fleet Carrier in Transfer mode
             self.stats_log['Fleet Carrier'] = self.stats_log['Fleet Carrier'] + 1
             # --------- SELL ----------
             if len(sell_commodities) > 0:
                 # Transfer to Fleet Carrier
-                self.transfer_to_fleetcarrier(ap)
+                self.ap.internal_panel.transfer_to_fleetcarrier(ap)
 
             # --------- BUY ----------
             if len(buy_commodities) > 0:
-                self.transfer_from_fleetcarrier(ap, buy_commodities)
+                self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
             self.stats_log['Station'] = self.stats_log['Station'] + 1
@@ -288,11 +274,11 @@ class EDWayPoint:
             market_time_old = self.market_parser.current_data['timestamp']
 
             # We start off on the Main Menu in the Station
-            ap.keys.send('UI_Up', repeat=3)  # make sure at the top
-            ap.keys.send('UI_Down')
-            ap.keys.send('UI_Select')  # Select StarPort Services
-
-            sleep(8)  # wait for new menu to finish rendering
+            # ap.keys.send('UI_Up', repeat=3)  # make sure at the top
+            # ap.keys.send('UI_Down')
+            # ap.keys.send('UI_Select')  # Select StarPort Services
+            # sleep(8)  # wait for new menu to finish rendering
+            self.ap.stn_svcs_in_ship.goto_station_services()
 
             # CONNECTED TO menu is different between stations and fleet carriers
             if not fleet_carrier:
@@ -318,10 +304,11 @@ class EDWayPoint:
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
-                self.select_sell(ap.keys)
+                # Select the BUY option
+                self.ap.stn_svcs_in_ship.select_sell(ap.keys)
 
                 for i, key in enumerate(sell_commodities):
-                    result, qty = self.sell_commodity(ap.keys, key, sell_commodities[key])
+                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key])
 
                     # Update counts if necessary
                     if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
@@ -339,7 +326,8 @@ class EDWayPoint:
 
             # --------- BUY ----------
             if len(buy_commodities) > 0 or len(global_buy_commodities) > 0:
-                self.select_buy(ap.keys)
+                # Select the BUY option
+                self.ap.stn_svcs_in_ship.select_buy(ap.keys)
 
                 # Go through buy commodities list
                 for i, key in enumerate(buy_commodities):
@@ -357,7 +345,7 @@ class EDWayPoint:
                     logger.info(f"Execute trade: Shopping list requests {qty_to_buy} units of {key}")
 
                     # Attempt to buy the commodity
-                    result, qty = self.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
+                    result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
                     logger.info(f"Execute trade: Bought {qty} units of {key}")
 
                     # If we bought any goods, wait for status file to update with
@@ -385,7 +373,7 @@ class EDWayPoint:
                     logger.info(f"Execute trade: Global shopping list requests {qty_to_buy} units of {key}")
 
                     # Attempt to buy the commodity
-                    result, qty = self.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
+                    result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
                     logger.info(f"Execute trade: Bought {qty} units of {key}")
 
                     # If we bought any goods, wait for status file to update with
@@ -403,231 +391,26 @@ class EDWayPoint:
             sleep(1.5)  # give time to popdown
             # Go to ship view
             ap.ship_control.goto_ship_view()
-            #
-            # ap.keys.send('UI_Left')    # back to left menu
-            # ap.keys.send('UI_Down', repeat=8)    # go down 4x to highlight Exit
-            # ap.keys.send('UI_Select')  # Select Exit, back to StartPort Menu
-            # sleep(1) # give time to get back to menu
-            # if self.is_odyssey:
-            #     ap.keys.send('UI_Down', repeat=4)    # go down 4x to highlight Exit
-            #
-            # ap.keys.send('UI_Select')  # Select Exit, back to top menu
-            # sleep(2)  # give time to popdown menu
 
-    def transfer_to_fleetcarrier(self, ap):
-        """ Transfer all goods to Fleet Carrier """
-        self.ap.ap_ckb('log+vce', "Executing transfer to Fleet Carrier.")
-        logger.debug("transfer_to_fleetcarrier: entered")
-        # Go to the internal (right) panel inventory tab
-        res = ap.internal_panel.show_inventory_tab()
-
-        # Assumes on the INVENTORY tab
-        ap.keys.send('UI_Right')
-        sleep(0.1)
-        ap.keys.send('UI_Up')  # To FILTERS
-        sleep(0.1)
-        ap.keys.send('UI_Right')  # To TRANSFER >>
-        sleep(0.1)
-        ap.keys.send('UI_Select')  # Click TRANSFER >>
-        sleep(0.1)
-        ap.keys.send('UI_Up', hold=3)
-        sleep(0.1)
-        ap.keys.send('UI_Up')
-        sleep(0.1)
-        ap.keys.send('UI_Select')
-
-        ap.keys.send('UI_Select')
-        sleep(0.1)
-
-        ap.keys.send("UI_Back", repeat=4)
-        sleep(0.2)
-        ap.keys.send("HeadLookReset")
-        print("End of unload FC")
-        # quit()
-
-    def transfer_from_fleetcarrier(self, ap, buy_commodities):
-        """ Transfer specific good from Fleet Carrier to ship"""
-        self.ap.ap_ckb('log+vce', f"Executing transfer from Fleet Carrier.")
-        logger.debug("transfer_to_fleetcarrier: entered")
-        # Go to the internal (right) panel inventory tab
-        res = ap.internal_panel.show_inventory_tab()
-
-        # Assumes on the INVENTORY tab
-        ap.keys.send('UI_Right')
-        sleep(0.1)
-        ap.keys.send('UI_Up')  # To FILTERS
-        sleep(0.1)
-        ap.keys.send('UI_Right')  # To >> TRANSFER
-        sleep(0.1)
-        ap.keys.send('UI_Select')  # Click >> TRANSFER
-        sleep(0.1)
-        ap.keys.send('UI_Up', hold=3)  # go to top of list
-        sleep(0.1)
-
-        index = buy_commodities['Down']
-
-        ap.keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
+    def sell_to_colonisation_ship(self, ap):
+        """ Sell all cargo to a colonisation/construction ship.
+        """
+        ap.keys.send('UI_Left', repeat=3)  # Go to table
+        ap.keys.send('UI_Down', hold=2)  # Go to bottom
+        ap.keys.send('UI_Up')  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
+        ap.keys.send('UI_Left', repeat=2)  # Go to RESET
+        ap.keys.send('UI_Right', repeat=2)  # Go to TRANSFER ALL
+        ap.keys.send('UI_Select')  # Select TRANSFER ALL
         sleep(0.5)
-        ap.keys.send('UI_Left', hold=10)  # Transfer commodity, wait 10 sec to xfer
 
-        sleep(0.1)
-        ap.keys.send('UI_Select')  # Take us down to "Confirm Item Transfer"
+        ap.keys.send('UI_Left')  # Go to CONFIRM TRANSFER
+        ap.keys.send('UI_Select')  # Select CONFIRM TRANSFER
+        sleep(2)
 
-        ap.keys.send('UI_Select')  # Click Transfer
-        sleep(0.1)
+        ap.keys.send('UI_Down')  # Go to EXIT
+        ap.keys.send('UI_Select')  # Select EXIT
 
-        ap.keys.send("UI_Back", repeat=4)
-        sleep(0.2)
-        ap.keys.send("HeadLookReset")
-        print("End of transfer from FC")
-
-    def select_buy(self, keys) -> bool:
-        """ Select Buy. Assumes on Commodities Market screen. """
-
-        # Select Buy
-        keys.send("UI_Left", repeat=2)
-        keys.send("UI_Up", repeat=4)
-
-        keys.send("UI_Select")  # Select Buy
-
-        sleep(0.5)  # give time to bring up list
-        keys.send('UI_Right')  # Go to top of commodities list
-        return True
-
-    def select_sell(self, keys) -> bool:
-        """ Select Buy. Assumes on Commodities Market screen. """
-
-        # Select Buy
-        keys.send("UI_Left", repeat=2)
-        keys.send("UI_Up", repeat=4)
-
-        keys.send("UI_Down")
-        keys.send("UI_Select")  # Select Sell
-
-        sleep(0.5)  # give time to bring up list
-        keys.send('UI_Right')  # Go to top of commodities list
-        return True
-
-    def buy_commodity(self, keys, name: str, qty: int, free_cargo: int) -> tuple[bool, int]:
-        """ Buy qty of commodity. If qty >= 9999 then buy as much as possible.
-        Assumed to be in the commodities buy screen in the list. """
-
-        # If we are updating requirement count, me might have all the qty we need
-        if qty <= 0:
-            return False, 0
-
-        # Determine if station sells the commodity!
-        self.market_parser.get_market_data()
-        if not self.market_parser.can_buy_item(name):
-            self.ap.ap_ckb('log+vce',
-                           f"'{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
-            logger.debug(f"Item '{name}' is not sold or has no stock at {self.market_parser.get_market_name()}.")
-            return False, 0
-
-        # Find commodity in market and return the index
-        buyable_items = self.market_parser.get_buyable_items()
-        index = -1
-        stock = 0
-        for i, value in enumerate(buyable_items):
-            if value['Name_Localised'].upper() == name.upper():
-                index = i
-                stock = value['Stock']
-                logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index}.")
-                break
-
-        # Actual qty we can sell
-        act_qty = min(qty, stock, free_cargo)
-
-        # See if we buy all and if so, remove the item to update the list, as the item will be removed
-        # from the commodities screen, but the market.json will not be updated.
-        buy_all = act_qty == stock
-        if buy_all:
-            for i, value in enumerate(self.market_parser.current_data['Items']):
-                if value['Name_Localised'].upper() == name.upper():
-                    # Set the stock bracket to 0, so it does not get included in available commodities list.
-                    self.market_parser.current_data['Items'][i]['StockBracket'] = 0
-
-        if index > -1:
-            keys.send('UI_Up', hold=2.0)  # go up 10x in case were not on top of list
-            # keys.send('UI_Up', repeat=sell_down+5)  # go up sell_down times in case were not on top of list (+5 for pad)
-            keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
-            sleep(0.5)
-            keys.send('UI_Select')  # Select that commodity
-
-            sleep(0.5)  # give time to popup
-            keys.send('UI_Up', repeat=2)  # go up to quantity to buy (may not default to this)
-            # Log the planned quantity
-            self.ap.ap_ckb('log+vce', f"Buying {act_qty} units of {name}.")
-            logger.info(f"Attempting to buy {act_qty} units of {name}")
-            # Increment count
-            if qty >= 9999 or qty >= stock or qty >= free_cargo:
-                keys.send("UI_Right", hold=4)
-            else:
-                keys.send("UI_Right", hold=0.04, repeat=act_qty)
-            keys.send('UI_Down')
-            keys.send('UI_Select')  # Select Buy
-            sleep(0.5)
-            #keys.send('UI_Back')  # Back to commodities list
-
-        return True, act_qty
-
-    def sell_commodity(self, keys, name: str, qty: int) -> tuple[bool, int]:
-        """ Sell qty of commodity. If qty >= 9999 then sell as much as possible.
-        Assumed to be in the commodities sell screen in the list. """
-
-        # If we are updating requirement count, me might have sold all we have
-        if qty <= 0:
-            return False, 0
-
-        # Determine if station buys the commodity!
-        self.market_parser.get_market_data()
-        if not self.market_parser.can_sell_item(name):
-            self.ap.ap_ckb('log+vce', f"'{name}' is not bought at {self.market_parser.get_market_name()}.")
-            logger.debug(f"Item '{name}' is not bought at {self.market_parser.get_market_name()}.")
-            return False, 0
-
-        # Find commodity in market and return the index
-        sellable_items = self.market_parser.get_sellable_items()
-        index = -1
-        demand = 0
-        for i, value in enumerate(sellable_items):
-            if value['Name_Localised'].upper() == name.upper():
-                index = i
-                demand = value['Demand']
-                logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index}.")
-                break
-
-        # Qty we can sell. Unlike buying, we can sell more than the demand
-        # But maybe not at all stations!
-        act_qty = qty
-
-        if index > -1:
-            keys.send('UI_Up', hold=2.0)  # go up 10x in case were not on top of list
-            # ap.keys.send('UI_Up', repeat=10)  # go up 10x in case were not on top of list
-            keys.send('UI_Down', hold=0.05, repeat=index)  # go down # of times user specified
-            sleep(0.5)
-            keys.send('UI_Select')  # Select that commodity
-
-            sleep(0.5)  # give time for popup
-            keys.send('UI_Up', repeat=2)  # make sure at top
-
-            # Log the planned quantity
-            if qty >= 9999:
-                self.ap.ap_ckb('log+vce', f"Selling all our units of {name}.")
-                logger.info(f"Attempting to sell all our units of {name}")
-                keys.send("UI_Right", hold=4)
-            else:
-                self.ap.ap_ckb('log+vce', f"Selling {act_qty} units of {name}.")
-                logger.info(f"Attempting to sell {act_qty} units of {name}")
-                keys.send('UI_Left', hold=4.0)  # Clear quantity to 0
-                keys.send("UI_Right", hold=0.04, repeat=act_qty)
-
-            keys.send('UI_Down')  # Down to the Sell button (already assume sell all)
-            keys.send('UI_Select')  # Select to Sell all
-            sleep(0.5)
-            #keys.send('UI_Back')  # Back to commodities list
-
-        return True, act_qty
+        sleep(2)  # give time to popdown menu
 
     def waypoint_assist(self, keys, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
@@ -831,18 +614,18 @@ def main():
     wp.step = 0  # start at first waypoint
     keys = EDKeys()
     keys.activate_window = True
-    wp.select_buy(keys)
-    wp.buy_commodity(keys, "Steel", 100, 200)
-    wp.buy_commodity(keys, "Titanium", 5, 200)
-    #wp.sell_commodity(keys,"Gold", 1)
+    wp.ap.stn_svcs_in_ship.select_buy(keys)
+    wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Steel", 100, 200)
+    wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
+    # wp.sell_commodity(keys,"Gold", 1)
 
-    #dest = 'Enayex'
+    # dest = 'Enayex'
     #print(dest)
 
     #print("In waypoint_assist, at:"+str(dest))
 
     # already in doc config, test the trade
-    #wp.execute_trade(keys, dest)    
+    #wp.execute_trade(keys, dest)
 
     # Set the Route for the waypoint^#
     #dest = wp.waypoint_next(ap=None)
@@ -858,7 +641,7 @@ def main():
     # Mark this waypoint as complated
     #wp.mark_waypoint_complete(dest)
 
-    # set target to next waypoint and loop)::@
+    # set target to next waypoint and loop
     #dest = wp.waypoint_next(ap=None)
 
 

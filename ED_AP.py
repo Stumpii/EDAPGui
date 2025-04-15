@@ -9,6 +9,7 @@ import cv2
 from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
 from EDShipControl import EDShipControl
+from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
 from EDlogger import logging
 import Image_Templates
@@ -185,6 +186,7 @@ class EDAutopilot:
         self.internal_panel = EDInternalStatusPanel(self.scr, self.keys, cb, self.ship_control)
         self.galaxy_map = EDGalaxyMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.stn_svcs_in_ship = EDStationServicesInShip(self.scr, self.keys, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
