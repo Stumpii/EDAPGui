@@ -183,10 +183,10 @@ class EDAutopilot:
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
         self.ship_control = EDShipControl(self.scr, self.keys, cb)
-        self.internal_panel = EDInternalStatusPanel(self.scr, self.keys, cb, self.ship_control)
-        self.galaxy_map = EDGalaxyMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
+        self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
-        self.stn_svcs_in_ship = EDStationServicesInShip(self.scr, self.keys, cb)
+        self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -525,6 +525,8 @@ class EDAutopilot:
             self.ap_ckb('log',
                         f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
 
+        # reload the templates with the new (or previous value)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
     def calibrate_ship_compass(self):
         """ Calibrate Compass """
@@ -554,10 +556,15 @@ class EDAutopilot:
             c_scaleX = float(scale_max / 100)
             self.ap_ckb('log',
                         f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scaleX:5.4f}')
+            # Keep new value
             self.compass_scale = c_scaleX
+
         else:
             self.ap_ckb('log',
                         f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
+
+        # reload the templates with the new (or previous value)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale)
 
     # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
     #  if so, announce finding and log the type of world found

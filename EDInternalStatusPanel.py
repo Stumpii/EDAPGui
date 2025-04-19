@@ -15,13 +15,13 @@ from EDlogger import logger
 class EDInternalStatusPanel:
     """ The Internal (Right hand) Ship Status Panel. """
 
-    def __init__(self, screen, keys, cb, ship_control):
+    def __init__(self, ed_ap, screen, keys, cb):
+        self.ap = ed_ap
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
-        self.ship_control = ship_control
 
         self.modules_tab_text = "MODULES"
         self.fire_groups_tab_text = "FIRE GROUPS"
@@ -52,9 +52,9 @@ class EDInternalStatusPanel:
         else:
             print("Open Internal Panel")
             logger.debug("show_right_panel: Open Internal Panel")
-            self.ship_control.goto_ship_view(self.keys, self.status_parser)
-            self.keys.send("HeadLookReset")
+            self.ap.ship_control.goto_cockpit_view()
 
+            self.keys.send("HeadLookReset")
             self.keys.send('UIFocus', state=1)
             self.keys.send('UI_Right')
             self.keys.send('UIFocus', state=0)
@@ -171,7 +171,7 @@ class EDInternalStatusPanel:
         self.ap_ckb('log+vce', "Executing transfer to Fleet Carrier.")
         logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
-        res = self.show_inventory_tab()
+        self.show_inventory_tab()
 
         # Assumes on the INVENTORY tab
         ap.keys.send('UI_Right')
@@ -202,7 +202,7 @@ class EDInternalStatusPanel:
         self.ap_ckb('log+vce', f"Executing transfer from Fleet Carrier.")
         logger.debug("transfer_to_fleetcarrier: entered")
         # Go to the internal (right) panel inventory tab
-        res = self.show_inventory_tab()
+        self.show_inventory_tab()
 
         # Assumes on the INVENTORY tab
         ap.keys.send('UI_Right')

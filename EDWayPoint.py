@@ -88,6 +88,9 @@ class EDWayPoint:
                     if 'UpdateCommodityCount' not in value:
                         logger.warning(f"Waypoint file key '{key}' does not contain 'UpdateCommodityCount'.")
                         err = True
+                    if 'Skip' not in value:
+                        logger.warning(f"Waypoint file key '{key}' does not contain 'Skip'.")
+                        err = True
                 else:
                     # All other cases
                     if 'SystemName' not in value:
@@ -205,11 +208,7 @@ class EDWayPoint:
 
     def log_stats(self):
         calc1 = 1.5 ** self.stats_log['Colonisation']
-        print(f'Colonisation delay: {calc1}')
-        # calc2 = 1.5 ** self.stats_log['Construction']
-        # print(f'Construction delay: {calc2}')
-        calc2 = 1.5 ** self.stats_log['Station']
-        print(f'Station delay: {calc2}')
+        calc2 = 1.5 ** self.stats_log['Construction']
         sleep(max(calc1, calc2))
 
     def execute_trade(self, ap, dest_key):
@@ -351,7 +350,7 @@ class EDWayPoint:
                     # If we bought any goods, wait for status file to update with
                     # new cargo count for next commodity
                     if qty > 0:
-                        res = ap.status.wait_for_file_change(cargo_timestamp, 5)
+                        ap.status.wait_for_file_change(cargo_timestamp, 5)
 
                     # Update counts if necessary
                     if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
@@ -379,7 +378,7 @@ class EDWayPoint:
                     # If we bought any goods, wait for status file to update with
                     # new cargo count for next commodity
                     if qty > 0:
-                        res = ap.status.wait_for_file_change(cargo_timestamp, 5)
+                        ap.status.wait_for_file_change(cargo_timestamp, 5)
 
                     # Update counts if necessary
                     if qty > 0 and self.waypoints['GlobalShoppingList']['UpdateCommodityCount']:
@@ -390,7 +389,7 @@ class EDWayPoint:
 
             sleep(1.5)  # give time to popdown
             # Go to ship view
-            ap.ship_control.goto_ship_view()
+            ap.ship_control.goto_cockpit_view()
 
     def sell_to_colonisation_ship(self, ap):
         """ Sell all cargo to a colonisation/construction ship.

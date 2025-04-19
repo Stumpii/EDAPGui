@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from EDAP_data import GuiFocusNoFocus
 from MarketParser import MarketParser
 from OCR import OCR
 from StatusParser import StatusParser
@@ -10,7 +9,8 @@ from EDlogger import logger
 
 class EDStationServicesInShip:
     """ Handles Station Services In Ship. """
-    def __init__(self, screen, keys, cb):
+    def __init__(self, ed_ap, screen, keys, cb):
+        self.ap = ed_ap
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys
@@ -18,23 +18,10 @@ class EDStationServicesInShip:
         self.ap_ckb = cb
         self.market_parser = MarketParser()
 
-    def goto_ship_view(self) -> bool:
-        """ Goto ship view.
-        @return: True once complete.
-        """
-        # Go down to ship view
-        while not self.status_parser.get_gui_focus() == GuiFocusNoFocus:
-            self.keys.send("UI_Back")  # make sure back in ship view
-
-        self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
-
-        return True
-
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """
-        # Go to ship view
-        self.goto_ship_view()
-        # self.keys.send("UI_Left", hold=1)  # go to very left (refuel line)
+        # Go to cockpit view
+        self.ap.ship_control.goto_cockpit_view()
 
         self.keys.send("UI_Down")  # station services
         self.keys.send("UI_Select")  # station services
@@ -189,5 +176,4 @@ class EDStationServicesInShip:
             # keys.send('UI_Back')  # Back to commodities list
 
         return True, act_qty
-
 

@@ -14,15 +14,14 @@ class EDShipControl:
         self.status_parser = StatusParser()
         self.ap_ckb = cb
 
-    def goto_ship_view(self) -> bool:
-        """ Goto ship view.
+    def goto_cockpit_view(self) -> bool:
+        """ Goto cockpit view.
         @return: True once complete.
         """
-        # Go down to ship view
+        # Go down to cockpit view
         while not self.status_parser.get_gui_focus() == GuiFocusNoFocus:
-            self.keys.send("UI_Back")  # make sure back in ship view
+            self.keys.send("UI_Back")  # make sure back in cockpit view
 
-        # self.keys.send("UI_Back", repeat=5)  # make sure back in ship view
         self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
 
         return True

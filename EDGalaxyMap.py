@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from EDAP_data import GuiFocusGalaxyMap
 from OCR import OCR
 from StatusParser import StatusParser
 from time import sleep
@@ -9,7 +10,8 @@ from pyautogui import typewrite
 
 class EDGalaxyMap:
     """ Handles the Galaxy Map. """
-    def __init__(self, screen, keys, cb, is_odyssey=True):
+    def __init__(self, ed_ap, screen, keys, cb, is_odyssey=True):
+        self.ap = ed_ap
         self.is_odyssey = is_odyssey
         self.screen = screen
         self.ocr = OCR(screen)
@@ -19,15 +21,14 @@ class EDGalaxyMap:
 
     def set_gal_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the gal map destination using a bookmark.
-        @param ap: EDAP reference.
+        @param ap: ED_AP reference.
         @param bookmark_type: The bookmark type (Favorite, System, Body, Station or Settlement), Favorite
          being the default if no match is made with the other options.
         @param bookmark_position: The position in the bookmark list, starting at 1 for the first bookmark.
         @return: True if bookmark could be selected, else False
         """
         if self.is_odyssey and bookmark_position > 0:
-            ap.keys.send('GalaxyMapOpen')
-            sleep(2)
+            self.goto_galaxy_map()
 
             ap.keys.send('UI_Left')  # Go to BOOKMARKS
             sleep(.5)
@@ -53,6 +54,7 @@ class EDGalaxyMap:
             sleep(.25)
             ap.keys.send('UI_Select', hold=3.0)
 
+            # Close Galaxy map
             ap.keys.send('GalaxyMapOpen')
             sleep(0.5)
             return True
@@ -65,14 +67,12 @@ class EDGalaxyMap:
         if not self.is_odyssey:
             return ap.galaxy_map.set_gal_map_destination_text_horizons(ap, target_name, target_select_cb)
         else:
-            return ap.galaxy_map.set_gal_map_destination_text_odyssey(ap, target_name, target_select_cb)
+            return ap.galaxy_map.set_gal_map_destination_text_odyssey(ap, target_name)
 
-    @staticmethod
-    def set_gal_map_destination_text_horizons(ap, target_name, target_select_cb=None) -> bool:
+    def set_gal_map_destination_text_horizons(self, ap, target_name, target_select_cb=None) -> bool:
         """ This sequence for the Horizons. """
-        # TODO - Move this to Gal Map class
-        ap.keys.send('GalaxyMapOpen')
-        sleep(2)
+        self.goto_galaxy_map()
+
         ap.keys.send('CycleNextPanel')
         sleep(1)
         ap.keys.send('UI_Select')
@@ -92,28 +92,24 @@ class EDGalaxyMap:
         ap.keys.send('UI_Select')
 
         # if got passed through the ship() object, lets call it to see if a target has been
-        # selected yet.. otherwise we wait.  If long route, it may take a few seconds
+        # selected yet... otherwise we wait.  If long route, it may take a few seconds
         if target_select_cb is not None:
             while not target_select_cb()['target']:
                 sleep(1)
 
+        # Close Galaxy map
         ap.keys.send('GalaxyMapOpen')
         sleep(2)
         return True
 
-    @staticmethod
-    def set_gal_map_destination_text_odyssey(ap, target_name, target_select_cb=None) -> bool:
+    def set_gal_map_destination_text_odyssey(self, ap, target_name) -> bool:
         """ This sequence for the Odyssey. """
-        # TODO - Move this to Gal Map class
-
-        ap.keys.send('GalaxyMapOpen')
-        # TODO - check this to OCR check
-        sleep(2)
+        self.goto_galaxy_map()
 
         # Check if the current nav route is to the target system
         last_nav_route_sys = ap.nav_route.get_last_system()
         if last_nav_route_sys.upper() == target_name.upper():
-            # Close Galaxy Map
+            # Close Galaxy map
             ap.keys.send('GalaxyMapOpen')
             return True
 
@@ -164,7 +160,7 @@ class EDGalaxyMap:
             sleep(0.05)
 
             # if got passed through the ship() object, lets call it to see if a target has been
-            # selected yet.. otherwise we wait.  If long route, it may take a few seconds
+            # selected yet... otherwise we wait.  If long route, it may take a few seconds
             if ap.nav_route is not None:
                 while 1:
                     curr_nav_route_sys = ap.nav_route.get_last_system()
@@ -183,6 +179,7 @@ class EDGalaxyMap:
                 # Cannot check route, so assume right
                 correct_route = True
 
+        # Close Galaxy map
         ap.keys.send('GalaxyMapOpen')
         return True
 
@@ -199,3 +196,23 @@ class EDGalaxyMap:
             # Error setting target
             logger.warning("Error setting waypoint, breaking")
             return False
+
+    def goto_galaxy_map(self):
+        """Open Galaxy Map if we are not there. Waits for map to load. Selects the search bar.
+        """
+        if self.status_parser.get_gui_focus() != GuiFocusGalaxyMap:
+            logger.debug("Opening Galaxy Map")
+            # Goto cockpit view
+            self.ap.ship_control.goto_cockpit_view()
+            # Goto Galaxy Map
+            self.keys.send('GalaxyMapOpen')
+            # Wait for map to load
+
+            # TODO - check this to OCR check
+            sleep(2)
+
+            self.keys.send('UI_Up')
+        else:
+            logger.debug("Galaxy Map is already open")
+            self.keys.send('UI_Left', repeat=2)
+            self.keys.send('UI_Right')
