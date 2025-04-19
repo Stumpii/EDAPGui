@@ -3,10 +3,18 @@ Waypoints are Systems that are captured in a waypoints.json file and read and pr
 
 ```py
 {
-"Mylaifai EP-G c27-631": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false}, 
-"Striechooe QR-S b37-0": {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,
-"Ploxao JV-E b31-1":     {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} ,
-"Beagle Point":          {"DockWithStation": null, "StationCoord": [0,0], "StationBookmark": -1, "SellNumDown": -1, "BuyNumDown": -1, "Completed": false} 
+  "1": {
+    "SystemName": "Mylaifai EP-G c27-631", "StationName": "", "GalaxyBookmarkType": "", "GalaxyBookmarkNumber": 0, "SystemBookmarkType": "", "SystemBookmarkNumber": 0, "SellCommodities": {}, "BuyCommodities": {}, "UpdateCommodityCount": false, "FleetCarrierTransfer": false, "Skip": false, "Completed": false
+  },
+  "2": {
+    "SystemName": "Striechooe QR-S b37-0", "StationName": "", "GalaxyBookmarkType": "", "GalaxyBookmarkNumber": 0, "SystemBookmarkType": "", "SystemBookmarkNumber": 0, "SellCommodities": {}, "BuyCommodities": {}, "UpdateCommodityCount": false, "FleetCarrierTransfer": false, "Skip": false, "Completed": false
+  },
+  "3": {
+    "SystemName": "Ploxao JV-E b31-1", "StationName": "", "GalaxyBookmarkType": "", "GalaxyBookmarkNumber": 0, "SystemBookmarkType": "", "SystemBookmarkNumber": 0, "SellCommodities": {}, "BuyCommodities": {}, "UpdateCommodityCount": false, "FleetCarrierTransfer": false, "Skip": false, "Completed": false
+  },
+  "4": {
+    "SystemName": "Beagle Point", "StationName": "", "GalaxyBookmarkType": "", "GalaxyBookmarkNumber": 0, "SystemBookmarkType": "", "SystemBookmarkNumber": 0, "SellCommodities": {}, "BuyCommodities": {}, "UpdateCommodityCount": false, "FleetCarrierTransfer": false, "Skip": false, "Completed": false
+  }
 }
 ```
 
