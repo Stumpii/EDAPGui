@@ -134,7 +134,7 @@ class MarketParser:
         # sellable_items = [x for x in data['Items'] if x['Consumer'] or x['Demand'] > 0]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
-        sellable_items = [x for x in data['Items'] if self.can_sell_item(x)]
+        sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
 
         # Sort by name, then category
@@ -168,7 +168,7 @@ class MarketParser:
         # buyable_items = [x for x in data['Items'] if x['Producer'] and x['Stock'] > 0]
         # StockBracket: 0=Not listed, 1=Low Stock, 2=Medium Stock, 3=High Stock
         # buyable_items = [x for x in data['Items'] if x['StockBracket'] > 0]
-        buyable_items = [x for x in data['Items'] if self.can_buy_item(x)]
+        buyable_items = [x for x in data['Items'] if self.can_buy_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
 
         # Sort by name, then category
