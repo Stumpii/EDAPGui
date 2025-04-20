@@ -211,8 +211,8 @@ class EDGalaxyMap:
             # TODO - check this to OCR check
             sleep(2)
 
-            self.keys.send('UI_Up')
+            self.keys.send('UI_Up')  # Go up to search bar
         else:
             logger.debug("Galaxy Map is already open")
             self.keys.send('UI_Left', repeat=2)
-            self.keys.send('UI_Right')
+            self.keys.send('UI_Up', hold=2)  # Go up to search bar. Allows 1 left to bookmarks.
