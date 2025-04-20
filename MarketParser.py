@@ -131,15 +131,20 @@ class MarketParser:
         }
         """
         data = self.get_market_data()
-        # sellable_items = [x for x in data['Items'] if x['Consumer'] or x['Demand'] > 0]
+        sellable_items = [x for x in data['Items'] if x['Consumer'] or x['Demand'] > 1]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
-        sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
+        #sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
         # print(json.dumps(newlist, indent=4))
 
         # Sort by name, then category
         sorted_list1 = sorted(sellable_items, key=lambda x: x['Name_Localised'].lower())
         sorted_list2 = sorted(sorted_list1, key=lambda x: x['Category_Localised'].lower())
+
+        logger.debug("Listing sellable commodities in market order")
+        for x in sorted_list2:
+            logger.debug(f"\t{x}")
+        logger.debug("Finished listing sellable commodities in market order")
 
         return sorted_list2
 
@@ -174,6 +179,11 @@ class MarketParser:
         # Sort by name, then category
         sorted_list1 = sorted(buyable_items, key=lambda x: x['Name_Localised'].lower())
         sorted_list2 = sorted(sorted_list1, key=lambda x: x['Category_Localised'].lower())
+
+        logger.debug("Listing buyable commodities in market order")
+        for x in sorted_list2:
+            logger.debug(f"\t{x}")
+        logger.debug("Finished listing buyable commodities in market order")
 
         return sorted_list2
 

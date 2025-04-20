@@ -290,6 +290,8 @@ class EDWayPoint:
                 ap.keys.send('UI_Right', repeat=2)
                 ap.keys.send('UI_Select')  # Select Commodities
 
+            self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
+
             # Wait for market to update
             self.market_parser.get_market_data()
             market_time_new = self.market_parser.current_data['timestamp']
