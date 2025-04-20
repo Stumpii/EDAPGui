@@ -1047,6 +1047,23 @@ class EDAutopilot:
         self.keys.send('UI_Back')
         self.keys.send('HeadLookReset')
 
+    def request_docking_cleanup(self):
+        """ After request docking, go back to NAVIGATION tab in Nav Panel from the CONTACTS tab. """
+        self.keys.send('UI_Back', repeat=10)
+        self.keys.send('HeadLookReset')
+        self.keys.send('UIFocus', state=1)
+        self.keys.send('UI_Left')
+        self.keys.send('UIFocus', state=0)
+        sleep(0.5)
+
+        self.keys.send('CycleNextPanel', hold=0.2)  # STATS tab
+        sleep(0.2)
+        self.keys.send('CycleNextPanel', hold=0.2)  # NAVIGATION tab
+
+        sleep(0.3)
+        self.keys.send('UI_Back')
+        self.keys.send('HeadLookReset')
+
     # Docking sequence.  Assumes in normal space, will get closer to the Station
     # then zero the velocity and execute menu commands to request docking, when granted
     # will wait a configurable time for dock.  Perform Refueling and Repair
@@ -1080,6 +1097,8 @@ class EDAutopilot:
         granted = False
         if self.jn.ship_state()['status'] == "dockinggranted":
             granted = True
+            # Go back to navigation tab
+            self.request_docking_cleanup()
         else:
             for i in range(tries):
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
@@ -1091,6 +1110,8 @@ class EDAutopilot:
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
                     granted = True
+                    # Go back to navigation tab
+                    self.request_docking_cleanup()
                     break
                 if self.jn.ship_state()['status'] == "dockingdenied":
                     pass
