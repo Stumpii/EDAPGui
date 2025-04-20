@@ -221,11 +221,21 @@ class EDWayPoint:
         if len(sell_commodities) == 0 and len(buy_commodities) == 0 and len(global_buy_commodities) == 0:
             return
 
-        # Determine type of station we are at
+        # Does this place have commodities service?
+        # From the journal, this works for stations (incl. outpost), colonisation ship and megaships
+        if ap.jn.ship_state()['StationServices'] is not None:
+            if 'commodities' not in ap.jn.ship_state()['StationServices']:
+                self.ap.ap_ckb('log', f"No commodities market at docked location.")
+                return
+        else:
+            self.ap.ap_ckb('log', f"No station services at docked location.")
+            return
 
+        # Determine type of station we are at
         colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
         orbital_construction_site = "OrbitalConstructionShip".upper() in ap.jn.ship_state()['cur_station'].upper()
         fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
+        outpost = ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
 
         if colonisation_ship or orbital_construction_site:
             if colonisation_ship:
@@ -260,30 +270,32 @@ class EDWayPoint:
                 self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
-            self.stats_log['Station'] = self.stats_log['Station'] + 1
-            print(f'Station: {self.stats_log["Station"]}')
             # Regular Station or Fleet Carrier in Buy/Sell mode
             self.ap.ap_ckb('log', "Executing trade.")
             logger.debug(f"Execute Trade: On Regular Station")
+            self.stats_log['Station'] = self.stats_log['Station'] + 1
+
             self.market_parser.get_market_data()
             market_time_old = self.market_parser.current_data['timestamp']
 
             # We start off on the Main Menu in the Station
-            # ap.keys.send('UI_Up', repeat=3)  # make sure at the top
-            # ap.keys.send('UI_Down')
-            # ap.keys.send('UI_Select')  # Select StarPort Services
-            # sleep(8)  # wait for new menu to finish rendering
             self.ap.stn_svcs_in_ship.goto_station_services()
 
             # CONNECTED TO menu is different between stations and fleet carriers
-            if not fleet_carrier:
-                # COMMODITIES MARKET location bottom left
-                ap.keys.send('UI_Down')
-                ap.keys.send('UI_Select')  # Select Commodities
-            else:
-                # COMMODITIES MARKET location top right, with:
+            if fleet_carrier:
+                # Fleet Carrier COMMODITIES MARKET location top right, with:
                 # uni cart, redemption, trit depot, shipyard, crew lounge
                 ap.keys.send('UI_Right', repeat=2)
+                ap.keys.send('UI_Select')  # Select Commodities
+
+            elif outpost:
+                # Outpost COMMODITIES MARKET location in middle column
+                ap.keys.send('UI_Right')
+                ap.keys.send('UI_Select')  # Select Commodities
+
+            else:
+                # Default station COMMODITIES MARKET location bottom left
+                ap.keys.send('UI_Down')
                 ap.keys.send('UI_Select')  # Select Commodities
 
             self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
