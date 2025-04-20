@@ -239,11 +239,7 @@ class EDWayPoint:
                 self.ap.ap_ckb('log', f"Executing trade with Orbital Construction Ship.")
                 logger.debug(f"Execute Trade: On Orbital Construction Site")
 
-            # We start off on the Main Menu in the Station
-            # ap.keys.send('UI_Up', repeat=3)  # make sure at the top
-            # ap.keys.send('UI_Down')
-            # ap.keys.send('UI_Select')  # Select StarPort Services
-            # sleep(5)  # wait for new menu to finish rendering
+            # Go to station services
             self.ap.stn_svcs_in_ship.goto_station_services()
 
             # --------- SELL ----------
