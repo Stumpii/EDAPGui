@@ -185,7 +185,7 @@ class EDAutopilot:
         self.ship_control = EDShipControl(self.scr, self.keys, cb)
         self.internal_panel = EDInternalStatusPanel(self, self.scr, self.keys, cb)
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
-        self.system_map = EDSystemMap(self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
+        self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
