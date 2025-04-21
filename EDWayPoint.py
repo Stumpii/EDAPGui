@@ -236,7 +236,7 @@ class EDWayPoint:
 
         # Determine type of station we are at
         colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
-        orbital_construction_site = "OrbitalConstructionShip".upper() in ap.jn.ship_state()['cur_station'].upper()
+        orbital_construction_site = ap.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
         fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
         outpost = ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
 
@@ -544,10 +544,10 @@ class EDWayPoint:
                     if (cur_station_type == 'SurfaceStation'.upper() and
                             'ColonisationShip'.upper() in cur_station.upper()):
                         docked_at_stn = True
-                elif next_wp_station.startswith('Orbital Construction Site'.upper()):
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
-                        docked_at_stn = True
+                # elif next_wp_station.startswith('Orbital Construction Site'.upper()):
+                #     if (cur_station_type == 'SurfaceStation'.upper() and
+                #             'Orbital Construction Site'.upper() in cur_station.upper()):
+                #         docked_at_stn = True
                 elif cur_station == next_wp_station:
                     docked_at_stn = True
 
