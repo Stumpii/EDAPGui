@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from time import sleep
+
+from CargoParser import CargoParser
 from EDAP_data import FlagsDocked
 from EDKeys import EDKeys
 from EDlogger import logger
@@ -48,6 +50,7 @@ class EDWayPoint:
 
         self.mouse = MousePoint()
         self.market_parser = MarketParser()
+        self.cargo_parser = CargoParser()
 
     def load_waypoint_file(self, filename=None) -> bool:
         if filename is None:
@@ -313,10 +316,18 @@ class EDWayPoint:
 
             # --------- SELL ----------
             if len(sell_commodities) > 0:
-                # Select the BUY option
+                # Select the SELL option
                 self.ap.stn_svcs_in_ship.select_sell(ap.keys)
 
                 for i, key in enumerate(sell_commodities):
+                    # Check if we have any of the item to sell
+                    self.cargo_parser.get_cargo_data()
+                    cargo_item = self.cargo_parser.get_item(key)
+                    if cargo_item is None:
+                        logger.info(f"Unable to sell {key}. None in cargo hold.")
+                        continue
+
+                    # Sell the commodity
                     result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key])
 
                     # Update counts if necessary
@@ -325,11 +336,6 @@ class EDWayPoint:
 
                 # Save changes
                 self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
-
-            # TODO: Note, if the waypoint plan has sell_down != -1, then we are assuming we have
-            # cargo to sell, if not we are in limbo here as the Sell button not selectable
-            #  Could look at the ship_status['MarketSel'] == True (to be added), to see that we sold
-            #  and if not, go down 1 and select cancel
 
             sleep(1)
 
