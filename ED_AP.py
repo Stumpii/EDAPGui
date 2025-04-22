@@ -1658,6 +1658,7 @@ class EDAutopilot:
 
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
+        on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
 
         # Check if we are on a landing pad in space or planet, or landed on a planet
         if self.status.get_flag(FlagsDocked):
@@ -1668,6 +1669,12 @@ class EDAutopilot:
             # need to wait until undock complete, that is when we are back in_space
             while self.jn.ship_state()['status'] != 'in_space':
                 sleep(1)
+
+            # If we are on an Orbital Construction Site we will need to pitch up 90 deg to avoid crashes
+            if on_orbital_construction_site:
+                self.ap_ckb('log+vce', 'Maneuvering')
+                # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+                self.pitchUp(90 * 1.25)
 
             self.update_ap_status("Undock Complete, accelerating")
         elif self.status.get_flag(FlagsLanded):
@@ -1690,7 +1697,8 @@ class EDAutopilot:
         else:
             # From planetary settlement
             self.keys.send('SetSpeed50')
-            self.pitchUp(90)  # The pitch rates are defined in SC, not normal flights, so this will be approximate.
+            # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+            self.pitchUp(90 * 1.25)
             self.keys.send('SetSpeed100')
 
             # While Mass Locked, keep boosting.
