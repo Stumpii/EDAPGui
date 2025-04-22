@@ -18,10 +18,11 @@ class EDShipControl:
         """ Goto cockpit view.
         @return: True once complete.
         """
+        if self.status_parser.get_gui_focus() == GuiFocusNoFocus:
+            return True
+
         # Go down to cockpit view
         while not self.status_parser.get_gui_focus() == GuiFocusNoFocus:
             self.keys.send("UI_Back")  # make sure back in cockpit view
-
-        self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
 
         return True

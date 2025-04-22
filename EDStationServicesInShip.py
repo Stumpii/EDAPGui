@@ -23,6 +23,7 @@ class EDStationServicesInShip:
         # Go to cockpit view
         self.ap.ship_control.goto_cockpit_view()
 
+        self.keys.send("UI_Up", repeat=3)  # go to very top (refuel line)
         self.keys.send("UI_Down")  # station services
         self.keys.send("UI_Select")  # station services
 
