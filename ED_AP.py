@@ -1064,11 +1064,11 @@ class EDAutopilot:
         self.keys.send('UI_Back')
         self.keys.send('HeadLookReset')
 
-    # Docking sequence.  Assumes in normal space, will get closer to the Station
-    # then zero the velocity and execute menu commands to request docking, when granted
-    # will wait a configurable time for dock.  Perform Refueling and Repair
-    #
     def dock(self):
+        """ Docking sequence.  Assumes in normal space, will get closer to the Station
+        then zero the velocity and execute menu commands to request docking, when granted
+        will wait a configurable time for dock.  Perform Refueling and Repair.
+        """
         # if not in normal space, give a few more sections as at times it will take a little bit
         if self.jn.ship_state()['status'] != "in_space":
             sleep(3)  # sleep a little longer
@@ -1082,7 +1082,7 @@ class EDAutopilot:
         if self.jn.ship_state()['status'] != "in_space":
             self.keys.send('SetSpeedZero')
             logger.error('In dock(), after long wait, but still not in_space')
-            raise Exception('Docking error')
+            raise Exception('Docking failed (not in space)')
 
         sleep(12)
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
@@ -1119,6 +1119,7 @@ class EDAutopilot:
         if not granted:
             self.ap_ckb('log', 'Docking denied: '+str(self.jn.ship_state()['no_dock_reason']))
             logger.warning('Did not get docking authorization, reason:'+str(self.jn.ship_state()['no_dock_reason']))
+            raise Exception('Docking failed (Did not get docking authorization)')
         else:
             # allow auto dock to take over
             for i in range(self.config['WaitForAutoDockTimer']):
@@ -1135,7 +1136,11 @@ class EDAutopilot:
                     self.keys.send('UI_Select')
                     sleep(0.5)
                     self.keys.send("UI_Left", repeat=2)  # back to fuel
-                    break
+                    return
+
+            self.ap_ckb('log', 'Auto dock timer timed out.')
+            logger.warning('Auto dock timer timed out. Aborting Docking.')
+            raise Exception('Docking failed (Auto dock timer timed out)')
 
     def is_sun_dead_ahead(self, scr_reg):
         return scr_reg.sun_percent(scr_reg.screen) > 5
@@ -1901,14 +1906,13 @@ class EDAutopilot:
         while True:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
-
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 if not self.sc_target_align(scr_reg):
                     # Continue ahead before aligning to prevent us circling the target
-                    #self.keys.send('SetSpeed100')
+                    # self.keys.send('SetSpeed100')
                     sleep(10)
                     self.keys.send('SetSpeed50')
-                    self.nav_align(scr_reg) # Align to target
+                    self.nav_align(scr_reg)  # Align to target
             elif self.status.get_flag2(Flags2GlideMode):
                 # Gliding - wait to complete
                 logger.debug("Gliding")
@@ -1954,8 +1958,9 @@ class EDAutopilot:
                     skip_docking = True
 
             if not skip_docking:
-                self.dock()  # go into docking sequence
-                self.ap_ckb('log+vce', "Docking complete, refueled, repaired and rearmed")
+                # go into docking sequence
+                self.dock()
+                self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
