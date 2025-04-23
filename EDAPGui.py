@@ -93,6 +93,7 @@ class APGui():
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
             'Jump Tries': "How many attempts the ap should make to jump.",
+            'Docking Retries': "How many attempts to make to dock.",
             'Wait For Autodock': "After docking granted, \nwait this amount of time for us to get docked with autodocking",
             'Start FSD': "Button to start FSD route assist.",
             'Start SC': "Button to start Supercruise assist.",
@@ -153,6 +154,7 @@ class APGui():
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, END)
         self.entries['autopilot']['Nav Align Tries'].delete(0, END)
         self.entries['autopilot']['Jump Tries'].delete(0, END)
+        self.entries['autopilot']['Docking Retries'].delete(0, END)
         self.entries['autopilot']['Wait For Autodock'].delete(0, END)
 
         self.entries['refuel']['Refuel Threshold'].delete(0, END)
@@ -176,6 +178,7 @@ class APGui():
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
         self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
+        self.entries['autopilot']['Docking Retries'].insert(0, int(self.ed_ap.config['DockingRetries']))
         self.entries['autopilot']['Wait For Autodock'].insert(0, int(self.ed_ap.config['WaitForAutoDockTimer']))
         self.entries['refuel']['Refuel Threshold'].insert(0, int(self.ed_ap.config['RefuelThreshold']))
         self.entries['refuel']['Scoop Timeout'].insert(0, int(self.ed_ap.config['FuelScoopTimeOut']))
@@ -548,6 +551,7 @@ class APGui():
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
             self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
             self.ed_ap.config['JumpTries'] = int(self.entries['autopilot']['Jump Tries'].get())
+            self.ed_ap.config['DockingRetries'] = int(self.entries['autopilot']['Docking Retries'].get())
             self.ed_ap.config['WaitForAutoDockTimer'] = int(self.entries['autopilot']['Wait For Autodock'].get())
             self.ed_ap.config['RefuelThreshold'] = int(self.entries['refuel']['Refuel Threshold'].get())
             self.ed_ap.config['FuelScoopTimeOut'] = int(self.entries['refuel']['Scoop Timeout'].get())
@@ -763,7 +767,7 @@ class APGui():
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
         ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
-        autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Wait For Autodock')
+        autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
         overlay_entry_fields = ('X Offset', 'Y Offset', 'Font Size')
@@ -866,13 +870,13 @@ class APGui():
         self.entries['autopilot'] = self.makeform(blk_ap, FORM_TYPE_SPINBOX, autopilot_entry_fields)
         self.checkboxvar['Enable Randomness'] = BooleanVar()
         cb_random = Checkbutton(blk_ap, text='Enable Randomness', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Enable Randomness'], command=(lambda field='Enable Randomness': self.check_cb(field)))
-        cb_random.grid(row=4, column=0, columnspan=2, sticky=(W))
+        cb_random.grid(row=5, column=0, columnspan=2, sticky=(W))
         self.checkboxvar['Activate Elite for each key'] = BooleanVar()
         cb_activate_elite = Checkbutton(blk_ap, text='Activate Elite for each key', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Activate Elite for each key'], command=(lambda field='Activate Elite for each key': self.check_cb(field)))
-        cb_activate_elite.grid(row=5, column=0, columnspan=2, sticky=(W))
+        cb_activate_elite.grid(row=6, column=0, columnspan=2, sticky=(W))
         self.checkboxvar['Automatic logout'] = BooleanVar()
         cb_logout = Checkbutton(blk_ap, text='Automatic logout', anchor='w', pady=3, justify=LEFT, onvalue=1, offvalue=0, variable=self.checkboxvar['Automatic logout'], command=(lambda field='Automatic logout': self.check_cb(field)))
-        cb_logout.grid(row=6, column=0, columnspan=2, sticky=(W))
+        cb_logout.grid(row=7, column=0, columnspan=2, sticky=(W))
 
         # buttons settings block
         blk_buttons = LabelFrame(blk_settings, text="BUTTONS")
