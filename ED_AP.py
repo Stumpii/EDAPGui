@@ -1178,8 +1178,16 @@ class EDAutopilot:
                 break
 
         sleep(0.35)                 # up slightly so not to overheat when scooping
-        sleep(self.sunpitchuptime)  # some ships heat up too much and need pitch up a little further
+        # Some ships heat up too much and need pitch up a little further
+        if self.sunpitchuptime > 0.0:
+            sleep(self.sunpitchuptime)
         self.keys.send('PitchUpButton', state=0)
+
+        # Some ships run cool so need to pitch down a little
+        if self.sunpitchuptime < 0.0:
+            self.keys.send('PitchDownButton', state=1)
+            sleep(-1.0 * self.sunpitchuptime)
+            self.keys.send('PitchDownButton', state=0)
 
     def nav_align(self, scr_reg):
         """ Use the compass to find the nav point position.  Will then perform rotation and pitching

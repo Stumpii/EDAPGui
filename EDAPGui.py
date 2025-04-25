@@ -766,7 +766,7 @@ class APGui():
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
-        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time')
+        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
@@ -821,6 +821,14 @@ class APGui():
         blk_ship = LabelFrame(blk_main, text="SHIP")
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky=(N, S, E, W))
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
+
+        lbl_sun_pitch_up = tk.Label(blk_ship, text='SunPitchUp +/- Time:', anchor='w', width=20)
+        lbl_sun_pitch_up.grid(row=3, column=0, pady=3, sticky=(N, S, E, W))
+        spn_sun_pitch_up = tk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5)
+        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=2, sticky=(N, S, E, W))
+        spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
+        self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
+
         btn_tst_roll = Button(blk_ship, text='Test Roll', command=self.ship_tst_roll)
         btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky=(N, E, W, S))
         btn_tst_pitch = Button(blk_ship, text='Test Pitch', command=self.ship_tst_pitch)
