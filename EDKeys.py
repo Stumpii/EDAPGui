@@ -96,12 +96,12 @@ class EDKeys:
                 if len(self.keys[key]['mods']) != 0:
                     keymod = self.reversed_dict.get(self.keys[key]['mods'][0], " ")
         
-                logger.info('get_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
+                logger.info('\tget_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
                 if key not in self.keys:
-                    logger.warning("get_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
+                    logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
                     self.missing_keys.append(key)
             except Exception as e:
-                logger.warning("get_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
+                logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)                
 
     def get_bindings(self) -> dict[str, Any]:

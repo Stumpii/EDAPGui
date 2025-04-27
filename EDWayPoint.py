@@ -297,7 +297,7 @@ class EDWayPoint:
                 ap.keys.send('UI_Select')  # Select Commodities
 
             else:
-                # Default station COMMODITIES MARKET location bottom left
+                # Orbital station COMMODITIES MARKET location bottom left
                 ap.keys.send('UI_Down')
                 ap.keys.send('UI_Select')  # Select Commodities
 
@@ -328,7 +328,8 @@ class EDWayPoint:
                         continue
 
                     # Sell the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key])
+                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key],
+                                                                          self.cargo_parser)
 
                     # Update counts if necessary
                     if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
@@ -625,14 +626,18 @@ class EDWayPoint:
 
 
 def main():
-    wp = EDWayPoint(None, True)  # False = Horizons
+    from ED_AP import EDAutopilot
+
+    ed_ap = EDAutopilot(cb=None)
+    wp = EDWayPoint(ed_ap, True)  # False = Horizons
     wp.step = 0  # start at first waypoint
     keys = EDKeys()
     keys.activate_window = True
-    wp.ap.stn_svcs_in_ship.select_buy(keys)
-    wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Steel", 100, 200)
-    wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
-    # wp.sell_commodity(keys,"Gold", 1)
+    wp.ap.stn_svcs_in_ship.select_sell(keys)
+    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
+    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
+    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
+    #wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
 
     # dest = 'Enayex'
     #print(dest)

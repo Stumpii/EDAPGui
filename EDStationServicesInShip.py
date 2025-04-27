@@ -82,7 +82,7 @@ class EDStationServicesInShip:
             if value['Name_Localised'].upper() == name.upper():
                 index = i
                 stock = value['Stock']
-                logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index}.")
+                logger.debug(f"Execute trade: Buy {name} (want {qty} of {stock} avail.) at position {index + 1}.")
                 break
 
         # Actual qty we can sell
@@ -120,9 +120,15 @@ class EDStationServicesInShip:
 
         return True, act_qty
 
-    def sell_commodity(self, keys, name: str, qty: int) -> tuple[bool, int]:
+    def sell_commodity(self, keys, name: str, qty: int, cargo_parser) -> tuple[bool, int]:
         """ Sell qty of commodity. If qty >= 9999 then sell as much as possible.
-        Assumed to be in the commodities sell screen in the list. """
+        Assumed to be in the commodities sell screen in the list.
+        @param keys: Keys class for sending keystrokes.
+        @param name: Name of the commodity.
+        @param qty: Quantity to sell.
+        @param cargo_parser: Current cargo to check if rare or demand=1 items exist in hold.
+        @return: Sale successful (T/F) and Qty.
+        """
 
         # If we are updating requirement count, me might have sold all we have
         if qty <= 0:
@@ -136,14 +142,14 @@ class EDStationServicesInShip:
             return False, 0
 
         # Find commodity in market and return the index
-        sellable_items = self.market_parser.get_sellable_items()
+        sellable_items = self.market_parser.get_sellable_items(cargo_parser)
         index = -1
         demand = 0
         for i, value in enumerate(sellable_items):
             if value['Name_Localised'].upper() == name.upper():
                 index = i
                 demand = value['Demand']
-                logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index}.")
+                logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")
                 break
 
         # Qty we can sell. Unlike buying, we can sell more than the demand

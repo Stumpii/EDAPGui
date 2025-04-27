@@ -109,7 +109,7 @@ class MarketParser:
         # print(json.dumps(data, indent=4))
         return data
 
-    def get_sellable_items(self):
+    def get_sellable_items(self, cargo_parser) -> list:
         """ Get a list of items that can be sold to the station.
         Will trigger a read of the json file.
         {
@@ -129,9 +129,12 @@ class MarketParser:
             "Producer": false,
             "Rare": false
         }
+        @param cargo_parser: Current cargo to check if rare or demand=1 items exist in hold.
+        @return: A list of commodities that can be sold.
         """
         data = self.get_market_data()
-        sellable_items = [x for x in data['Items'] if x['Consumer'] or x['Demand'] > 1]
+        sellable_items = [x for x in data['Items'] if x['Consumer'] or
+                          ((x['Demand'] > 1 or x['Demand']) and cargo_parser.get_item(x['Name_Localised']) is not None)]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
         #sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
