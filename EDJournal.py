@@ -363,6 +363,12 @@ class EDJournal:
                 self.ship['target'] = None
                 self.ship['jumps_remains'] = 0
 
+            elif log_event == 'CarrierJump':
+                self.ship['location'] = log['StarSystem']
+                self.ship['cur_star_system'] = log['StarSystem']
+                self.ship['cur_station'] = log['StationName']
+                self.ship['cur_station_type'] = log['StationType']
+
         # exceptions
         except Exception as e:
             #logger.exception("Exception occurred")
