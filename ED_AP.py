@@ -85,7 +85,8 @@ class EDAutopilot:
             "ShipConfigFile": None,        # Ship config to load on start - deprecated
             "TargetScale": 1.0,            # Scaling of the target when a system is selected
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
-            "AutomaticLogout": False,  # Logout when we are done with the mission
+            "AutomaticLogout": False,      # Logout when we are done with the mission
+            "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -120,6 +121,8 @@ class EDAutopilot:
                     cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
                 if 'AutomaticLogout' not in cnf:
                     cnf['AutomaticLogout'] = False
+                if 'FCDepartureTime' not in cnf:
+                    cnf['FCDepartureTime'] = 5.0
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -1672,43 +1675,77 @@ class EDAutopilot:
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
         on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
+        fleet_carrier = self.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
 
-        # Check if we are on a landing pad in space or planet, or landed on a planet
-        if self.status.get_flag(FlagsDocked):
-            # We are on a landing pad in space or planet
-            # Undock from station
-            self.undock()
-
-            # need to wait until undock complete, that is when we are back in_space
-            while self.jn.ship_state()['status'] != 'in_space':
-                sleep(1)
-
-            # If we are on an Orbital Construction Site we will need to pitch up 90 deg to avoid crashes
-            if on_orbital_construction_site:
-                self.ap_ckb('log+vce', 'Maneuvering')
-                # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                self.pitchUp(90 * 1.25)
-
-            self.update_ap_status("Undock Complete, accelerating")
-        elif self.status.get_flag(FlagsLanded):
-            # We are on planet surface (not planet landing pad)
-            # Hold UP for takeoff
-            self.keys.send('UpThrustButton', hold=6)
-            self.keys.send('LandingGearToggle')
-
-            self.update_ap_status("Takeoff Complete, accelerating")
-
-        # move away from station
+        # Leave starport or planetary port
         if not on_planet:
-            # In space (launch from starport or outpost etc.)
-            sleep(1.5)
-            self.keys.send('SetSpeed100')
-            sleep(1)
-            self.keys.send('UseBoostJuice')
-            sleep(13)  # get away from Station
-            self.keys.send('SetSpeed50')
-        else:
-            # From planetary settlement
+            # Check that we are docked
+            if self.status.get_flag(FlagsDocked):
+                # Undock from station
+                self.undock()
+
+                # need to wait until undock complete, that is when we are back in_space
+                while self.jn.ship_state()['status'] != 'in_space':
+                    sleep(1)
+
+                # If we are on an Orbital Construction Site we will need to pitch up 90 deg to avoid crashes
+                if on_orbital_construction_site:
+                    self.ap_ckb('log+vce', 'Maneuvering')
+                    # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+                    self.pitchUp(90 * 1.25)
+
+                # If we are on a Fleet Carrier we will pitch up 90 deg and fly away to avoid planet
+                elif fleet_carrier:
+                    self.ap_ckb('log+vce', 'Maneuvering')
+                    # The pitch rates are defined in SC, not normal flights, so bump this up a bit
+                    self.pitchUp(90 * 1.25)
+
+                    self.keys.send('SetSpeed100')
+
+                    # While Mass Locked, keep boosting.
+                    while not self.status.wait_for_flag_off(FlagsFsdMassLocked, timeout=2):
+                        self.keys.send('UseBoostJuice')
+
+                    # Enter supercruise to get away from the Fleet Carrier
+                    self.keys.send('Supercruise')
+
+                    # Start SCO monitoring
+                    self.start_sco_monitoring()
+
+                    # Wait the configured time before continuing
+                    sleep(self.config['FCDepartureTime'])
+                    self.keys.send('SetSpeed50')
+
+                if not fleet_carrier:
+                    # In space (launched from starport or outpost etc.)
+                    sleep(1.5)
+                    self.update_ap_status("Undock Complete, accelerating")
+                    self.keys.send('SetSpeed100')
+                    sleep(1)
+                    self.keys.send('UseBoostJuice')
+                    sleep(13)  # get away from Station
+                    self.keys.send('SetSpeed50')
+
+        elif on_planet:
+            # Check if we are on a landing pad (docked), or landed on the planet surface
+            if self.status.get_flag(FlagsDocked):
+                # We are on a landing pad (docked)
+                # Undock from port
+                self.undock()
+
+                # need to wait until undock complete, that is when we are back in_space
+                while self.jn.ship_state()['status'] != 'in_space':
+                    sleep(1)
+                self.update_ap_status("Undock Complete, accelerating")
+
+            elif self.status.get_flag(FlagsLanded):
+                # We are on planet surface (not docked at planet landing pad)
+                # Hold UP for takeoff
+                self.keys.send('UpThrustButton', hold=6)
+                self.keys.send('LandingGearToggle')
+                self.update_ap_status("Takeoff Complete, accelerating")
+
+            # Undocked or off the surface, so leave planet
             self.keys.send('SetSpeed50')
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
             self.pitchUp(90 * 1.25)
@@ -1885,6 +1922,10 @@ class EDAutopilot:
     #
     def sc_assist(self, scr_reg, do_docking=True):
         logger.debug("Entered sc_assist")
+
+        # Goto cockpit view
+        self.ship_control.goto_cockpit_view()
+
         align_failed = False
         # see if we have a compass up, if so then we have a target
         if not self.have_destination(scr_reg):
