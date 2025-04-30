@@ -68,7 +68,8 @@ A simple reference for common actions:
 A complete example with notes:
 ```py
 {
-    "GlobalShoppingList": {                 # The Global shopping list. Will attempt to buy these items at every station before buying the waypoint defined items. Do not change this name.
+    "GlobalShoppingList": {                 # The Global shopping list. Will attempt to buy these items at every station
+                                            #    before buying the waypoint defined items. Do not change this name.
         "BuyCommodities": {                 # The dictionary of commodities to buy. There are no global sell commodities.
             "Ceramic Composites": 14,       # Enter commodity name and quantity
             "CMM Composite": 3029,
@@ -79,16 +80,19 @@ A complete example with notes:
         "Completed": false                  # Ignored for shopping list
     },
     "1": {                                  # System key. May be changed to something useful, but must be unique.
-        "SystemName": "Hillaunges",         # The target system name used to find the system in the Galaxy Map. If the system name is blank, then the current system is assumed to be the target.
+        "SystemName": "Hillaunges",         # The target system name used to find the system in the Galaxy Map. If the system
+                                            # name is blank, then the current system is assumed to be the target.
         "StationName": "",                  # The destination name (station name, FC name etc). 
-                                            #   If blank and no bookmark is set, then the waypoint is complete when reaching the system.
+                                            #   If blank and no bookmark is set, then the waypoint is complete when reaching
+                                            #   the system.
         "GalaxyBookmarkType": "Sys",        # The Galaxy Map bookmark type. May be:
                                             #   'Fav' or '' - Favorites
                                             #   'Sys' - System
                                             #   'Bod' - Body
                                             #   'Sta' - Station
                                             #   'Set' - Settlement
-                                            # Note: System Colonisation Ships are bookmarked at the Gal Map level, so would be 'Sta' above.
+                                            # Note: System Colonisation Ships are bookmarked at the Gal Map level, so would
+                                            #   be 'Sta' above.
         "GalaxyBookmarkNumber": 6,          # The bookmark index within the type specified above.
                                             #   Set to 0 or -1 if bookmarks are not used.
         "SystemBookmarkType": "Fav",        # The System Map bookmark type. May be:
@@ -96,26 +100,36 @@ A complete example with notes:
                                             #   'Bod' - Body
                                             #   'Sta' - Station
                                             #   'Set' - Settlement
-                                            #   'Nav' - This is a special case that uses the Navigation Panel (Panel #1) to select the bookmark.
-                                            #       This is primarily for system targets that do not show up in system map, like Mega Ships.
-                                            #       Note that the Nav Panel list is highly variable due to what is in system and where you 
-                                            #       drop into a system, so filter your Nav Panel first. So use with caution.
+                                            #   'Nav' - This is a special case that uses the Navigation Panel (Panel #1) to
+                                            #      select the bookmark.
+                                            #      This is primarily for system targets that do not show up in system map,
+                                            #      like Mega Ships.
+                                            #      Note that the Nav Panel list is highly variable due to what is in system
+                                            #      and where you drop into a system, so filter your Nav Panel first. So use
+                                            #      with caution.
                                             #   Note: System Colonisation Ships can only be bookmarked at the Gal Map level, 
                                             #       so this is not applicable to Col Ships.
         "SystemBookmarkNumber": 1,          # The bookmark index within the type specified above.
                                             #   Set to 0 or -1 if bookmarks are not used.
-        "SellCommodities": {},              # The dictionary of commodities to sell. Same format as the Global shopping list above.
-                                            #   Additionally, for Colonisation Ships and Fleet Carriers in 'Transfer' mode, 
-                                            #   as all commodities must be transferred, it is okay to put '"All": 0' as the sell good to trigger a sell/transfer all. 
-        "BuyCommodities": {},               # The dictionary of commodities to buy. Same format as the Global shopping list above.
-                                            #   If you define global and waypoint buy shopping lists, the waypoint shopping list will be processed first, 
-                                            #   Additionally, for Colonisation Ships and Fleet Carriers in 'Transfer' mode, 
-                                            #   as all commodities must be transferred, it is okay to put '"All": 0' as the buy good to trigger a transfer all.
-        "UpdateCommodityCount": true,       # Update the buy counts above when goods are purchased (not sold). Sell counts are never updated.
-        "FleetCarrierTransfer": false,      # If this 'station' is a Fleet Carrier allows option to TRANSFER goods rather than BUY/SELL,
-                                            #   Set to False to Buy/sell, True to Transfer. Transfer is by default everything you have.
-        "Skip": true,                       # Skip this waypoint. EDAP will not change this value, so a good way to disable a waypoint without deleting it.
-        "Completed": false                  # If false, process this waypoint. One complete EDAP will switch to True. Once all waypoints are complete, EDAP will switch to False.
+        "SellCommodities": {},              # The dictionary of commodities to sell. Same format as the Global shopping list
+                                            #   above. Additionally, for Colonisation Ships and Fleet Carriers in 'Transfer'
+                                            #   mode, as all commodities must be transferred, it is okay to put '"All": 0'
+                                            #   as the sell good to trigger a sell/transfer all. 
+        "BuyCommodities": {},               # The dictionary of commodities to buy. Same format as the Global shopping list
+                                            #   above. If you define global and waypoint buy shopping lists, the waypoint
+                                            #   shopping list will be processed first. Additionally, for Colonisation
+                                            #   Ships and Fleet Carriers in 'Transfer' mode, as all commodities must be
+                                            #   transferred, it is okay to put '"All": 0' as the buy good to trigger a
+                                            #   transfer all.
+        "UpdateCommodityCount": true,       # Update the buy counts above when goods are purchased (not sold). Sell counts
+                                            #   are never updated.
+        "FleetCarrierTransfer": false,      # If this 'station' is a Fleet Carrier allows option to TRANSFER goods rather
+                                            #   than BUY/SELL, set to False to Buy/sell, True to Transfer. Transfer is by
+                                            #   default everything you have.
+        "Skip": true,                       # Skip this waypoint. EDAP will not change this value, so a good way to disable
+                                            #   a waypoint without deleting it.
+        "Completed": false                  # If false, process this waypoint. One complete EDAP will switch to True. Once
+                                            #   all waypoints are complete, EDAP will switch to False.
     },
     "2": {
         "SystemName": "Synuefe ZX-M b54-1",
