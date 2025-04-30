@@ -8,6 +8,7 @@ import cv2
 
 from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
+from EDGraphicsSettings import EDGraphicsSettings
 from EDShipControl import EDShipControl
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
@@ -170,6 +171,8 @@ class EDAutopilot:
         self.single_waypoint_enabled = False
 
         # Create instance of each of the needed Classes
+        self.gfx_settings = EDGraphicsSettings()
+
         self.scr = Screen.Screen()
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
