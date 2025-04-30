@@ -43,6 +43,8 @@ _Note: Colonisation Ships and Construction Ships can only be bookmarked at the G
 
 ## Docking with a Fleet Carrier
 Refer to *Docking with a Station* above. In addition to Trading (Buy/Sell), Fleet Carriers include the option to Transfer (to/from) the Fleet Carrier using the **FleetCarrierTransfer** option. Transfer will attempt to transfer all commodities on the ship/Fleet Carrier, so transfer from a Fleet Carrier is not particularly useful.
+<br>
+_Note: There appears to be a bug that sometimes prevents bookmarking a Fleet Carrier in the System Map. If this occurs, it is still possible to bookmark the FC through the Navigation Panel. Once bookmarked, it will be accessible through the System Map.
 
 ## Trading
 The **SellCommodities** and **BuyCommodities** lists are associated with auto-trading and each waypoint will have both lists and either or both may be empty. If either of the lists are not empty, the trade executor kicks in, brings up Commodities Screen and will perform the Selling and then Buying of each listed commodity if it can be traded. The commodities will be processed in the order defined, so place the important items first. There is also an option to update the item counts as the items are bought and sold.
