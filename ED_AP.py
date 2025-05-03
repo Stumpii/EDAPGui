@@ -5,6 +5,7 @@ import random
 from tkinter import messagebox
 
 import cv2
+from simple_localization import LocalizationManager
 
 from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
@@ -88,6 +89,7 @@ class EDAutopilot:
             "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
+            "Language": 'en',              # Language (matching ./locales/xx.json file)
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -124,6 +126,8 @@ class EDAutopilot:
                     cnf['AutomaticLogout'] = False
                 if 'FCDepartureTime' not in cnf:
                     cnf['FCDepartureTime'] = 5.0
+                if 'Language' not in cnf:
+                    cnf['Language'] = 'en'
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -131,6 +135,9 @@ class EDAutopilot:
                 logger.debug("read AP json:"+str(cnf))
         else:
             self.write_config(self.config)
+
+        # Load selected language
+        self.locale = LocalizationManager('locales', self.config['Language'])
 
         shp_cnf = self.read_ship_configs()
         # if we read it then point to it, otherwise use the default table above
@@ -948,7 +955,7 @@ class EDAutopilot:
         sim = 0.0
         ocr_textlist = self.ocr.image_simple_ocr(image)
         if ocr_textlist is not None:
-            sim = self.ocr.string_similarity(f"PRESS TO DISENGAGE", str(ocr_textlist))
+            sim = self.ocr.string_similarity(self.locale["PRESS_TO_DISENGAGE_MSG"], str(ocr_textlist))
             logger.info(f"Disengage similarity with {str(ocr_textlist)} is {sim}")
 
         if self.cv_view:

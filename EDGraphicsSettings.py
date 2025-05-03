@@ -15,14 +15,17 @@ class EDGraphicsSettings:
         self.screenheight = ''
         self.monitor = ''
         self.fov = ''
-        self.display_settings_filepath = display_file_path if display_file_path else\
-            (environ['LOCALAPPDATA'] + "\\Frontier Developments\\Elite Dangerous\\Options\\Graphics\\DisplaySettings.xml")
+        self.display_settings_filepath = display_file_path if display_file_path else \
+            (environ[
+                 'LOCALAPPDATA'] + "\\Frontier Developments\\Elite Dangerous\\Options\\Graphics\\DisplaySettings.xml")
         self.settings_filepath = settings_file_path if settings_file_path else \
             (environ['LOCALAPPDATA'] + "\\Frontier Developments\\Elite Dangerous\\Options\\Graphics\\Settings.xml")
 
         if not isfile(self.display_settings_filepath):
-            logger.error(f"Elite Dangerous graphics display settings file does not exist: {self.display_settings_filepath}.")
-            raise Exception(f"Elite Dangerous graphics display settings file does not exist: {self.display_settings_filepath}.")
+            logger.error(
+                f"Elite Dangerous graphics display settings file does not exist: {self.display_settings_filepath}.")
+            raise Exception(
+                f"Elite Dangerous graphics display settings file does not exist: {self.display_settings_filepath}.")
 
         if not isfile(self.settings_filepath):
             logger.error(f"Elite Dangerous settings file does not exist: {self.settings_filepath}.")

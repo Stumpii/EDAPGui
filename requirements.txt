@@ -16,5 +16,6 @@ pyttsx3==2.90
 pywin32==303
 protobuf<=3.20.2 # Specific version required for paddlepaddle.
 requests~=2.32.3
+simple_localization
 strsimpy~=0.2.1
 xmltodict~=0.14.2

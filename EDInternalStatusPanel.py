@@ -17,18 +17,19 @@ class EDInternalStatusPanel:
 
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
+        self.locale = self.ap.locale
         self.screen = screen
         self.ocr = OCR(screen)
         self.keys = keys
         self.status_parser = StatusParser()
         self.ap_ckb = cb
 
-        self.modules_tab_text = "MODULES"
-        self.fire_groups_tab_text = "FIRE GROUPS"
-        self.ship_tab_text = "SHIP"
-        self.inventory_tab_text = "INVENTORY"
-        self.storage_tab_text = "STORAGE"
-        self.status_tab_text = "STATUS"
+        self.modules_tab_text = self.locale["INT_PNL_TAB_MODULES"]
+        self.fire_groups_tab_text = self.locale["INT_PNL_TAB_FIRE_GROUPS"]
+        self.ship_tab_text = self.locale["INT_PNL_TAB_SHIP"]
+        self.inventory_tab_text = self.locale["INT_PNL_TAB_INVENTORY"]
+        self.storage_tab_text = self.locale["INT_PNL_TAB_STORAGE"]
+        self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg = {'right_panel': {'rect': [0.25, 0.0, 1.0, 0.5]}}
