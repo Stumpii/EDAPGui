@@ -246,6 +246,9 @@ class APGui():
             logger.debug("Detected 'waypoint_stop' callback msg")
             self.checkboxvar['Waypoint Assist'].set(0)
             self.check_cb('Waypoint Assist')
+        elif msg == 'waypoint_start':
+            self.checkboxvar['Waypoint Assist'].set(1)
+            self.check_cb('Waypoint Assist')
         elif msg == 'robigo_stop':
             logger.debug("Detected 'robigo_stop' callback msg")
             self.checkboxvar['Robigo Assist'].set(0)
@@ -533,7 +536,6 @@ class APGui():
             if res:
                 self.wp_filelabel.set("loaded: " + Path(filename).name)
             else:
-                self.callback('log', f"Waypoint file is invalid. Check log file for details.")
                 self.wp_filelabel.set("<no list loaded>")
 
     def reset_wp_file(self):

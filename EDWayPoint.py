@@ -61,9 +61,11 @@ class EDWayPoint:
         if ss is not None:
             self.waypoints = ss
             self.filename = filename
+            self.ap.ap_ckb('log', f"Loaded Waypoint file: {filename}")
             logger.debug("EDWayPoint: read json:" + str(ss))
             return True
 
+        self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
         return False
 
     def read_waypoints(self, filename='./waypoints/waypoints.json'):

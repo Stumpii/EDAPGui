@@ -15,3 +15,4 @@
 /configs/AP.json
 /EDAPGui.exe
 .idea/
+EDMesg/__pycache__/

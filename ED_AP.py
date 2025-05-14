@@ -7,6 +7,7 @@ from tkinter import messagebox
 import cv2
 from simple_localization import LocalizationManager
 
+from EDAP_EDMesg_Server import EDMesgServer
 from EDAP_data import *
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
@@ -200,6 +201,7 @@ class EDAutopilot:
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
+        self.mesg_server = EDMesgServer(self, cb)
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
