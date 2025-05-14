@@ -811,11 +811,13 @@ class EDAutopilot:
 
         return result
 
-    # Looks to see if the 'dashed' line of the target is present indicating the target is occluded by the planet
-    #  return True if meets threshold
-    #
     def is_destination_occluded(self, scr_reg) -> bool:
-        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded')
+        """ Looks to see if the 'dashed' line of the target is present indicating the target
+        is occluded by the planet.
+        @param scr_reg: The screen region to check.
+        @return: True if target occluded (meets threshold), else False.
+        """
+        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
 
         pt = maxLoc
 
@@ -840,8 +842,10 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         if maxVal > scr_reg.target_occluded_thresh:
+            logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
             return True
         else:
+            #logger.debug(f"Target is not occluded ({maxVal:5.4f} < {scr_reg.target_occluded_thresh:5.2f})")
             return False
 
     def get_destination_offset(self, scr_reg):
@@ -1021,7 +1025,9 @@ class EDAutopilot:
 
     def undock(self):
         """ Performs menu action to undock from Station """
-        # Assume we are in Star Port Services
+        # Go to cockpit view
+        self.ship_control.goto_cockpit_view()
+
         # Now we are on initial menu, we go up to top (which is Refuel)
         self.keys.send('UI_Up', repeat=3)
 
@@ -1341,7 +1347,6 @@ class EDAutopilot:
 
         self.fsd_target_align(scr_reg)
 
-
     def sc_target_align(self, scr_reg) -> bool:
         """ Stays tight on the target, monitors for disengage and obscured.
         If target could not be found, return false."""
@@ -1356,8 +1361,8 @@ class EDAutopilot:
             if new:
                 off = new
                 break
-            if self.is_destination_occluded(scr_reg) == True:
-                self.reposition(scr_reg)
+            if self.is_destination_occluded(scr_reg):
+                self.occluded_reposition(scr_reg)
             sleep(0.1)
 
         # Could not be found, return
@@ -1394,9 +1399,9 @@ class EDAutopilot:
 
             sleep(.02)  # time for image to catch up
 
-            # this checks if suddenly the target show up behind the planete
-            if self.is_destination_occluded(scr_reg) == True:
-                self.reposition(scr_reg)
+            # this checks if suddenly the target show up behind the planet
+            if self.is_destination_occluded(scr_reg):
+                self.occluded_reposition(scr_reg)
 
             new = self.get_destination_offset(scr_reg)
             if new:
@@ -1410,18 +1415,22 @@ class EDAutopilot:
 
         return True
 
-    # Reposition is use when the target is obscured by a world
-    #   We pitch 90 up for a bit, then down 90, this should make the target underneath us
-    #   this is important because when we do nav_align() if it does not see the Nav Point
-    #   in the compass (because it is a hollow circle), then it will pitch down, this will
-    #   bring the target into view quickly
-    #
-    def reposition(self, scr_reg):
-        self.vce.say("Target obscured, repositioning")
-        self.pitchUp(90)
+    def occluded_reposition(self, scr_reg):
+        """ Reposition is use when the target is occluded by a planet or other.
+        We pitch 90 deg down for a bit, then up 90, this should make the target underneath us
+        this is important because when we do nav_align() if it does not see the Nav Point
+        in the compass (because it is a hollow circle), then it will pitch down, this will
+        bring the target into view quickly. """
+        self.ap_ckb('log+vce', 'Target occluded, repositioning.')
+        self.keys.send('SetSpeed50')
+        self.pitchDown(90)
+
+        # Speed away
         self.keys.send('SetSpeed100')
         sleep(15)
-        self.pitchDown(90)
+
+        self.keys.send('SetSpeed50')
+        self.pitchUp(90)
         sleep(5)
         self.nav_align(scr_reg)
         self.keys.send('SetSpeed50')

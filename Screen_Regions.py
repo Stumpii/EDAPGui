@@ -52,7 +52,7 @@ class Screen_Regions:
         self.compass_match_thresh = 0.5
         self.navpoint_match_thresh = 0.8
         self.target_thresh = 0.54
-        self.target_occluded_thresh = 0.75
+        self.target_occluded_thresh = 0.55
         self.sun_threshold = 125
         self.disengage_thresh = 0.25
 
@@ -91,10 +91,10 @@ class Screen_Regions:
         Returns an unfiltered image. """
         return screen.get_screen_region(self.reg[region_name]['rect'])
 
-    def capture_region_filtered(self, screen, region_name):
+    def capture_region_filtered(self, screen, region_name, inv_col=True):
         """ Grab screen region and call its filter routine.
         Returns the filtered image. """
-        scr = screen.get_screen_region(self.reg[region_name]['rect'])
+        scr = screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
         if self.reg[region_name]['filterCB'] == None:
             # return the screen region untouched in BGRA format.
             return scr
@@ -102,10 +102,10 @@ class Screen_Regions:
             # return the screen region in the format returned by the filter.
             return self.reg[region_name]['filterCB'] (scr, self.reg[region_name]['filter'])          
 
-    def match_template_in_region(self, region_name, templ_name):
+    def match_template_in_region(self, region_name, templ_name, inv_col=True):
         """ Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask. """
-        img_region = self.capture_region_filtered(self.screen, region_name)    # which would call, reg.capture_region('compass') and apply defined filter
+        img_region = self.capture_region_filtered(self.screen, region_name, inv_col)    # which would call, reg.capture_region('compass') and apply defined filter
         match = cv2.matchTemplate(img_region, self.templates.template[templ_name]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match 

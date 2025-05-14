@@ -41,7 +41,7 @@ def main():
     # template_matching_test('compass', 'compass')
     # template_matching_test('compass','navpoint')
     # template_matching_test('target', 'target')
-    # template_matching_test('target_occluded', 'target_occluded')
+    template_matching_test('target_occluded', 'target_occluded')
 
     # More complicated specific test cases...
     # =======================================
@@ -51,9 +51,9 @@ def main():
     # Shows regions on the Elite window...
     # Requires Elite Dangerous to be running.
     # =======================================
-    wanted_regions = ["compass", "target", "nav_panel", "disengage", "fss", "mission_dest", "missions", "sun"]
+    #wanted_regions = ["compass", "target", "nav_panel", "disengage", "fss", "mission_dest", "missions", "sun"]
     # wanted_regions = ["compass", "target", "nav_panel", "disengage"]  # The more common regions for navigation
-    show_regions(wanted_regions)
+    #show_regions(wanted_regions)
 
     # HSV Tester...
     #
@@ -64,7 +64,7 @@ def main():
     # hsv_tester("test/navpoint/Screenshot 2024-07-04 20-02-01.png")
     # hsv_tester("test/navpoint-behind/Screenshot 2024-07-04 20-01-33.png")
     # hsv_tester("test/target/Screenshot 2024-07-04 23-22-02.png")
-
+    # hsv_tester("test/target-occluded/Screenshot 2025-05-04 16-07-09_cr.png")
 
 def draw_match_rect(img, pt1, pt2, color, thick):
     """ Utility function to add a rectangle to an image. """
@@ -145,7 +145,7 @@ def template_matching_test(region_name, template):
     #scr = ed_ap.scr
     scr = Screen(cb=None)
 
-    templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
+    templ = Image_Templates(scr.scaleX, scr.scaleY, scr.scaleX)
 
     scr_reg = Screen_Regions(scr, templ)
 
