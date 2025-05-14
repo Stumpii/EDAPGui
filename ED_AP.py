@@ -1687,10 +1687,18 @@ class EDAutopilot:
         on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
         fleet_carrier = self.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
 
+
+
         # Leave starport or planetary port
         if not on_planet:
             # Check that we are docked
             if self.status.get_flag(FlagsDocked):
+                # Check if we have an advanced docking computer
+                if not self.jn.ship_state()['has_adv_dock_comp']:
+                    self.ap_ckb('log', "Unable to undock. Advanced Docking Computer not fitted.")
+                    logger.warning('Unable to undock. Advanced Docking Computer not fitted.')
+                    raise Exception('Unable to undock. Advanced Docking Computer not fitted.')
+
                 # Undock from station
                 self.undock()
 
@@ -1740,6 +1748,12 @@ class EDAutopilot:
             # Check if we are on a landing pad (docked), or landed on the planet surface
             if self.status.get_flag(FlagsDocked):
                 # We are on a landing pad (docked)
+                # Check if we have an advanced docking computer
+                if not self.jn.ship_state()['has_adv_dock_comp']:
+                    self.ap_ckb('log', "Unable to undock. Advanced Docking Computer not fitted.")
+                    logger.warning('Unable to undock. Advanced Docking Computer not fitted.')
+                    raise Exception('Unable to undock. Advanced Docking Computer not fitted.')
+
                 # Undock from port
                 self.undock()
 
@@ -2004,6 +2018,10 @@ class EDAutopilot:
 
             # Check if this is a target we cannot dock at
             skip_docking = False
+            if not self.jn.ship_state()['has_adv_dock_comp'] and not self.jn.ship_state()['has_std_dock_comp']:
+                self.ap_ckb('log', "Skipping docking. No Docking Computer fitted.")
+                skip_docking = True
+
             if not self.jn.ship_state()['SupercruiseDestinationDrop_type'] is None:
                 if (self.jn.ship_state()['SupercruiseDestinationDrop_type'].startswith("$USS_Type")
                         # Bulk Cruisers
@@ -2014,6 +2032,7 @@ class EDAutopilot:
                         or "-class Surveyor" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
                         or "-class Traveller" in self.jn.ship_state()['SupercruiseDestinationDrop_type']
                         or "-class Tanker" in self.jn.ship_state()['SupercruiseDestinationDrop_type']):
+                    self.ap_ckb('log', "Skipping docking. No docking privilege at MegaShips.")
                     skip_docking = True
 
             if not skip_docking:
@@ -2021,6 +2040,8 @@ class EDAutopilot:
                 self.dock()
                 self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
+            else:
+                self.keys.send('SetSpeedZero')
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
             self.keys.send('SetSpeedZero')  # make sure we don't continue to land
@@ -2363,6 +2384,8 @@ class EDAutopilot:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with a Fuel Scoop.")
                         if not self.jn.ship_state()['has_adv_dock_comp']:
                             self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is not fitted with an Advanced Docking Computer.")
+                        if self.jn.ship_state()['has_std_dock_comp']:
+                            self.ap_ckb('log+vce', f"Warning, your {ship_fullname} is fitted with a Standard Docking Computer.")
 
                         # Add ship to ship configs if missing
                         if ship is not None:
