@@ -32,11 +32,11 @@ def set_focus_elite_window():
 @final
 class EDKeys:
 
-    def __init__(self):
+    def __init__(self, cb):
+        self.ap_ckb = cb
         self.key_mod_delay = 0.010
         self.key_default_delay = 0.200
         self.key_repeat_delay = 0.100
-
 
         self.keys_to_obtain = [
             'YawLeftButton',
@@ -85,24 +85,28 @@ class EDKeys:
         # We want to log the keyboard name instead of just the key number so we build a reverse dictionary
         # so we can look up the name also
         self.reversed_dict = {value: key for key, value in SCANCODE.items()}
- 
+
         # dump config to log
         for key in self.keys_to_obtain:
             try:
                 # lookup the keyname in the SCANCODE reverse dictionary and output that key name
                 keyname = self.reversed_dict.get(self.keys[key]['key'], "Key not found")
                 keymod = " "
-                #if key modifier, then look up that modifier name also
+                # if key modifier, then look up that modifier name also
                 if len(self.keys[key]['mods']) != 0:
                     keymod = self.reversed_dict.get(self.keys[key]['mods'][0], " ")
-        
+
                 logger.info('\tget_bindings_<{}>={} Key: <{}> Mod: <{}>'.format(key, self.keys[key], keyname, keymod))
                 if key not in self.keys:
-                    logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
+                    self.ap_ckb('log',
+                                f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind {keyname}.")
+                    logger.warning(
+                        "\tget_bindings_<{}>= does not have a valid keyboard keybind {}".format(key, keyname).upper())
                     self.missing_keys.append(key)
             except Exception as e:
+                self.ap_ckb('log', f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind.")
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
-                self.missing_keys.append(key)                
+                self.missing_keys.append(key)
 
     def get_bindings(self) -> dict[str, Any]:
         """Returns a dict struct with the direct input equivalent of the necessary elite keybindings"""
@@ -160,7 +164,7 @@ class EDKeys:
 
     # Note:  this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self):
-        path_bindings = environ['LOCALAPPDATA']+"\Frontier Developments\Elite Dangerous\Options\Bindings"
+        path_bindings = environ['LOCALAPPDATA'] + "\Frontier Developments\Elite Dangerous\Options\Bindings"
         try:
             list_of_bindings = [join(path_bindings, f) for f in listdir(path_bindings) if
                                 isfile(join(path_bindings, f)) and f.endswith('.binds')]
@@ -188,11 +192,13 @@ class EDKeys:
         key = self.keys.get(key_binding)
         if key is None:
             logger.warning('SEND=NONE !!!!!!!!')
+            self.ap_ckb('log', f"WARNING: Unable to retrieve keybinding for {key_binding}.")
             raise Exception(
                 f"Unable to retrieve keybinding for {key_binding}. Advise user to check game settings for keyboard bindings.")
 
         key_name = self.reversed_dict.get(key['key'], "Key not found")
-        logger.debug('\tsend=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(hold) + ',repeat:' + str(
+        logger.debug('\tsend=' + key_binding + ',key:' + str(key) + ',key_name:' + key_name + ',hold:' + str(
+            hold) + ',repeat:' + str(
             repeat) + ',repeat_delay:' + str(repeat_delay) + ',state:' + str(state))
 
         for i in range(repeat):

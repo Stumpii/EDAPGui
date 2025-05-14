@@ -141,8 +141,9 @@ def template_matching_test(region_name, template):
     """ To test the template matching. Using the provided region and template.
     :param region_name: The name of the region with the required filter to apply to the image.
     :param template: The name of the template to find in each file being tested. """
-    ed_ap = EDAutopilot(cb=None)
-    scr = ed_ap.scr
+    #ed_ap = EDAutopilot(cb=None)
+    #scr = ed_ap.scr
+    scr = Screen(cb=None)
 
     templ = Image_Templates(scr.scaleX, scr.scaleY, ed_ap.compass_scale)
 

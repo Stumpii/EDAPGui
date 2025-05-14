@@ -1,3 +1,4 @@
+import queue
 import sys
 import os
 import threading
@@ -112,6 +113,9 @@ class APGui():
             'Reset Waypoint List': "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list."
         }
 
+        self.gui_loaded = False
+        self.log_buffer = queue.Queue()
+
         self.ed_ap = EDAutopilot(cb=self.callback)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
 
@@ -211,6 +215,9 @@ class APGui():
         self.check_updates()
 
         self.ed_ap.gui_loaded = True
+        self.gui_loaded = True
+        # Send a log entry which will flush out the buffer.
+        self.callback('log', 'ED Autopilot loaded successfully.')
 
     # callback from the EDAP, to configure GUI items
     def callback(self, msg, body=None):
@@ -443,9 +450,20 @@ class APGui():
         os.startfile('autopilot.log')
 
     def log_msg(self, msg):
-        self.msgList.insert(END, datetime.now().strftime("%H:%M:%S: ") + msg)
-        self.msgList.yview(END)
-        logger.info(f"Log Msg: {msg}")
+        message = datetime.now().strftime("%H:%M:%S: ") + msg
+
+        if not self.gui_loaded:
+            # Store message in queue
+            self.log_buffer.put(message)
+            logger.info(f"Log Msg: {message}")
+        else:
+            # Add queued messages to the list
+            while not self.log_buffer.empty():
+                self.msgList.insert(END, self.log_buffer.get())
+
+            self.msgList.insert(END, message)
+            self.msgList.yview(END)
+            logger.info(f"Log Msg: {message}")
 
     def set_statusbar(self, txt):
         self.statusbar.configure(text=txt)

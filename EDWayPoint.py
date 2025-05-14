@@ -631,7 +631,7 @@ def main():
     ed_ap = EDAutopilot(cb=None)
     wp = EDWayPoint(ed_ap, True)  # False = Horizons
     wp.step = 0  # start at first waypoint
-    keys = EDKeys()
+    keys = EDKeys(cb=None)
     keys.activate_window = True
     wp.ap.stn_svcs_in_ship.select_sell(keys)
     wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)

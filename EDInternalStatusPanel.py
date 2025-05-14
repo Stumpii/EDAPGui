@@ -238,8 +238,8 @@ class EDInternalStatusPanel:
 # Usage Example
 if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)  # Default to log all debug when running this file.
-    scr = Screen()
-    mykeys = EDKeys()
+    scr = Screen(cb=None)
+    mykeys = EDKeys(cb=None)
     mykeys.activate_window = True  # Helps with single steps testing
     nav_pnl = EDInternalStatusPanel(scr, mykeys, None, None)
     nav_pnl.show_inventory_tab()

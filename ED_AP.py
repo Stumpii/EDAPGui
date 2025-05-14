@@ -180,7 +180,7 @@ class EDAutopilot:
         # Create instance of each of the needed Classes
         self.gfx_settings = EDGraphicsSettings()
 
-        self.scr = Screen.Screen()
+        self.scr = Screen.Screen(cb)
         self.scr.scaleX = self.config['TargetScale']
         self.scr.scaleY = self.config['TargetScale']
 
@@ -188,7 +188,7 @@ class EDAutopilot:
         self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal()
-        self.keys = EDKeys()
+        self.keys = EDKeys(cb)
         self.keys.activate_window = self.config['ActivateEliteEachKey']
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
