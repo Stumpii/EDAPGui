@@ -9,6 +9,7 @@ from typing import Any, final
 from xml.etree.ElementTree import parse
 
 import win32gui
+import xmltodict
 
 from directinput import *
 from EDlogger import logger
@@ -77,8 +78,11 @@ class EDKeys:
             'UpThrustButton',
             'LandingGearToggle',
             'TargetNextRouteSystem',  # Target next system in route
+            'CamTranslateForward',
+            'CamTranslateRight',
         ]
         self.keys = self.get_bindings()
+        self.bindings = self.get_bindings_dict()
         self.activate_window = False
 
         self.missing_keys = []
@@ -107,6 +111,52 @@ class EDKeys:
                 self.ap_ckb('log', f"WARNING: \tget_bindings_<{key}>= does not have a valid keyboard keybind.")
                 logger.warning("\tget_bindings_<{}>= does not have a valid keyboard keybind.".format(key).upper())
                 self.missing_keys.append(key)
+
+        # Check for known key collisions
+        collisions = self.get_collisions('UI_Up')
+        if 'CamTranslateForward' in collisions:
+            warn_text = ("Up arrow key is used for 'UI Panel Up' and 'Galaxy Cam Translate Fwd'. "
+                         "This will cause problems in the Galaxy Map. Change the keybinding for "
+                         "'Galaxy Cam Translate' to Shift + WASD under General Controls in ED Controls.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
+
+        collisions = self.get_collisions('UI_Right')
+        if 'CamTranslateRight' in collisions:
+            warn_text = ("Up arrow key is used for 'UI Panel Up' and 'Galaxy Cam Translate Right'. "
+                         "This will cause problems in the Galaxy Map. Change the keybinding for"
+                         " 'Galaxy Cam Translate' to Shift + WASD under General Controls in ED Controls.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
+
+        # Check if the hotkeys are used in ED
+        binding_name = self.check_hotkey_in_bindings('Key_End')
+        if binding_name != "":
+            warn_text = (f"Hotkey 'Key_End' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                         f" ED to another key to avoid EDAP accidentally being triggered.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
+
+        binding_name = self.check_hotkey_in_bindings('Key_Insert')
+        if binding_name != "":
+            warn_text = (f"Hotkey 'Key_Insert' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                         f" ED to another key to avoid EDAP accidentally being triggered.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
+
+        binding_name = self.check_hotkey_in_bindings('Key_PageUp')
+        if binding_name != "":
+            warn_text = (f"Hotkey 'Key_PageUp' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                         f" ED to another key to avoid EDAP accidentally being triggered.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
+
+        binding_name = self.check_hotkey_in_bindings('Key_Home')
+        if binding_name != "":
+            warn_text = (f"Hotkey 'Key_Home' is used in the ED keybindings for '{binding_name}'. Recommend changing in"
+                         f" ED to another key to avoid EDAP accidentally being triggered.")
+            self.ap_ckb('log', f"WARNING: {warn_text}")
+            logger.warning(f"{warn_text}")
 
     def get_bindings(self) -> dict[str, Any]:
         """Returns a dict struct with the direct input equivalent of the necessary elite keybindings"""
@@ -161,6 +211,54 @@ class EDKeys:
             return {}
         else:
             return direct_input_keys
+
+    def get_bindings_dict(self) -> dict[str, Any]:
+        """Returns a dict of all the elite keybindings.
+        @return: A dictionary of the keybinds file.
+        Example:
+        {
+        'Root': {
+            'YawLeftButton': {
+                'Primary': {
+                    '@Device': 'Keyboard',
+                    '@Key': 'Key_A'
+                },
+                'Secondary': {
+                    '@Device': '{NoDevice}',
+                    '@Key': ''
+                }
+            }
+        }
+        }
+        """
+        latest_bindings = self.get_latest_keybinds()
+        if not latest_bindings:
+            return {}
+
+        try:
+            with open(latest_bindings, 'r') as file:
+                my_xml = file.read()
+                my_dict = xmltodict.parse(my_xml)
+                return my_dict
+
+        except OSError as e:
+            logger.error(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")
+            raise Exception(f"OS Error reading Elite Dangerous bindings file: {latest_bindings}.")
+
+    def check_hotkey_in_bindings(self, key_name: str) -> str:
+        """ Check for the action keys. """
+        ret = []
+        for key, value in self.bindings['Root'].items():
+            if type(value) is dict:
+                primary = value.get('Primary', None)
+                if primary is not None:
+                    if primary['@Key'] == key_name:
+                        ret.append(f"{key} (Primary)")
+                secondary = value.get('Secondary', None)
+                if secondary is not None:
+                    if secondary['@Key'] == key_name:
+                        ret.append(f"{key} (Secondary)")
+        return " and ".join(ret)
 
     # Note:  this routine will grab the *.binds file which is the latest modified
     def get_latest_keybinds(self):
@@ -234,3 +332,14 @@ class EDKeys:
                 sleep(repeat_delay)
             else:
                 sleep(self.key_repeat_delay)
+
+    def get_collisions(self, key_name: str) -> list[str]:
+        """ Get key name collisions (keys used for more than one binding).
+        @param key_name: The key name (i.e. UI_Up, UI_Down).
+        """
+        key = self.keys.get(key_name)
+        collisions = []
+        for k, v in self.keys.items():
+            if key == v:
+                collisions.append(k)
+        return collisions
