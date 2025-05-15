@@ -91,6 +91,9 @@ class EDAutopilot:
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
             "Language": 'en',              # Language (matching ./locales/xx.json file)
+            "EnableEDMesg": False,
+            "EDMesgActionsPort": 15570,
+            "EDMesgEventsPort": 15571,
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -129,6 +132,10 @@ class EDAutopilot:
                     cnf['FCDepartureTime'] = 5.0
                 if 'Language' not in cnf:
                     cnf['Language'] = 'en'
+                if 'EnableEDMesg' not in cnf:
+                    cnf['EnableEDMesg'] = False
+                    cnf['EDMesgActionsPort'] = 15570
+                    cnf['EDMesgEventsPort'] = 15571
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -201,9 +208,14 @@ class EDAutopilot:
         self.galaxy_map = EDGalaxyMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.system_map = EDSystemMap(self, self.scr, self.keys, cb, self.jn.ship_state()['odyssey'])
         self.stn_svcs_in_ship = EDStationServicesInShip(self, self.scr, self.keys, cb)
-        self.mesg_server = EDMesgServer(self, cb)
 
-        # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
+        self.mesg_server = EDMesgServer(self, cb)
+        self.mesg_server.actions_port = self.config['EDMesgActionsPort']
+        self.mesg_server.events_port = self.config['EDMesgEventsPort']
+        if self.config['EnableEDMesg']:
+            self.mesg_server.start_server()
+
+        # rate as ship dependent. Can be found on the outfitting page for the ship. However, it looks like supercruise
         # has worse performance for these rates
         # see:  https://forums.frontier.co.uk/threads/supercruise-handling-of-ships.396845/
         #
@@ -2486,7 +2498,7 @@ def main():
     #if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
-    ed_ap = EDAutopilot(False)
+    ed_ap = EDAutopilot(cb=None, doThread=False)
     ed_ap.cv_view = True
     ed_ap.cv_view_x = 4000
     ed_ap.cv_view_y = 100

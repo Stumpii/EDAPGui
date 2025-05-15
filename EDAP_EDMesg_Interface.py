@@ -34,11 +34,11 @@ actions: list[type[EDMesgAction]] = [
 events: list[type[EDMesgEvent]] = [
     UndockCompleteEvent,
 ]
-actions_port = 15560
-events_port = 15561
+#actions_port = 15570
+#events_port = 15571
 
 
-def create_edap_provider() -> EDMesgProvider:
+def create_edap_provider(actions_port: int, events_port: int) -> EDMesgProvider:
     return EDMesgProvider(
         provider_name=provider_name,
         action_types=actions,
@@ -48,7 +48,7 @@ def create_edap_provider() -> EDMesgProvider:
     )
 
 
-def create_edap_client() -> EDMesgClient:
+def create_edap_client(actions_port: int, events_port: int) -> EDMesgClient:
     return EDMesgClient(
         provider_name=provider_name,
         action_types=actions,
