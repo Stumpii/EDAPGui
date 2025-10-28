@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
+import os
+
 from EDAP_data import GuiFocusSystemMap
 from EDlogger import logger
-from OCR import OCR
-from Screen_Regions import reg_scale_for_station
+from Screen_Regions import scale_region, Quad
 from StatusParser import StatusParser
 from time import sleep
 
@@ -19,8 +21,27 @@ class EDSystemMap:
         self.status_parser = StatusParser()
         self.ap_ckb = cb
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
+        self.reg = {'full_panel': {'rect': [0.1, 0.1, 0.9, 0.9]},
+                    'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     }
+        self.sub_reg = {'cartographics': {'rect': [0.0, 0.0, 0.15, 0.15]}}
+
+        self.load_calibrated_regions()
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDSystemMap.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
+
+            # Scale the regions based on the sub-region.
+            self.reg['cartographics']['rect'] = scale_region(self.reg['full_panel']['rect'],
+                                                             self.sub_reg['cartographics']['rect'])
 
     def set_sys_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the System Map destination using a bookmark.
@@ -34,7 +55,9 @@ class EDSystemMap:
         if self.is_odyssey and bookmark_position != -1:
             # Check if this is a nav-panel bookmark
             if not bookmark_type.lower().startswith("nav"):
-                self.goto_system_map()
+                res = self.goto_system_map()
+                if not res:
+                    return False
 
                 ap.keys.send('UI_Left')  # Go to BOOKMARKS
                 sleep(.5)
@@ -89,7 +112,7 @@ class EDSystemMap:
 
         return False
 
-    def goto_system_map(self):
+    def goto_system_map(self) -> bool:
         """ Open System Map if we are not there.
         """
         if self.status_parser.get_gui_focus() != GuiFocusSystemMap:
@@ -99,21 +122,22 @@ class EDSystemMap:
             # Goto System Map
             self.ap.keys.send('SystemMapOpen')
 
-            # Wait for map to load
-            # if not self.status_parser.wait_for_gui_focus(GuiFocusSystemMap):
-            #     logger.debug("goto_galaxy_map: System map did not open.")
-
-            # TODO - Add OCR to check screen loaded
-            # Scale the regions based on the target resolution.
-            scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
-                                            self.screen.screen_height)
+            if self.ap.debug_overlay:
+                stn_svcs = Quad.from_rect(self.reg['full_panel']['rect'])
+                self.ap.overlay.overlay_quad_pct('system map', stn_svcs, (0, 255, 0), 2, 5)
+                self.ap.overlay.overlay_paint()
 
             # Wait for screen to appear. The text is the same, regardless of language.
-            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], self.reg['cartographics'], timeout=15)
+            if not res:
+                if self.status_parser.get_gui_focus() != GuiFocusSystemMap:
+                    logger.warning("Unable to open System Map")
+                    return False
 
-            # sleep(3.5)
+            return True
         else:
             logger.debug("System Map is already open")
             self.keys.send('UI_Left')
             self.keys.send('UI_Up', hold=2)
             self.keys.send('UI_Left')
+            return True

@@ -107,6 +107,28 @@ class CargoParser:
                     return good
         return None
 
+    def get_items(self) -> list[any]:
+        """ Get all items in the cargo in a list.
+        Will not trigger a read of the json file. """
+        return self.current_data['Inventory']
+
+    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
+        """ Waits for the file to change.
+        Returns True if the file changes or False on a time-out.
+        @param start_timestamp: The initial timestamp from 'timestamp' value.
+        @param timeout: Timeout in seconds.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            # Check file and read now data
+            self.get_cargo_data()
+            # Check if internal timestamp changed
+            if self.current_data['timestamp'] != start_timestamp:
+                return True
+
+            sleep(0.5)
+
+        return False
 
 # Usage Example
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
@@ -134,6 +135,7 @@ class EDJournal:
         self.log_file = None
         self.current_log = self.get_latest_log()
         self.open_journal(self.current_log)
+        self._prev_const_depot_details = None
 
         self.ship = {
             'time': (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds,
@@ -168,6 +170,8 @@ class EDJournal:
             'has_std_dock_comp': None,
             'has_sco_fsd': None,
             'StationServices': None,
+            'ConstructionDepotDetails': dict[str, any],
+            'MarketID': 0,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -299,6 +303,7 @@ class EDJournal:
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
                 self.ship['StationServices'] = log['StationServices']
+                self.ship['MarketID'] = log['MarketID']
 
                 # parse location
             elif log_event == 'Location':
@@ -306,6 +311,7 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                self.ship['MarketID'] = log['MarketID']
                 if log['Docked'] == True:
                     self.ship['status'] = 'in_station'
 
@@ -388,11 +394,81 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                self.ship['MarketID'] = log['MarketID']
+
+            elif log_event == 'ColonisationConstructionDepot':
+                # {"timestamp": "2025-06-24T02:20:26Z", "event": "ColonisationConstructionDepot",
+                #  "MarketID": 3953149698, "ConstructionProgress": 0.396292, "ConstructionComplete": false,
+                #  "ConstructionFailed": false, "ResourcesRequired": [
+                #      {"Name": "$aluminium_name;", "Name_Localised": "Aluminium", "RequiredAmount": 1278,
+                #       "ProvidedAmount": 1278, "Payment": 3239},
+                #      {"Name": "$fruitandvegetables_name;", "Name_Localised": "Fruit and Vegetables",
+                #       "RequiredAmount": 9, "ProvidedAmount": 9, "Payment": 865},
+                #      {"Name": "$waterpurifiers_name;", "Name_Localised": "Water Purifiers", "RequiredAmount": 13,
+                #       "ProvidedAmount": 13, "Payment": 849}]}
+                self._prev_const_depot_details = self.ship['ConstructionDepotDetails']
+                self.ship['ConstructionDepotDetails'] = {'MarketID': log['MarketID'],
+                                                         'ConstructionProgress': log['ConstructionProgress'],
+                                                         'ConstructionComplete': log['ConstructionComplete'],
+                                                         'ConstructionFailed': log['ConstructionFailed'],
+                                                         'ResourcesRequired': log['ResourcesRequired']}
+                # Process the construction depot details
+                self.process_construction_depot_details()
 
         # exceptions
         except Exception as e:
             #logger.exception("Exception occurred")
             print(e)
+
+    def process_construction_depot_details(self):
+        # TODO - save this construction data to a construction.json with multiple markets and update it
+        #  locally and from Inara in case other commanders deliver goods.
+        if self._prev_const_depot_details != self.ship['ConstructionDepotDetails']:
+            # Load construction dict
+            filepath = './configs/construction.json'
+            if os.path.exists(filepath):
+                const = read_construction(filepath)
+            else:
+                const = {}
+
+            # Get construction details
+            dic = self.ship['ConstructionDepotDetails']
+            if isinstance(dic, dict):
+                # If Market is the current location, use the station name
+                mrk = dic.get('MarketID')
+                str_mrk = str(mrk)
+                if mrk == self.ship['MarketID']:
+                    stn = self.ship['cur_station']
+                else:
+                    stn = dic.get('MarketID')
+
+                # Check if market in construction dict
+                if str_mrk not in const:
+                    const[str_mrk] = {}
+
+                # Add station to the dictionary
+                const[str_mrk]['StationName'] = stn
+                const[str_mrk]['MarketID'] = dic.get('MarketID')
+                const[str_mrk]['ConstructionProgress'] = dic.get('ConstructionProgress')
+                const[str_mrk]['ConstructionComplete'] = dic.get('ConstructionComplete')
+                const[str_mrk]['ConstructionFailed'] = dic.get('ConstructionFailed')
+                const[str_mrk]['ResourcesRequired'] = dic.get('ResourcesRequired')
+
+                # Get the list of resources required.
+                res = dic.get('ResourcesRequired')
+                if isinstance(res, list):
+                    first = True
+                    for good in res:
+                        if good['RequiredAmount'] > good['ProvidedAmount']:
+                            need = good['RequiredAmount'] - good['ProvidedAmount']
+                            if first:
+                                self.ap_ckb('log', f"Construction Depot Details for '{stn}'...")
+                                first = False
+                            self.ap_ckb('log', f"   Need {need} of {good['Name_Localised']}.")
+
+                # Save file
+                filepath = './configs/construction.json'
+                write_construction(const, filepath)
 
     def ship_state(self):
         latest_log = self.get_latest_log()
@@ -422,6 +498,30 @@ class EDJournal:
 
         self.last_mod_time = self.get_file_modified_time()
         return self.ship
+
+
+def write_construction(data, filename='./configs/construction.json'):
+    #  TODO - move to separate class/file
+    if data is None:
+        return False
+    try:
+        with open(filename, "w") as fp:
+            json.dump(data, fp, indent=4)
+            return True
+    except Exception as e:
+        logger.warning("EDJournal.py write_construction error:" + str(e))
+        return False
+
+
+def read_construction(filename='./configs/construction.json'):
+    #  TODO - move to separate class/file
+    s = None
+    try:
+        with open(filename, "r") as fp:
+            s = json.load(fp)
+    except Exception as e:
+        logger.warning("EDJournal.py read_construction error:"+str(e))
+    return s
 
 
 def dummy_cb(msg, body=None):

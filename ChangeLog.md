@@ -1,3 +1,78 @@
+# 10/25/2025 v1.8.0 b13
+ - Updated screenshots for github main page.
+ - Added Key class default values to config file for users to tune. Added to Settings tab as well.
+ - Added target align tuning values to config file.
+ - Increased some delays to improve performance on older computers.
+
+# 10/22/2025 v1.8.0 b12
+ - Added sell ALL and buy ALL to the waypoint trader for normal station and FC commodity markets.
+ - Added Debug OCR option to enable logging of OCR detection if there are OCR issues.
+ - Added Debug Images option to log some images for debug purposes.
+
+# 10/19/2025 v1.8.0 b11
+ - In English locale file, changed CONNECTED TO to CONNECTED.
+ - Added enable hotkey option (off by default) to help new players with bindings.
+ - Disabled target auto calibration (again).
+ - More improvements to SC.
+ - Enabled overlay for auto calibration.
+ - Added time indication for disengage overlay.
+ - Added OCR detection for disengage into sco thread.
+ - Fixed issue with target scale not being read from save file.
+ - Added auto deletion of old log files.
+ - Cleared target and compass overlays when moving the ship.
+ - Decreased margin for compass align and nav detect is more accurate.
+
+# 10/16/2025 v1.8.0 b10
+ - Reduced fallback for gal and sys map.
+ - Better detection of Col Ships.
+ - Improved sc disengaged image.
+ - Improved SC disengage operation.
+
+# 10/12/2025 v1.8.0 b9
+ - Added 'ScreenScale' to config as the auto target calibration is now messing with the other template scaling.
+ - Moved occluded target code into the target code. This should make occluded state easier to check and test.
+ - Changed target regions back to default and increased occluded target filtering.
+ - Updated occluded target image to regular target size.
+ - Added delay after ship movement in SC assist to allow ship to finish moving. 
+ - Added FSD ETA to overlay.
+ - Added logging of target offset, before and after for test.
+ - Added SC check to interdiction logic. Thanks vasconet.
+ - Added nav point correction when target aligned, to zero out any nav point offset errors.
+ - When in sc assist and compass is in control, increased the threshold as the compass is less accurate.
+ - Added ETA to system to log.
+
+# 10/9/2025 v1.8.0 b8
+ - Added Delete All global shopping button.
+ - Added Load Construction Commodities button to add construction commodity requirements to global shopping list.
+ - Added additional nav_align error checking.
+ - Changed sc_assist constants.
+
+# 10/7/2025 v1.8.0 b7
+ - Change auto calibration range.
+ - Added auto calibrate when first initialising SC instead while in SC.
+ - Target align now falls back to compass align automatically to keep on target.
+ - Changed target align thresholds.
+ - Added wait for removal of mass lock when leaving stations.
+ - Added construction requirements logging to 'configs\construction.json' file. Updated when docking with construction site.
+ - Fixed bug during auto calibration.
+ - Added FOV calculation.
+ - Updated calibration docs.
+ - Added Type-11 Prospector.
+
+# 9/1/2025 v1.8.0 b6:
+ - Updated PaddleOCR.
+ - Added screen calibration.
+
+# 9/1/2025 v1.8.0 b5:
+ - Updated requirements to remove OCR crash
+ - Made fix to Spansh import.
+ - Added waypoint editor tab from DankShaman's branch.
+ - Fixed error on missing NavRoute.json file.
+ - Updated GUI.
+ - Added auto calibration (WIP).
+ - Improved debug overlay.
+ - Improved fallback for ED client window detection.
+
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
  - Fixed CARTOGRAPHICS detection.

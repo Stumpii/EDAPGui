@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import logging
+import os
+from copy import copy
 from time import sleep
 import cv2
 from EDAP_data import *
 from EDKeys import EDKeys
+from EDNavigationPanel import rects_to_quadrilateral, image_perspective_transform, image_reverse_perspective_transform
 from OCR import OCR
-from Screen import Screen
-from Screen_Regions import size_scale_for_station
+from Screen import Screen, crop_image_by_pct
+from Screen_Regions import Quad
 from StatusParser import StatusParser
 from EDlogger import logger
 
@@ -32,26 +36,141 @@ class EDInternalStatusPanel:
         self.status_tab_text = self.locale["INT_PNL_TAB_STATUS"]
 
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'right_panel': {'rect': [0.2, 0.2, 1.0, 0.35]}}
+        # Nav Panel region covers the entire navigation panel.
+        self.reg = {'panel_bounds1': {'rect': [0.0, 0.2, 0.7, 0.35]},
+                    'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
+                    }
+        # self.reg = {'right_panel': {'rect': [0.2, 0.2, 1.0, 0.35]}}
+        self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
+                        'inventory_panel': {'rect': [0.174, 0.2265, 0.75, 0.8528]}}
+        self.sub_reg_size = {'sts_pnl_tab': {"width": 0.15, "height": 0.7},  # Nav panel tab size in percent
+                             'sts_pnl_location': {"width": 1.0, "height": 0.1577}}  # Nav panel location size in percent
+        self.panel_quad_pct = Quad()
+        self.panel_quad_pix = Quad()
+        self.panel = None
+        self._transform = None  # Warp transform to deskew the Nav panel
+        self._rev_transform = None  # Reverse warp transform to skew to match the Nav panel
 
-        self.nav_pnl_tab_width = 140  # Nav panel tab width in pixels at 1920x1080
-        self.nav_pnl_tab_height = 35  # Nav panel tab height in pixels at 1920x1080
+        self.load_calibrated_regions()
 
-    def show_right_panel(self):
-        """ Shows the Internal (Right) Panel.
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDInternalStatusPanel.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
+
+            # Produce quadrilateral from the two bounds rectangles
+            reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
+            reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
+            self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
+            self.panel_quad_pix = copy(self.panel_quad_pct)
+            self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
+
+    def capture_panel_straightened(self):
+        """ Grab the image based on the panel coordinates.
+        Returns an unfiltered image, either from screenshot or provided image, or None if an image cannot
+        be grabbed.
+        """
+        if self.panel_quad_pct is None:
+            logger.warning(f"Nav Panel Calibration has not been performed. Cannot continue.")
+            self.ap_ckb('log', 'Nav Panel Calibration has not been performed. Cannot continue.')
+            return None
+
+        # Get the nav panel image based on the region
+        image = self.screen.get_screen(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top(),
+                                       self.panel_quad_pix.get_right(), self.panel_quad_pix.get_bottom(), rgb=False)
+        cv2.imwrite(f'test/status-panel/out/nav_panel_original.png', image)
+
+        # Offset the panel co-ords to match the cropped image (i.e. starting at 0,0)
+        panel_quad_pix_off = copy(self.panel_quad_pix)
+        panel_quad_pix_off.offset(-panel_quad_pix_off.get_left(), -panel_quad_pix_off.get_top())
+
+        # Straighten the image
+        straightened, trans, rev_trans = image_perspective_transform(image, panel_quad_pix_off)
+        # Store the transforms
+        self._transform = trans
+        self._rev_transform = rev_trans
+        # Write the file
+        cv2.imwrite(f'test/status-panel/out/nav_panel_straight.png', straightened)
+
+        if self.ap.debug_overlay:
+            self.ap.overlay.overlay_quad_pct('nav_panel_active', self.panel_quad_pct, (0, 255, 0), 2, 5)
+            self.ap.overlay.overlay_paint()
+
+        return straightened
+
+    def capture_tab_bar(self):
+        """ Get the tab bar (MODULES/FIRE GROUPS/SHIP/INVENTORY/STORAGE/STATUS).
+        Returns an image, or None.
+        """
+        # Scale the regions based on the target resolution.
+        self.panel = self.capture_panel_straightened()
+        if self.panel is None:
+            return None
+
+        # Convert region rect to quad
+        tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+        # Crop the image to the extents of the quad
+        tab_bar = crop_image_by_pct(self.panel, tab_bar_quad)
+        cv2.imwrite(f'test/status-panel/out/tab_bar.png', tab_bar)
+
+        if self.ap.debug_overlay:
+            # Transform the array of coordinates to the skew of the nav panel
+            q_out = image_reverse_perspective_transform(self.panel, tab_bar_quad, self._rev_transform)
+            # Offset to match the nav panel offset
+            q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+
+            self.ap.overlay.overlay_quad_pix('status_panel_tab_bar', q_out, (0, 255, 0), 2, 5)
+            self.ap.overlay.overlay_paint()
+
+        return tab_bar
+
+    def capture_inventory_panel(self):
+        """ Get the inventory panel from within the panel.
+        Returns an image, or None.
+        """
+        # Scale the regions based on the target resolution.
+        panel = self.capture_panel_straightened()
+        if panel is None:
+            return None
+
+        # Convert region rect to quad
+        inventory_panel_quad = Quad.from_rect(self.sub_reg['inventory_panel']['rect'])
+        # Crop the image to the extents of the quad
+        inventory_panel = crop_image_by_pct(panel, inventory_panel_quad)
+        cv2.imwrite(f'test/status-panel/out/inventory_panel.png', inventory_panel)
+
+        if self.ap.debug_overlay:
+            # Transform the array of coordinates to the skew of the nav panel
+            q_out = image_reverse_perspective_transform(panel, inventory_panel_quad, self._rev_transform)
+            # Offset to match the nav panel offset
+            q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+
+            self.ap.overlay.overlay_quad_pix('sts_panel_inventory_panel', q_out, (0, 255, 0), 2, 5)
+            self.ap.overlay.overlay_paint()
+
+        return inventory_panel
+
+    def show_panel(self):
+        """ Shows the Status Panel. Opens the Nav Panel if not already open.
         Returns True if successful, else False.
         """
         logger.debug("show_right_panel: entered")
 
         # Is nav panel active?
-        active, active_tab_name = self.is_right_panel_active()
+        active, active_tab_name = self.is_panel_active()
         if active:
             # Store image
             image = self.screen.get_screen_full()
-            cv2.imwrite(f'test/internal-panel/int_panel_full.png', image)
+            cv2.imwrite(f'test/status-panel/int_panel_full.png', image)
             return active, active_tab_name
         else:
-            print("Open Internal Panel")
+            print("Open Status Panel")
             logger.debug("show_right_panel: Open Internal Panel")
             self.ap.ship_control.goto_cockpit_view()
 
@@ -62,48 +181,23 @@ class EDInternalStatusPanel:
             sleep(0.5)
 
             # Check if it opened
-            active, active_tab_name = self.is_right_panel_active()
+            active, active_tab_name = self.is_panel_active()
             if active:
                 # Store image
                 image = self.screen.get_screen_full()
-                cv2.imwrite(f'test/internal-panel/internal_panel_full.png', image)
+                cv2.imwrite(f'test/status-panel/internal_panel_full.png', image)
                 return active, active_tab_name
             else:
                 return False, ""
 
-    def show_inventory_tab(self) -> bool | None:
-        """ Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
-        Returns True if successful, else False.
+    def hide_panel(self):
+        """ Hides the Internal Panel if open.
         """
-        logger.debug("show_inventory_tab: entered")
+        # Is internal panel active?
+        if self.status_parser.get_gui_focus() == GuiFocusInternalPanel:
+            self.ap.ship_control.goto_cockpit_view()
 
-        # Show nav panel
-        active, active_tab_name = self.show_right_panel()
-        if active is None:
-            return None
-        if not active:
-            print("Internal (Right) Panel could not be opened")
-            return False
-        elif active_tab_name is self.inventory_tab_text:
-            # Do nothing
-            return True
-        elif active_tab_name is self.modules_tab_text:
-            self.keys.send('CycleNextPanel', repeat=3)
-            return True
-        elif active_tab_name is self.fire_groups_tab_text:
-            self.keys.send('CycleNextPanel', repeat=2)
-            return True
-        elif active_tab_name is self.ship_tab_text:
-            self.keys.send('CycleNextPanel', repeat=1)
-            return True
-        elif active_tab_name is self.storage_tab_text:
-            self.keys.send('CycleNextPanel', repeat=7)
-            return True
-        elif active_tab_name is self.status_tab_text:
-            self.keys.send('CycleNextPanel', repeat=6)
-            return True
-
-    def is_right_panel_active(self) -> (bool, str):
+    def is_panel_active(self) -> (bool, str):
         """ Determine if the Nav Panel is open and if so, which tab is active.
             Returns True if active, False if not and also the string of the tab name.
         """
@@ -114,35 +208,30 @@ class EDInternalStatusPanel:
             logger.debug("is_right_panel_active: right panel not focused")
             return False, ""
 
-        logger.debug("is_right_panel_active: right panel is focused")
-
-        # Draw box around region
-        abs_rect = self.screen.screen_rect_to_abs(self.reg['right_panel']['rect'])
-        if self.ap.debug_overlay:
-            self.ap.overlay.overlay_rect1('right_panel_active', abs_rect, (0, 255, 0), 2)
-            self.ap.overlay.overlay_paint()
-
         # Try this 'n' times before giving up
         tab_text = ""
         for i in range(10):
-            # Take screenshot of the panel
-            image = self.ocr.capture_region_pct(self.reg['right_panel'])
-            # tab_bar = self.capture_tab_bar()
-            # if tab_bar is None:
-            #     return None
+            # Is open, so proceed
+            tab_bar = self.capture_tab_bar()
+            if tab_bar is None:
+                return False, ""
 
-            # Determine the nav panel tab size at this resolution
-            scl_row_w, scl_row_h = size_scale_for_station(self.nav_pnl_tab_width, self.nav_pnl_tab_height,
-                                                          self.screen.screen_width, self.screen.screen_height)
-
-            img_selected, ocr_data, ocr_textlist = self.ocr.get_highlighted_item_data(image, scl_row_w, scl_row_h)
+            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, self.sub_reg_size['sts_pnl_tab']['width'], self.sub_reg_size['sts_pnl_tab']['height'], 'status panel')
             if img_selected is not None:
-                logger.debug("is_right_panel_active: image selected")
-                logger.debug(f"is_right_panel_active: OCR: {ocr_textlist}")
-
-                # Overlay OCR result
                 if self.ap.debug_overlay:
-                    self.ap.overlay.overlay_floating_text('right_panel_text', f'{ocr_textlist}', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+                    tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+                    # Convert to a percentage of the nav panel
+                    quad.scale_from_origin(tab_bar_quad.get_width(), tab_bar_quad.get_height())
+                    # quad.offset(tab_bar_quad.get_left(), tab_bar_quad.get_top())
+
+                    # Transform the array of coordinates to the skew of the nav panel
+                    q_out = image_reverse_perspective_transform(self.panel, quad, self._rev_transform)
+                    # Offset to match the nav panel offset
+                    q_out.offset(self.panel_quad_pix.get_left(), self.panel_quad_pix.get_top())
+
+                    # Overlay OCR result
+                    self.ap.overlay.overlay_floating_text('sts_panel_item_text', f'{str(ocr_textlist)}', q_out.get_left(), q_out.get_top() - 25,                                                         (0, 255, 0))
+                    self.ap.overlay.overlay_quad_pix('sts_panel_item', q_out, (0, 255, 0), 2)
                     self.ap.overlay.overlay_paint()
 
                 # Test OCR string
@@ -173,25 +262,41 @@ class EDInternalStatusPanel:
             # In case we are on a picture tab, cycle to the next tab
             self.keys.send('CycleNextPanel')
 
-        # Clean up screen
-        if self.ap.debug_overlay:
-            sleep(2)
-            self.ap.overlay.overlay_remove_rect('right_panel_active')
-            self.ap.overlay.overlay_remove_floating_text('right_panel_text')
-            self.ap.overlay.overlay_paint()
-
         # Return Tab text or nothing
         if tab_text != "":
             return True, tab_text
         else:
             return False, ""
 
-    def hide_right_panel(self):
-        """ Hides the Internal Panel if open.
+    def show_inventory_tab(self) -> bool | None:
+        """ Shows the INVENTORY tab of the Nav Panel. Opens the Nav Panel if not already open.
+        Returns True if successful, else False.
         """
-        # Is internal panel active?
-        if self.status_parser.get_gui_focus() == GuiFocusInternalPanel:
-            self.ap.ship_control.goto_cockpit_view()
+        # Show nav panel
+        active, active_tab_name = self.show_panel()
+        if active is None:
+            return None
+        if not active:
+            print("Internal (Right) Panel could not be opened")
+            return False
+        elif active_tab_name is self.inventory_tab_text:
+            # Do nothing
+            return True
+        elif active_tab_name is self.modules_tab_text:
+            self.keys.send('CycleNextPanel', repeat=3)
+            return True
+        elif active_tab_name is self.fire_groups_tab_text:
+            self.keys.send('CycleNextPanel', repeat=2)
+            return True
+        elif active_tab_name is self.ship_tab_text:
+            self.keys.send('CycleNextPanel', repeat=1)
+            return True
+        elif active_tab_name is self.storage_tab_text:
+            self.keys.send('CycleNextPanel', repeat=7)
+            return True
+        elif active_tab_name is self.status_tab_text:
+            self.keys.send('CycleNextPanel', repeat=6)
+            return True
 
     def transfer_to_fleetcarrier(self, ap):
         """ Transfer all goods to Fleet Carrier """

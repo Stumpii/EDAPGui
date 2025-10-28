@@ -129,18 +129,21 @@ class EDMesgServer:
 
     def _system_map_target_station_by_bookmark(self, bm_type: str, number: int):
         self.ap_ckb('log', "Received EDMesg Action: SystemMapTargetStationByBookmarkAction")
-        self.ap.system_map.goto_system_map()
-        self.ap.system_map.set_sys_map_dest_bookmark(self.ap, bm_type, number)
+        res = self.ap.system_map.goto_system_map()
+        if res:
+            self.ap.system_map.set_sys_map_dest_bookmark(self.ap, bm_type, number)
 
     def _galaxy_map_target_station_by_bookmark(self, bm_type: str, number: int):
         self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetStationByBookmarkAction")
-        self.ap.galaxy_map.goto_galaxy_map()
-        self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, bm_type, number)
+        res = self.ap.galaxy_map.goto_galaxy_map()
+        if res:
+            self.ap.galaxy_map.set_gal_map_dest_bookmark(self.ap, bm_type, number)
 
     def _galaxy_map_target_system_by_name(self, name: str):
         self.ap_ckb('log', "Received EDMesg Action: GalaxyMapTargetSystemByNameAction")
-        self.ap.galaxy_map.goto_galaxy_map()
-        self.ap.galaxy_map.set_gal_map_destination_text(self.ap, name, target_select_cb=None)
+        res = self.ap.galaxy_map.goto_galaxy_map()
+        if res:
+            self.ap.galaxy_map.set_gal_map_destination_text(self.ap, name, target_select_cb=None)
 
     def _generic_action(self, name: str):
         self.ap_ckb('log', f"Received EDMesg Action: GenericAction '{name}'")

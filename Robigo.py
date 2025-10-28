@@ -149,7 +149,7 @@ class Robigo:
         # tries is the number of rows to go through to find the item looking for
         # the Nav Panel should be filtered to reduce the number of rows in the list
         while not found and tries < 50:
-            found = self.is_found(ap, "nav_panel", templ)   
+            found = self.is_found(ap, 'nav_panel', templ)
             if found:
                 ap.keys.send("UI_Select", repeat=2)  # Select it and lock target
             else:

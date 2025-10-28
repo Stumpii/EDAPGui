@@ -17,3 +17,9 @@
 .idea/
 EDMesg/__pycache__/
 simple_localization/__pycache__/
+ocr_output/
+configs/construction.json
+configs/ocr_calibration.json
+configs/ship_configs.json
+test/match/
+debug-output/
