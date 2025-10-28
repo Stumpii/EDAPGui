@@ -144,6 +144,7 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
+        self.speed_demand = None
         self._tce_integration = None
         self._ocr = None
         self._sc_disengage_active = False  # Is SC Disengage active
@@ -839,7 +840,7 @@ class EDAutopilot:
     def fss_detect_elw(self, scr_reg):
 
         #open fss
-        self.keys.send('SetSpeedZero')
+        self.set_speed_zero()
         sleep(0.1)
         self.keys.send('ExplorationFSSEnter')
         sleep(2.5)
@@ -894,7 +895,7 @@ class EDAutopilot:
         else:
             self.fss_detected = "nothing found"
 
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
 
         return
 
@@ -925,11 +926,11 @@ class EDAutopilot:
 
         # Keep setting speed to zero to submit while in supercruise or system jump.
         while self.status.get_flag(FlagsSupercruise) or self.status.get_flag2(Flags2FsdHyperdriveCharging):
-            self.keys.send('SetSpeedZero')  # Submit.
+            self.set_speed_zero()  # Submit.
             sleep(0.5)
 
         # Set speed to 100%.
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
 
         # Wait for cooldown to start.
         self.status.wait_for_flag_on(FlagsFsdCooldown)
@@ -1431,7 +1432,7 @@ class EDAutopilot:
         self.keys.send('UI_Down')
         self.keys.send('UI_Down')
         self.keys.send('UI_Select')
-        self.keys.send('SetSpeedZero', repeat=2)
+        self.set_speed_zero(repeat=2)
 
         # Performs left menu ops to request docking
 
@@ -1452,17 +1453,17 @@ class EDAutopilot:
             logger.error('In dock(), after wait, but still not in_space')
 
         sleep(5)  # wait 5 seconds to get to 7.5km to request docking
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
 
         if self.jn.ship_state()['status'] != "in_space":
-            self.keys.send('SetSpeedZero')
+            self.set_speed_zero()
             logger.error('In dock(), after long wait, but still not in_space')
             raise Exception('Docking failed (not in space)')
 
         sleep(12)
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
-        self.keys.send('SetSpeedZero', repeat=2)
+        self.set_speed_zero(repeat=2)
         sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
         # Request docking through Nav panel.
@@ -1476,13 +1477,13 @@ class EDAutopilot:
         else:
             for i in range(tries):
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
-                    self.keys.send('SetSpeed50')
+                    self.set_speed_50()
                     sleep(5)
-                    self.keys.send('SetSpeedZero', repeat=2)
+                    self.set_speed_zero(repeat=2)
                 sleep(3)  # Wait for ship to come to stop
                 # Request docking through Nav panel.
                 self.request_docking()
-                self.keys.send('SetSpeedZero', repeat=2)
+                self.set_speed_zero(repeat=2)
 
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
@@ -1547,7 +1548,7 @@ class EDAutopilot:
             interdicted = self.interdiction_check()
             if interdicted:
                 # Continue journey after interdiction
-                self.keys.send('SetSpeedZero')
+                self.set_speed_zero()
 
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
             if ((time.time()-starttime) > fail_safe_timeout):
@@ -1698,7 +1699,7 @@ class EDAutopilot:
         # Quick calibrate the compass
         if res:
             self.quick_calibrate_compass()
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
 
         self.ap_ckb('log+vce', 'Target Align')
         for i in range(5):
@@ -1879,19 +1880,19 @@ class EDAutopilot:
         in the compass (because it is a hollow circle), then it will pitch down, this will
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
         sleep(5)
         self.pitchDown(90)
 
         # Speed away
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
         sleep(15)
 
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
         sleep(5)
         self.pitchUp(90)
         self.compass_align(scr_reg)
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
 
     def honk(self):
         # Do the Discovery Scan (Honk)
@@ -1939,7 +1940,7 @@ class EDAutopilot:
         logger.debug('position')
         add_time = 12
 
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
 
         self.vce.say("Passing star")
 
@@ -2007,7 +2008,7 @@ class EDAutopilot:
 
             logger.debug('jump= speed 0')
             self.jump_cnt = self.jump_cnt+1
-            self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
+            self.set_speed_zero(repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
             logger.debug('jump=complete')
 
@@ -2082,11 +2083,11 @@ class EDAutopilot:
             self.update_ap_status("Refueling")
 
             # mnvr into position
-            self.keys.send('SetSpeed100')
+            self.set_speed_100()
             sleep(5)
-            self.keys.send('SetSpeed50')
+            self.set_speed_50()
             sleep(1.7)
-            self.keys.send('SetSpeedZero', repeat=3)
+            self.set_speed_zero(repeat=3)
 
             self.refuel_cnt += 1
 
@@ -2098,7 +2099,7 @@ class EDAutopilot:
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.keys.send('SetSpeedZero')
+                    self.set_speed_zero()
 
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
@@ -2113,7 +2114,7 @@ class EDAutopilot:
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.keys.send('SetSpeedZero')
+                    self.set_speed_zero()
 
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
@@ -2225,7 +2226,7 @@ class EDAutopilot:
                 self.update_ap_status("Takeoff Complete, accelerating")
 
             # Undocked or off the surface, so leave planet
-            self.keys.send('SetSpeed50')
+            self.set_speed_50()
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
             self.pitchUp(90 * 1.25)
 
@@ -2251,7 +2252,7 @@ class EDAutopilot:
             self.start_sco_monitoring()
             return True
 
-        self.keys.send('SetSpeed100')
+        self.set_speed_100()
 
         # While Mass Locked, keep boosting.
         while self.status.get_flag(FlagsFsdMassLocked):
@@ -2275,7 +2276,7 @@ class EDAutopilot:
         self.status.wait_for_flag_on(FlagsSupercruise, timeout=30)
 
         # Revert to 50%
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
 
         return True
 
@@ -2422,7 +2423,7 @@ class EDAutopilot:
 
         # if there is no destination defined, we are done
         if not self.have_destination(scr_reg):
-            self.keys.send('SetSpeedZero')
+            self.set_speed_zero()
             self.ap_ckb('log+vce', f"Destination reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
             if self.config["AutomaticLogout"]:
                 sleep(5)
@@ -2430,7 +2431,7 @@ class EDAutopilot:
             return FSDAssistReturn.Complete
         # else there is a destination in System, so let jump over to SC Assist
         else:
-            self.keys.send('SetSpeed100')
+            self.set_speed_100()
             self.ap_ckb('log+vce', f"System reached, preparing for supercruise")
             sleep(1)
             return FSDAssistReturn.Partial
@@ -2464,9 +2465,9 @@ class EDAutopilot:
 
         # Ensure we are 50%, don't want the loop of shame
         # Align Nav to target
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
         res = self.compass_align(scr_reg)  # Compass Align
-        self.keys.send('SetSpeed50')
+        self.set_speed_50()
 
         # self.quick_calibrate_target()
         self.ap_ckb('log+vce', 'Target Align')
@@ -2483,9 +2484,9 @@ class EDAutopilot:
                 align_res = self.sc_target_align(scr_reg)
                 if align_res == ScTargetAlignReturn.Lost:
                     # Continue ahead before aligning to prevent us circling the target
-                    # self.keys.send('SetSpeed100')
+                    # self.set_speed_100()
                     sleep(10)
-                    self.keys.send('SetSpeed50')
+                    self.set_speed_50()
                     self.compass_align(scr_reg)  # Compass Align
 
                 elif align_res == ScTargetAlignReturn.Found:
@@ -2509,7 +2510,7 @@ class EDAutopilot:
             interdicted = self.interdiction_check()
             if interdicted:
                 # Continue journey after interdiction
-                self.keys.send('SetSpeed50')
+                self.set_speed_50()
                 self.compass_align(scr_reg)  # realign with station
 
             # check for SC Disengage
@@ -2550,10 +2551,10 @@ class EDAutopilot:
                 self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
             else:
-                self.keys.send('SetSpeedZero')
+                self.set_speed_zero()
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
-            self.keys.send('SetSpeedZero')  # make sure we don't continue to land
+            self.set_speed_zero()  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
         self.ap_ckb('log+vce', "Supercruise Assist complete")
@@ -2959,7 +2960,7 @@ class EDAutopilot:
 
         set_focus_elite_window()
         sleep(0.25)
-        # self.keys.send('SetSpeed50')
+        # self.set_speed_50()
         self.pitchUp(angle)
 
     def ship_tst_roll(self, angle: float):
@@ -2977,7 +2978,7 @@ class EDAutopilot:
 
         set_focus_elite_window()
         sleep(0.25)
-        # self.keys.send('SetSpeed50')
+        # self.set_speed_50()
         self.rotateLeft(angle)
 
     def ship_tst_yaw(self, angle: float):
@@ -2995,9 +2996,32 @@ class EDAutopilot:
 
         set_focus_elite_window()
         sleep(0.25)
-        # self.keys.send('SetSpeed50')
+        # self.set_speed_50()
         self.yawLeft(angle)
 
+    def set_speed_zero(self, repeat=1):
+        if self.status.get_flag(FlagsSupercruise):
+            self.speed_demand = 'SCSpeedZero'
+        else:
+            self.speed_demand = 'SpeedZero'
+
+        self.keys.send('SetSpeedZero', repeat)
+
+    def set_speed_50(self, repeat=1):
+        if self.status.get_flag(FlagsSupercruise):
+            self.speed_demand = 'SCSpeed50'
+        else:
+            self.speed_demand = 'Speed50'
+
+        self.keys.send('SetSpeed50', repeat)
+
+    def set_speed_100(self, repeat=1):
+        if self.status.get_flag(FlagsSupercruise):
+            self.speed_demand = 'SCSpeed100'
+        else:
+            self.speed_demand = 'Speed100'
+
+        self.keys.send('SetSpeed100', repeat)
 
 def delete_old_log_files():
     """ Deleted old .log files from the main folder."""
@@ -3103,7 +3127,7 @@ def main():
     # sleep(1)
 
     set_focus_elite_window()
-    ed_ap.keys.send('SetSpeed50')
+    ed_ap.set_speed_50()
     sleep(0.25)
 
     tar_off = ed_ap.get_target_offset(ed_ap.scrReg)
