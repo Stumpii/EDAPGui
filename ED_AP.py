@@ -1815,18 +1815,16 @@ class EDAutopilot:
 
             # Calc pitch time based on nav point location
             logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
+            p_deg = 0.0
             if abs(off['pit']) > target_align_outer_lim:
-                if off['pit'] < 0:
-                    self.pitchDown(self.target_align_inertia_pitch_factor * abs(off['pit']))
-                else:
-                    self.pitchUp(self.target_align_inertia_pitch_factor * abs(off['pit']))
+                p_deg = off['pit']
+                self.pitch_up_down(p_deg)
 
             # Calc yaw time based on nav point location
+            y_deg = 0.0
             if abs(off['yaw']) > target_align_outer_lim:
-                if off['yaw'] < 0:
-                    self.yawLeft(self.target_align_inertia_yaw_factor * abs(off['yaw']))
-                else:
-                    self.yawRight(self.target_align_inertia_yaw_factor * abs(off['yaw']))
+                y_deg = off['yaw']
+                self.yawRight(y_deg)
 
             # Wait for ship to finish moving and picture to stabilize
             sleep(0.25)
