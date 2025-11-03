@@ -1679,7 +1679,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.yawRight(off['yaw'])
+                    self.yaw_right_left(off['yaw'])
                     sleep(0.5)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -1824,7 +1824,7 @@ class EDAutopilot:
             y_deg = 0.0
             if abs(off['yaw']) > target_align_outer_lim:
                 y_deg = off['yaw']
-                self.yawRight(y_deg)
+                self.yaw_right_left(y_deg)
 
             # Wait for ship to finish moving and picture to stabilize
             sleep(0.25)
@@ -2027,9 +2027,9 @@ class EDAutopilot:
 
         # a set of convience routes to pitch, rotate by specified degress
 
-    def rotateLeft(self, deg):
-        htime = deg/self.rollrate
-        self.keys.send('RollLeftButton', hold=htime)
+    # def rotateLeft(self, deg):
+    #     htime = deg/self.rollrate
+    #     self.keys.send('RollLeftButton', hold=htime)
 
     def rotate_clockwise_anticlockwise(self, deg):
         # def rotate_right(self, deg):
@@ -2051,9 +2051,9 @@ class EDAutopilot:
 
         return htime
 
-    def pitchDown(self, deg):
-        htime = deg/self.pitchrate
-        self.keys.send('PitchDownButton', hold=htime)
+    # def pitchDown(self, deg):
+    #     htime = deg/self.pitchrate
+    #     self.keys.send('PitchDownButton', hold=htime)
 
     def pitch_up_down(self, deg):
         abs_deg = abs(deg)
@@ -2074,11 +2074,11 @@ class EDAutopilot:
 
         return htime
 
-    def yawLeft(self, deg):
-        htime = deg/self.yawrate
-        self.keys.send('YawLeftButton', hold=htime)
+    # def yawLeft(self, deg):
+    #     htime = deg/self.yawrate
+    #     self.keys.send('YawLeftButton', hold=htime)
 
-    def yawRight(self, deg):
+    def yaw_right_left(self, deg):
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
         @return: The key hold duration.
         """
@@ -3014,7 +3014,7 @@ class EDAutopilot:
         set_focus_elite_window()
         sleep(0.25)
         # self.set_speed_50()
-        self.pitchUp(angle)
+        self.pitch_up_down(angle)
 
     def ship_tst_roll(self, angle: float):
         """ Performs a ship roll test by pitching 360 degrees.
@@ -3032,7 +3032,7 @@ class EDAutopilot:
         set_focus_elite_window()
         sleep(0.25)
         # self.set_speed_50()
-        self.rotateLeft(angle)
+        self.rotate_clockwise_anticlockwise(angle)
 
     def ship_tst_yaw(self, angle: float):
         """ Performs a ship yaw test by pitching 360 degrees.
@@ -3050,7 +3050,7 @@ class EDAutopilot:
         set_focus_elite_window()
         sleep(0.25)
         # self.set_speed_50()
-        self.yawLeft(angle)
+        self.yaw_right_left(angle)
 
     def set_speed_0(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
