@@ -75,7 +75,7 @@ class AFK_Combat:
         sleep(1)
         self.ap.set_speed_100(repeat=2)
         sleep(20)
-        self.ap.set_speed_zero()
+        self.ap.set_speed_0()
         sleep(10)
         if self.voice is not None:
             self.voice.say("Exiting supercruise, all power to system and weapons")
@@ -131,7 +131,7 @@ class AFK_Combat:
         # Command fighter to attack at will
         if self.ap.config['AFKCombat_AttackAtWill']:
             self.k.send('OrderAggressiveBehaviour')
-        self.ap.set_speed_zero()
+        self.ap.set_speed_0()
 
 
 """

@@ -250,7 +250,7 @@ class Robigo:
 
             # give a few more seconds
             sleep(2)
-            ap.set_speed_zero()
+            ap.set_speed_0()
             ap.keys.send("SelectTarget")    # target the marker so missions will complete
             # takes about 10-22 sec to acknowledge missions
             sleep(15)
@@ -336,7 +336,7 @@ class Robigo:
   
             elif self.state == STATE_UNDOCK: 
                 # if we got the destination and perform undocking
-                ap.set_speed_zero()  # ensure 0 so auto undock will work
+                ap.set_speed_0()  # ensure 0 so auto undock will work
                         
                 ap.waypoint_undock_seq()
                 self.state = STATE_FSD_TO_SOTHIS

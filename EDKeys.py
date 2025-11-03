@@ -312,9 +312,11 @@ class EDKeys:
 
             if state is None:
                 if hold:
-                    sleep(hold)
+                    if hold > 0.0:
+                        sleep(hold)
                 else:
-                    sleep(self.key_def_hold_time)
+                    if self.key_def_hold_time > 0.0:
+                        sleep(self.key_def_hold_time)
 
             if 'hold' in key:
                 sleep(0.1)

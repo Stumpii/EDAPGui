@@ -531,9 +531,8 @@ class EDAutopilot:
         self.target_align_inertia_pitch_factor = self.config['target_align_inertia_pitch_factor']
         self.target_align_inertia_yaw_factor = self.config['target_align_inertia_yaw_factor']
 
-    # draws the matching rectangle within the image
-    #
     def draw_match_rect(self, img, pt1, pt2, color, thick):
+        """ Draws the matching rectangle within the image. """
         wid = pt2[0]-pt1[0]
         hgt = pt2[1]-pt1[1]
 
@@ -840,7 +839,7 @@ class EDAutopilot:
     def fss_detect_elw(self, scr_reg):
 
         #open fss
-        self.set_speed_zero()
+        self.set_speed_0()
         sleep(0.1)
         self.keys.send('ExplorationFSSEnter')
         sleep(2.5)
@@ -926,7 +925,7 @@ class EDAutopilot:
 
         # Keep setting speed to zero to submit while in supercruise or system jump.
         while self.status.get_flag(FlagsSupercruise) or self.status.get_flag2(Flags2FsdHyperdriveCharging):
-            self.set_speed_zero()  # Submit.
+            self.set_speed_0()  # Submit.
             sleep(0.5)
 
         # Set speed to 100%.
@@ -1432,7 +1431,7 @@ class EDAutopilot:
         self.keys.send('UI_Down')
         self.keys.send('UI_Down')
         self.keys.send('UI_Select')
-        self.set_speed_zero(repeat=2)
+        self.set_speed_0(repeat=2)
 
         # Performs left menu ops to request docking
 
@@ -1456,14 +1455,14 @@ class EDAutopilot:
         self.set_speed_50()
 
         if self.jn.ship_state()['status'] != "in_space":
-            self.set_speed_zero()
+            self.set_speed_0()
             logger.error('In dock(), after long wait, but still not in_space')
             raise Exception('Docking failed (not in space)')
 
         sleep(12)
         # At this point (of sleep()) we should be < 7.5km from the station.  Go 0 speed
         # if we get docking granted ED's docking computer will take over
-        self.set_speed_zero(repeat=2)
+        self.set_speed_0(repeat=2)
         sleep(3)  # Wait for ship to come to stop
         self.ap_ckb('log+vce', "Initiating Docking Procedure")
         # Request docking through Nav panel.
@@ -1479,11 +1478,11 @@ class EDAutopilot:
                 if self.jn.ship_state()['no_dock_reason'] == "Distance":
                     self.set_speed_50()
                     sleep(5)
-                    self.set_speed_zero(repeat=2)
+                    self.set_speed_0(repeat=2)
                 sleep(3)  # Wait for ship to come to stop
                 # Request docking through Nav panel.
                 self.request_docking()
-                self.set_speed_zero(repeat=2)
+                self.set_speed_0(repeat=2)
 
                 sleep(1.5)
                 if self.jn.ship_state()['status'] == "dockinggranted":
@@ -1548,7 +1547,7 @@ class EDAutopilot:
             interdicted = self.interdiction_check()
             if interdicted:
                 # Continue journey after interdiction
-                self.set_speed_zero()
+                self.set_speed_0()
 
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
             if ((time.time()-starttime) > fail_safe_timeout):
@@ -2008,7 +2007,7 @@ class EDAutopilot:
 
             logger.debug('jump= speed 0')
             self.jump_cnt = self.jump_cnt+1
-            self.set_speed_zero(repeat=3)  # Let's be triply sure that we set speed to 0% :)
+            self.set_speed_0(repeat=3)  # Let's be triply sure that we set speed to 0% :)
             sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
             logger.debug('jump=complete')
 

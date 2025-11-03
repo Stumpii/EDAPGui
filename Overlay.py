@@ -410,20 +410,24 @@ class Overlay:
 
             Overlay.overlay_set_font(hdc, fnt[0], fnt[1])
 
-            for i, key in enumerate(lines):
+            #for i, key in enumerate(lines):
+            for key in list(lines.keys()):
                 #print(lines[key])
                 Overlay.overlay_draw_rect(hdc, lines[key][0], lines[key][1], win32con.PS_SOLID, lines[key][2], lines[key][3])
 
-            for i, key in enumerate(quadrilaterals):
+            #for i, key in enumerate(quadrilaterals):
+            for key in list(quadrilaterals.keys()):
                 #print(lines[key])
                 Overlay.overlay_draw_quad(hdc, quadrilaterals[key][0], win32con.PS_SOLID, quadrilaterals[key][1],
                                           quadrilaterals[key][2])
 
-            for i, key in enumerate(text):
+            #for i, key in enumerate(text):
+            for key in list(text.keys()):
                 #print(text[key])
                 Overlay.overlay_draw_text(hWnd, hdc, text[key][0], text[key][1], text[key][2], text[key][3])
 
-            for i, key in enumerate(floating_text):
+            #for i, key in enumerate(floating_text):
+            for key in list(floating_text.keys()):
                 #print(text[key])
                 Overlay.overlay_draw_floating_text(hWnd, hdc, floating_text[key][0], floating_text[key][1],
                                                    floating_text[key][2], floating_text[key][3])
