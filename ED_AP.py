@@ -216,23 +216,6 @@ class EDAutopilot:
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
 
-        shp_cnf = self.read_ship_configs()
-        # if we read it then point to it, otherwise use the default table above
-        if shp_cnf is not None:
-            if len(shp_cnf) != len(self.ship_configs):
-                # If configs of different lengths, then a new parameter was added.
-                # self.write_config(self.config)
-                # Add default values for new entries
-                if 'Ship_Configs' not in shp_cnf:
-                    shp_cnf['Ship_Configs'] = dict()
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-            else:
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-        else:
-            self.write_ship_configs(self.ship_configs)
-
         # config the voice interface
         self.vce = Voice()
         self.vce.v_enabled = self.config['VoiceEnable']
@@ -303,6 +286,11 @@ class EDAutopilot:
         self.rollrate  = 80.0
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
+        self.yawfactor = 0.0
+        self.rollfactor = 0.0
+        self.pitchfactor = 0.0
+
+        self.load_ship_configs()
 
         self.jump_cnt = 0
         self._eta = 0
@@ -384,6 +372,13 @@ class EDAutopilot:
         return s
 
     def update_config(self):
+        # Get values from classes
+        if self.keys:
+            self.config['ActivateEliteEachKey'] = self.keys.activate_window
+            self.config['Key_ModDelay'] = self.keys.key_mod_delay
+            self.config['Key_DefHoldTime'] = self.keys.key_def_hold_time
+            self.config['Key_RepeatDelay'] = self.keys.key_repeat_delay
+
         self.write_config(self.config)
 
     def write_config(self, data, fileName='./configs/AP.json'):
@@ -404,6 +399,30 @@ class EDAutopilot:
 
         return s
 
+    def load_ship_configs(self):
+        shp_cnf = self.read_ship_configs()
+        # if we read it then point to it, otherwise use the default table above
+        if shp_cnf is not None:
+            if len(shp_cnf) != len(self.ship_configs):
+                # If configs of different lengths, then a new parameter was added.
+                # self.write_config(self.config)
+                # Add default values for new entries
+                if 'Ship_Configs' not in shp_cnf:
+                    shp_cnf['Ship_Configs'] = dict()
+                self.ship_configs = shp_cnf
+                logger.debug("read Ships Config json:" + str(shp_cnf))
+            else:
+                self.ship_configs = shp_cnf
+                logger.debug("read Ships Config json:" + str(shp_cnf))
+        else:
+            self.write_ship_configs(self.ship_configs)
+
+        # Load ship configuration with proper hierarchy
+        if self.jn:
+            ship = self.jn.ship_state()['type']
+            if ship:
+                self.load_ship_configuration(ship)
+
     def update_ship_configs(self):
         """ Update the user's ship configuration file."""
         # Check if a ship and not a suit (on foot)
@@ -418,6 +437,9 @@ class EDAutopilot:
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchFactor'] = self.pitchfactor
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollFactor'] = self.rollfactor
+            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawFactor'] = self.yawfactor
 
             self.write_ship_configs(self.ship_configs)
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
@@ -447,6 +469,9 @@ class EDAutopilot:
                 self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
                 self.yawrate = current_ship_cfg.get('YawRate', 8.0)
                 self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+                self.rollfactor = current_ship_cfg.get('RollFactor', 30.0)
+                self.pitchfactor = current_ship_cfg.get('PitchFactor', 30.0)
+                self.yawfactor = current_ship_cfg.get('YawFactor', 30.0)
                 logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
                 return
         
@@ -459,6 +484,9 @@ class EDAutopilot:
             self.pitchrate = ship_defaults.get('PitchRate', 33.0)
             self.yawrate = ship_defaults.get('YawRate', 8.0)
             self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
+            self.rollfactor = ship_defaults.get('RollFactor', 30.0)
+            self.pitchfactor = ship_defaults.get('PitchFactor', 30.0)
+            self.yawfactor = ship_defaults.get('YawFactor', 30.0)
             logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
             return
 
@@ -468,15 +496,17 @@ class EDAutopilot:
         self.pitchrate = 33.0
         self.yawrate = 8.0
         self.sunpitchuptime = 0.0
+        self.rollfactor = 30.0
+        self.pitchfactor = 30.0
+        self.yawfactor = 30.0
         logger.info(f"Using hardcoded default configuration for {ship_type}")
         
         # Add empty entry to ship_configs for future customization
         if ship_type not in self.ship_configs['Ship_Configs']:
             self.ship_configs['Ship_Configs'][ship_type] = dict()
 
-    # draw the overlay data on the ED Window
-    #
     def update_overlay(self):
+        """ Draw the overlay data on the ED Window """
         if self.config['OverlayTextEnable']:
             ap_mode = "Offline"
             if self.fsd_assist_enabled == True:
@@ -833,12 +863,10 @@ class EDAutopilot:
         # reload the templates with the new (or previous value)
         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
 
-    # Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
-    #  if so, announce finding and log the type of world found
-    #
     def fss_detect_elw(self, scr_reg):
-
-        #open fss
+        """ Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
+        if so, announce finding and log the type of world found. """
+        # open fss
         self.set_speed_0()
         sleep(0.1)
         self.keys.send('ExplorationFSSEnter')
@@ -1586,7 +1614,7 @@ class EDAutopilot:
             if off is None:
                 self.ap_ckb('log', 'Unable to detect compass. Rolling to new position.')
                 # Try rolling if star glare is obscuring the compass
-                self.rotateRight(90)
+                self.rotate_clockwise_anticlockwise(90)
                 continue
 
             logger.debug(f"Compass position: yaw: {str(off['yaw'])} pit: {str(off['pit'])}")
@@ -1613,20 +1641,8 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        # first roll to get the nav point at the vertical position
-                        if off['yaw'] > 0 and off['pit'] > 0:
-                            # top right quad, then roll right to get to 90 up
-                            self.rotateRight(off['roll'])
-                        elif off['yaw'] > 0 > off['pit']:
-                            # bottom right quad, then roll left
-                            self.rotateLeft(180 - off['roll'])
-                        elif off['yaw'] < 0 < off['pit']:
-                            # top left quad, then roll left
-                            self.rotateLeft(-off['roll'])
-                        else:
-                            # bottom left quad, then roll right
-                            self.rotateRight(180 + off['roll'])
-                        sleep(0.5)
+                        self.rotate_clockwise_anticlockwise(off['roll'])
+                        sleep(1)
                         off = self.get_nav_offset(scr_reg)
                     else:
                         break
@@ -1644,13 +1660,9 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    if off['pit'] < 0:
-                        self.pitchDown(abs(off['pit']))
-                    else:
-                        self.pitchUp(abs(off['pit']))
-                    sleep(0.5)
+                    self.pitch_up_down(off['pit'])
+                    sleep(0.75)
                     off = self.get_nav_offset(scr_reg)
-
                 else:
                     break
 
@@ -1667,10 +1679,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    if off['yaw'] < 0:
-                        self.yawLeft(abs(off['yaw']))
-                    else:
-                        self.yawRight(abs(off['yaw']))
+                    self.yawRight(off['yaw'])
                     sleep(0.5)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -1879,17 +1888,15 @@ class EDAutopilot:
         in the compass (because it is a hollow circle), then it will pitch down, this will
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
-        self.set_speed_50()
-        sleep(5)
-        self.pitchDown(90)
+        self.set_speed_0()
+        self.pitch_up_down(-90)
 
         # Speed away
         self.set_speed_100()
         sleep(15)
 
-        self.set_speed_50()
-        sleep(5)
-        self.pitchUp(90)
+        self.set_speed_0()
+        self.pitch_up_down(90)
         self.compass_align(scr_reg)
         self.set_speed_50()
 
@@ -2026,25 +2033,74 @@ class EDAutopilot:
         htime = deg/self.rollrate
         self.keys.send('RollLeftButton', hold=htime)
 
-    def rotateRight(self, deg):
-        htime = deg/self.rollrate
-        self.keys.send('RollRightButton', hold=htime)
+    def rotate_clockwise_anticlockwise(self, deg):
+        # def rotate_right(self, deg):
+        abs_deg = abs(deg)
+        htime = abs_deg/self.rollrate
+
+        if self.speed_demand is None:
+            self.set_speed_50()
+
+        if 0 < abs_deg < 45:
+            value = self.rollrate * pow(abs_deg / 45, self.rollfactor / 100)
+            htime = abs_deg / value
+
+        # Check if we are rolling right or left
+        if deg > 0.0:
+            self.keys.send('RollRightButton', hold=htime)
+        else:
+            self.keys.send('RollLeftButton', hold=htime)
+
+        return htime
 
     def pitchDown(self, deg):
         htime = deg/self.pitchrate
         self.keys.send('PitchDownButton', hold=htime)
 
-    def pitchUp(self, deg):
-        htime = deg/self.pitchrate
-        self.keys.send('PitchUpButton', hold=htime)
+    def pitch_up_down(self, deg):
+        abs_deg = abs(deg)
+        htime = abs_deg/self.pitchrate
+
+        if self.speed_demand is None:
+            self.set_speed_50()
+
+        if 0 < abs_deg < 30:
+            value = self.pitchrate * pow(abs_deg / 30, self.pitchfactor / 100)
+            htime = abs_deg / value
+
+        # Check if we are pitching up or down
+        if deg > 0.0:
+            self.keys.send('PitchUpButton', hold=htime)
+        else:
+            self.keys.send('PitchDownButton', hold=htime)
+
+        return htime
 
     def yawLeft(self, deg):
         htime = deg/self.yawrate
         self.keys.send('YawLeftButton', hold=htime)
 
     def yawRight(self, deg):
-        htime = deg / self.yawrate
-        self.keys.send('YawRightButton', hold=htime)
+        """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
+        @return: The key hold duration.
+        """
+        abs_deg = abs(deg)
+        htime = abs_deg/self.yawrate
+
+        if self.speed_demand is None:
+            self.set_speed_50()
+
+        if 0 < abs_deg < 30:
+            value = self.yawrate * pow(abs_deg / 30, self.yawfactor / 100)
+            htime = abs_deg / value
+
+        # Check if we are yawing right or left
+        if deg > 0.0:
+            self.keys.send('YawRightButton', hold=htime)
+        else:
+            self.keys.send('YawLeftButton', hold=htime)
+
+        return htime
 
     def refuel(self, scr_reg):
         """ Check if refueling needed, ensure correct start type. """
@@ -2086,7 +2142,7 @@ class EDAutopilot:
             sleep(5)
             self.set_speed_50()
             sleep(1.7)
-            self.set_speed_zero(repeat=3)
+            self.set_speed_0(repeat=3)
 
             self.refuel_cnt += 1
 
@@ -2098,7 +2154,7 @@ class EDAutopilot:
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.set_speed_zero()
+                    self.set_speed_0()
 
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
@@ -2113,7 +2169,7 @@ class EDAutopilot:
                 interdicted = self.interdiction_check()
                 if interdicted:
                     # Continue journey after interdiction
-                    self.set_speed_zero()
+                    self.set_speed_0()
 
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
@@ -2126,7 +2182,7 @@ class EDAutopilot:
         elif is_star_scoopable == False:
             self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
-            self.pitchUp(20)
+            self.pitch_up_down(20)
             return False
 
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
@@ -2137,11 +2193,11 @@ class EDAutopilot:
         elif not has_fuel_scoop:
             self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
             logger.debug('No fuel scoop fitted.')
-            self.pitchUp(20)
+            self.pitch_up_down(20)
             return False
 
         else:
-            self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
+            self.pitch_up_down(15)  # if not refueling pitch up somemore so we won't heat up
             return False
 
     def waypoint_undock_seq(self):
@@ -2175,7 +2231,7 @@ class EDAutopilot:
                 if fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitchUp(90 * 1.25)
+                    self.pitch_up_down(90 * 1.25)
 
                     self.update_ap_status("Undock Complete, accelerating")
 
@@ -2190,7 +2246,7 @@ class EDAutopilot:
                 if on_orbital_construction_site:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitchUp(90 * 1.25)
+                    self.pitch_up_down(90 * 1.25)
 
                 if starport_outpost or on_orbital_construction_site:
                     # In space (launched from starport or outpost etc.) OR construction site
@@ -2227,7 +2283,7 @@ class EDAutopilot:
             # Undocked or off the surface, so leave planet
             self.set_speed_50()
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-            self.pitchUp(90 * 1.25)
+            self.pitch_up_down(90 * 1.25)
 
             # Engage Supercruise
             self.sc_engage(True)
@@ -2422,7 +2478,7 @@ class EDAutopilot:
 
         # if there is no destination defined, we are done
         if not self.have_destination(scr_reg):
-            self.set_speed_zero()
+            self.set_speed_0()
             self.ap_ckb('log+vce', f"Destination reached, distance jumped:"+str(int(self.total_dist_jumped))+" lightyears")
             if self.config["AutomaticLogout"]:
                 sleep(5)
@@ -2550,10 +2606,10 @@ class EDAutopilot:
                 self.ap_ckb('log+vce', "Docking complete, refueled, repaired and re-armed")
                 self.update_ap_status("Docking Complete")
             else:
-                self.set_speed_zero()
+                self.set_speed_0()
         else:
             self.vce.say("Exiting Supercruise, setting throttle to zero")
-            self.set_speed_zero()  # make sure we don't continue to land
+            self.set_speed_0()  # make sure we don't continue to land
             self.ap_ckb('log', "Supercruise dropped, terminating SC Assist")
 
         self.ap_ckb('log+vce', "Supercruise Assist complete")
@@ -2998,11 +3054,11 @@ class EDAutopilot:
         # self.set_speed_50()
         self.yawLeft(angle)
 
-    def set_speed_zero(self, repeat=1):
+    def set_speed_0(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
-            self.speed_demand = 'SCSpeedZero'
+            self.speed_demand = 'SCSpeed0'
         else:
-            self.speed_demand = 'SpeedZero'
+            self.speed_demand = 'Speed0'
 
         self.keys.send('SetSpeedZero', repeat)
 
@@ -3137,7 +3193,7 @@ def main():
     # ed_ap.rotateLeft(1)
     x = 10
     ed_ap.pitchrate = 16.0
-    ed_ap.pitchDown(x)
+    ed_ap.pitch_up_down(-x)
 
     sleep(.5)
 
@@ -3148,7 +3204,7 @@ def main():
 
     sleep(.5)
 
-    ed_ap.pitchUp(x)
+    ed_ap.pitch_up_down(x)
 
     # ed_ap.yawLeft(1)
 

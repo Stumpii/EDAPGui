@@ -102,6 +102,9 @@ class APGui:
             'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
+            'RollFactor': "TBD",
+            'PitchFactor': "TBD",
+            'YawFactor': "TBD",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -180,7 +183,10 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-
+        self.entries['ship']['PitchFactor'].delete(0, tk.END)
+        self.entries['ship']['RollFactor'].delete(0, tk.END)
+        self.entries['ship']['YawFactor'].delete(0, tk.END)
+        
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
         self.entries['autopilot']['Nav Align Tries'].delete(0, tk.END)
         self.entries['autopilot']['Jump Tries'].delete(0, tk.END)
@@ -208,7 +214,10 @@ class APGui:
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
         self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
         self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
-
+        self.entries['ship']['PitchFactor'].insert(0, float(self.ed_ap.pitchfactor))
+        self.entries['ship']['RollFactor'].insert(0, float(self.ed_ap.rollfactor))
+        self.entries['ship']['YawFactor'].insert(0, float(self.ed_ap.yawfactor))
+        
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
         self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
@@ -344,12 +353,18 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-
+        self.entries['ship']['PitchFactor'].delete(0, tk.END)
+        self.entries['ship']['RollFactor'].delete(0, tk.END)
+        self.entries['ship']['YawFactor'].delete(0, tk.END)
+        
         self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
-
+        self.entries['ship']['PitchFactor'].insert(0, self.ed_ap.pitchfactor)
+        self.entries['ship']['RollFactor'].insert(0, self.ed_ap.rollfactor)
+        self.entries['ship']['YawFactor'].insert(0, self.ed_ap.yawfactor)
+        
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
 
@@ -635,7 +650,10 @@ class APGui:
             self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
             self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
             self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
-
+            self.ed_ap.pitchfactor = float(self.entries['ship']['PitchFactor'].get())
+            self.ed_ap.rollfactor = float(self.entries['ship']['RollFactor'].get())
+            self.ed_ap.yawfactor = float(self.entries['ship']['YawFactor'].get())
+            
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
             self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
             self.ed_ap.config['JumpTries'] = int(self.entries['autopilot']['Jump Tries'].get())
@@ -1003,7 +1021,7 @@ class APGui:
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
-        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
+        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'RollFactor', 'PitchFactor', 'YawFactor')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
@@ -1068,18 +1086,17 @@ class APGui:
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
 
         lbl_sun_pitch_up = ttk.Label(blk_ship, text='SunPitchUp +/- Time:')
-        lbl_sun_pitch_up.grid(row=3, column=0, pady=3, sticky=tk.W)
+        lbl_sun_pitch_up.grid(row=6, column=0, pady=3, sticky=tk.W)
         spn_sun_pitch_up = ttk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5, justify=tk.RIGHT)
-        spn_sun_pitch_up.grid(row=3, column=1, padx=2, pady=2, sticky=tk.E)
+        spn_sun_pitch_up.grid(row=6, column=1, padx=2, pady=2, sticky=tk.E)
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
         btn_tst_roll = ttk.Button(blk_ship, text='Test Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=4, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_roll.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
         btn_tst_pitch = ttk.Button(blk_ship, text='Test Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=5, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_pitch.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
         btn_tst_yaw = ttk.Button(blk_ship, text='Test Yaw Rate', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         # waypoints button block
         blk_wp_buttons = ttk.LabelFrame(page0, text="Waypoints", padding=(10, 5))
@@ -1095,6 +1112,7 @@ class APGui:
         btn_reset = ttk.Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
         btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
         tip_reset = ToolTip(btn_reset, msg=self.tooltips['Reset Waypoint List'], delay=1.0, bg="#808080", fg="#FFFFFF")
+        btn_tst_yaw.grid(row=9, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))
