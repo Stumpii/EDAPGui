@@ -1,3 +1,12 @@
+# 11/3/2025 v1.8.0 b14
+ - Added function to track last EDAP speed command.
+ - Added hold > 0 check.
+ - Added potential fix for overlay error.
+ - Added RPY factors to the ship config file.
+ - Added RPY factors to calculate ship movement timings.
+ - Better ship config loading.
+ - Quicker (but less accurate) target occluded movement.
+
 # 10/25/2025 v1.8.0 b13
  - Updated screenshots for github main page.
  - Added Key class default values to config file for users to tune. Added to Settings tab as well.
