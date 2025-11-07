@@ -263,6 +263,7 @@ class WaypointEditorTab:
         ttk.Button(waypoint_buttons_frame, text="Add", command=self.add_waypoint).pack(padx=5, pady=2, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Del", command=self.delete_waypoint).pack(padx=5, pady=2, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Plot to System", command=self.plot_waypoint_system).pack(padx=5, pady=20, fill="x")
+        ttk.Button(waypoint_buttons_frame, text="Plot to Station", command=self.plot_waypoint_station).pack(padx=5, pady=2, fill="x")
 
         # Bottom frame for waypoint options and commodity lists
         bottom_frame = ttk.Frame(page0)
@@ -897,7 +898,31 @@ class WaypointEditorTab:
             wp = self.waypoints.waypoints[index]
             sys_name = wp.system_name.get()
             # TODO - replace this with direct EDAP control in case client comms not working?
-            self.mesg_client.publish(GalaxyMapTargetSystemByNameAction(name=sys_name))
+            # self.mesg_client.publish(GalaxyMapTargetSystemByNameAction(name=sys_name))
+            res = self.ed_waypoint.ap.galaxy_map.goto_galaxy_map()
+            if res:
+                self.ed_waypoint.ap.galaxy_map.set_gal_map_destination_text(self.ed_waypoint.ap, sys_name, target_select_cb=None)
+
+    def plot_waypoint_station(self):
+        selected_item = self.waypoints_tree.selection()
+        if selected_item:
+            index = self.waypoints_tree.index(selected_item[0])
+            wp = self.waypoints.waypoints[index]
+            sys_name = wp.system_name.get()
+            sys_name = wp.station_name.get()
+            galaxy_bookmark_type = wp.galaxy_bookmark_type.get()
+            galaxy_bookmark_number = wp.galaxy_bookmark_number.get()
+            system_bookmark_type = wp.system_bookmark_type.get()
+            system_bookmark_number = wp.system_bookmark_number.get()
+
+            if galaxy_bookmark_number > 0:
+                res = self.ed_waypoint.ap.galaxy_map.goto_galaxy_map()
+                if res:
+                    self.ed_waypoint.ap.galaxy_map.set_gal_map_dest_bookmark(self.ed_waypoint.ap, galaxy_bookmark_type, galaxy_bookmark_number)
+            elif system_bookmark_number > 0:
+                res = self.ed_waypoint.ap.system_map.goto_system_map()
+                if res:
+                    self.ed_waypoint.ap.system_map.set_sys_map_dest_bookmark(self.ed_waypoint.ap, system_bookmark_type, system_bookmark_number)
 
     def delete_waypoint(self):
         selected_item = self.waypoints_tree.selection()

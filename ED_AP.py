@@ -127,8 +127,8 @@ class EDAutopilot:
             "DisengageUseMatch": False,    # For 'Disengage' use old image match instead of OCR
             "target_align_outer_lim": 1.0, # For test
             "target_align_inner_lim": 0.5, # For test
-            "target_align_inertia_pitch_factor": 1.2, # For test
-            "target_align_inertia_yaw_factor": 1.2, # For test
+            "Debug_ShowCompassOverlay": False, # For test
+            "Debug_ShowTargetOverlay": False, # For test
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -204,10 +204,10 @@ class EDAutopilot:
                 cnf['target_align_outer_lim'] = 1.0 # For test
             if 'target_align_inner_lim' not in cnf:
                 cnf['target_align_inner_lim'] = 0.5 # For test
-            if 'target_align_inertia_pitch_factor' not in cnf:
-                cnf['target_align_inertia_pitch_factor'] = 1.2 # For test
-            if 'target_align_inertia_yaw_factor' not in cnf:
-                cnf['target_align_inertia_yaw_factor'] = 1.2 # For test
+            if 'Debug_ShowCompassOverlay' not in cnf:
+                cnf['Debug_ShowCompassOverlay'] = False # For test
+            if 'Debug_ShowTargetOverlay' not in cnf:
+                cnf['Debug_ShowTargetOverlay'] = False # For test
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
         else:
@@ -304,8 +304,8 @@ class EDAutopilot:
         self._nav_cor_y = 0.0  # Nav Point correction to yaw
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
-        self.target_align_inertia_pitch_factor = 1.2  # As we are dealing with small increments, we need to up the gain to overcome the inertia.
-        self.target_align_inertia_yaw_factor = 1.2  # As we are dealing with small increments, we need to up the gain to overcome the inertia.
+        self.debug_show_compass_overlay = False
+        self.debug_show_target_overlay = False
 
         self.ap_ckb = cb
 
@@ -378,6 +378,10 @@ class EDAutopilot:
             self.config['Key_ModDelay'] = self.keys.key_mod_delay
             self.config['Key_DefHoldTime'] = self.keys.key_def_hold_time
             self.config['Key_RepeatDelay'] = self.keys.key_repeat_delay
+
+        # Delete old settings
+        self.config.pop('target_align_inertia_pitch_factor', None)
+        self.config.pop('target_align_inertia_yaw_factor', None)
 
         self.write_config(self.config)
 
@@ -558,8 +562,8 @@ class EDAutopilot:
 
         self.target_align_outer_lim = self.config['target_align_outer_lim']
         self.target_align_inner_lim = self.config['target_align_inner_lim']
-        self.target_align_inertia_pitch_factor = self.config['target_align_inertia_pitch_factor']
-        self.target_align_inertia_yaw_factor = self.config['target_align_inertia_yaw_factor']
+        self.debug_show_compass_overlay = self.config['Debug_ShowCompassOverlay']
+        self.debug_show_target_overlay = self.config['Debug_ShowTargetOverlay']
 
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         """ Draws the matching rectangle within the image. """
@@ -1344,6 +1348,10 @@ class EDAutopilot:
 
     def sc_disengage_ocr(self, scr_reg) -> bool:
         """ look for the "SUPERCRUISE OVERCHARGE ACTIVE" text using OCR, if in this region then return true. """
+        # Do we have cockpit view? If not, return
+        if self.status.get_gui_focus() != GuiFocusNoFocus:
+            return False
+
         image = self.scr.get_screen_region(scr_reg.reg['disengage']['rect'])
         # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -1614,7 +1622,7 @@ class EDAutopilot:
             if off is None:
                 self.ap_ckb('log', 'Unable to detect compass. Rolling to new position.')
                 # Try rolling if star glare is obscuring the compass
-                self.rotate_clockwise_anticlockwise(90)
+                self.roll_clockwise_anticlockwise(90)
                 continue
 
             logger.debug(f"Compass position: yaw: {str(off['yaw'])} pit: {str(off['pit'])}")
@@ -1641,7 +1649,7 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        self.rotate_clockwise_anticlockwise(off['roll'])
+                        self.roll_clockwise_anticlockwise(off['roll'])
                         sleep(1)
                         off = self.get_nav_offset(scr_reg)
                     else:
@@ -1735,28 +1743,33 @@ class EDAutopilot:
         target_align_compass_mult = 5  # Multiplier to close and target_align_inner_lim when using compass for align.
         target_align_pit_off = 0.25  # In deg. To keep the target above the center line (prevent it going down out of view).
 
+        target_pit = target_align_pit_off
+        target_yaw = 0.0
+
         # Copy locally as we will change the values
         target_align_outer_lim = self.target_align_outer_lim
         target_align_inner_lim = self.target_align_inner_lim
 
-        tar_off = None
         off = None
-        nav_off = None
+        tar_off1 = None
+        nav_off1 = None
+        tar_off2 = None
+        nav_off2 = None
 
         # Try to get the target 5 times before quiting
         for i in range(5):
             # Check Target and Compass
-            nav_off = self.get_nav_offset(scr_reg)
-            tar_off = self.get_target_offset(scr_reg)
-            if tar_off:
+            nav_off1 = self.get_nav_offset(scr_reg)
+            tar_off1 = self.get_target_offset(scr_reg)
+            if tar_off1:
                 # Target detected
-                off = tar_off
+                off = tar_off1
                 # logger.debug(f"sc_target_align x: {str(off['x'])} y:{str(off['y'])}")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off:
+            elif nav_off1:
                 # Try to use the compass data if the target is not visible.
-                off = nav_off
+                off = nav_off1
                 self.ap_ckb('log+vce', 'Using Compass for Target Align')
 
                 # We are using compass align, increase the values as compass is much less accurate
@@ -1765,12 +1778,12 @@ class EDAutopilot:
                 target_align_pit_off = target_align_pit_off * target_align_compass_mult
 
                 # Check if Target is now behind us
-                if nav_off['z'] < 0:
+                if nav_off1['z'] < 0:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
             # Check if target occluded
-            if tar_off and tar_off['occ']:
+            if tar_off1 and tar_off1['occ']:
                 self.occluded_reposition(scr_reg)
                 self.ap_ckb('log+vce', 'Target Align')
 
@@ -1792,7 +1805,7 @@ class EDAutopilot:
                 break
 
         # Target could not be found, return
-        if tar_off is None and nav_off is None:
+        if tar_off1 is None and nav_off1 is None:
             logger.debug("sc_target_align not finding target")
             self.ap_ckb('log', 'Target Align failed - target not found')
             return ScTargetAlignReturn.Lost
@@ -1815,6 +1828,7 @@ class EDAutopilot:
 
             # Calc pitch time based on nav point location
             logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
+
             p_deg = 0.0
             if abs(off['pit']) > target_align_outer_lim:
                 p_deg = off['pit']
@@ -1827,27 +1841,48 @@ class EDAutopilot:
                 self.yaw_right_left(y_deg)
 
             # Wait for ship to finish moving and picture to stabilize
-            sleep(0.25)
+            sleep(0.75)
 
             # Check Target and Compass
-            nav_off = self.get_nav_offset(scr_reg)  # For cv view only
-            tar_off = self.get_target_offset(scr_reg)
-            if tar_off:
-                off = tar_off
+            nav_off2 = self.get_nav_offset(scr_reg)  # For cv view only
+            tar_off2 = self.get_target_offset(scr_reg)
+            if tar_off2:
+                off = tar_off2
                 logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']} ")
                 # Apply offset to keep target above center
                 off['pit'] = off['pit'] - target_align_pit_off
-            elif nav_off:
+            elif nav_off2:
                 # Try to use the compass data if the target is not visible.
-                off = nav_off
+                off = nav_off2
                 self.ap_ckb('log+vce', 'Using Compass for Target Align')
                 # Check if Target is now behind us
-                if nav_off['z'] < 0:
+                if nav_off2['z'] < 0:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
+            # Check diff from before and after movement
+            pit_delta = tar_off2['pit'] - tar_off1['pit']
+            yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
+            if abs(pit_delta) > (abs(tar_off1['pit']) + 0.25):
+                self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {abs(tar_off1['pit']) + 0.25}. Reducing Pitch Factor.")
+                # Correct factor
+                self.pitchfactor = self.pitchfactor - 1.0
+                # Update GUI with ship config
+                self.ap_ckb('update_ship_cfg')
+
+            if abs(yaw_delta) > (abs(tar_off1['yaw']) + 0.25):
+                self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {abs(tar_off1['yaw']) + 0.25}. Reducing Yaw Factor.")
+                # Correct factor
+                self.yawfactor = self.yawfactor - 1.0
+                # Update GUI with ship config
+                self.ap_ckb('update_ship_cfg')
+
+            # Store current offsets
+            tar_off1['pit'] = tar_off2['pit']
+            tar_off1['yaw'] = tar_off2['yaw']
+
             # Check if target occluded
-            if tar_off and tar_off['occ']:
+            if tar_off2 and tar_off2['occ']:
                 self.occluded_reposition(scr_reg)
                 self.ap_ckb('log+vce', 'Target Align')
 
@@ -1865,16 +1900,19 @@ class EDAutopilot:
                 return ScTargetAlignReturn.Disengage
 
             # Check if target is outside the target region (behind us) and break loop
-            if tar_off is None and nav_off is None:
+            if tar_off2 is None and nav_off2 is None:
                 logger.debug("sc_target_align lost target")
                 self.ap_ckb('log', 'Target Align failed - lost target.')
                 return ScTargetAlignReturn.Lost
 
         # We are aligned, so define the navigation correction as the current offset. This won't be 100% accurate, but
         # will be within a few degrees.
-        if tar_off and nav_off:
-            self._nav_cor_x = self._nav_cor_x + nav_off['x']
-            self._nav_cor_y = self._nav_cor_y + nav_off['y']
+        if tar_off1 and nav_off1:
+            self._nav_cor_x = self._nav_cor_x + nav_off1['x']
+            self._nav_cor_y = self._nav_cor_y + nav_off1['y']
+        elif tar_off2 and nav_off2:
+            self._nav_cor_x = self._nav_cor_x + nav_off2['x']
+            self._nav_cor_y = self._nav_cor_y + nav_off2['y']
 
         # self.ap_ckb('log', 'Target Align complete.')
         return ScTargetAlignReturn.Found
@@ -2027,11 +2065,7 @@ class EDAutopilot:
 
         # a set of convience routes to pitch, rotate by specified degress
 
-    # def rotateLeft(self, deg):
-    #     htime = deg/self.rollrate
-    #     self.keys.send('RollLeftButton', hold=htime)
-
-    def rotate_clockwise_anticlockwise(self, deg):
+    def roll_clockwise_anticlockwise(self, deg):
         # def rotate_right(self, deg):
         abs_deg = abs(deg)
         htime = abs_deg/self.rollrate
@@ -2039,8 +2073,12 @@ class EDAutopilot:
         if self.speed_demand is None:
             self.set_speed_50()
 
-        if 0 < abs_deg < 45:
-            value = self.rollrate * pow(abs_deg / 45, self.rollfactor / 100)
+        # if 0 < abs_deg < 45:
+        #     value = self.rollrate * pow(abs_deg / 45, self.rollfactor / 100)
+        #     htime = abs_deg / value
+
+        if 0 < abs_deg < self.rollfactor:
+            value = 0.5 * self.rollrate * math.log10(100.0 * abs_deg / self.rollfactor)
             htime = abs_deg / value
 
         # Check if we are rolling right or left
@@ -2051,10 +2089,6 @@ class EDAutopilot:
 
         return htime
 
-    # def pitchDown(self, deg):
-    #     htime = deg/self.pitchrate
-    #     self.keys.send('PitchDownButton', hold=htime)
-
     def pitch_up_down(self, deg):
         abs_deg = abs(deg)
         htime = abs_deg/self.pitchrate
@@ -2062,8 +2096,12 @@ class EDAutopilot:
         if self.speed_demand is None:
             self.set_speed_50()
 
-        if 0 < abs_deg < 30:
-            value = self.pitchrate * pow(abs_deg / 30, self.pitchfactor / 100)
+        # if 0 < abs_deg < 30:
+        #     value = self.pitchrate * pow(abs_deg / 30, self.pitchfactor / 100)
+        #     htime = abs_deg / value
+
+        if 0 < abs_deg < self.pitchfactor:
+            value = 0.5 * self.pitchrate * math.log10(100.0 * abs_deg / self.pitchfactor)
             htime = abs_deg / value
 
         # Check if we are pitching up or down
@@ -2073,10 +2111,6 @@ class EDAutopilot:
             self.keys.send('PitchDownButton', hold=htime)
 
         return htime
-
-    # def yawLeft(self, deg):
-    #     htime = deg/self.yawrate
-    #     self.keys.send('YawLeftButton', hold=htime)
 
     def yaw_right_left(self, deg):
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
@@ -2088,8 +2122,12 @@ class EDAutopilot:
         if self.speed_demand is None:
             self.set_speed_50()
 
-        if 0 < abs_deg < 30:
-            value = self.yawrate * pow(abs_deg / 30, self.yawfactor / 100)
+        # if 0 < abs_deg < 30:
+        #     value = self.yawrate * pow(abs_deg / 30, self.yawfactor / 100)
+        #     htime = abs_deg / value
+
+        if 0 < abs_deg < self.yawfactor:
+            value = 0.5 * self.yawrate * math.log10(100.0 * abs_deg / self.yawfactor)
             htime = abs_deg / value
 
         # Check if we are yawing right or left
@@ -2810,13 +2848,15 @@ class EDAutopilot:
     def engine_loop(self):
         while not self.terminate:
             # TODO - Remove these show compass/target all the time
-            # self.get_nav_offset(self.scrReg, True)
-            # self.get_target_offset(self.scrReg, True)
+            if self.debug_show_compass_overlay:
+                self.get_nav_offset(self.scrReg, True)
+            if self.debug_show_target_overlay:
+                self.get_target_offset(self.scrReg, True)
 
             # TODO - Enable for test
             # self.start_sco_monitoring()
 
-            if self.fsd_assist_enabled == True:
+            if self.fsd_assist_enabled:
                 logger.debug("Running fsd_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -3032,7 +3072,7 @@ class EDAutopilot:
         set_focus_elite_window()
         sleep(0.25)
         # self.set_speed_50()
-        self.rotate_clockwise_anticlockwise(angle)
+        self.roll_clockwise_anticlockwise(angle)
 
     def ship_tst_yaw(self, angle: float):
         """ Performs a ship yaw test by pitching 360 degrees.

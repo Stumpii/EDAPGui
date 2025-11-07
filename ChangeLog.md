@@ -1,3 +1,11 @@
+# 11/6/2025 v1.8.0 b15
+ - Changed RPY factor calculation.
+ - Added automatic factor modification based on overshoot.
+ - Simplified saving.
+ - Added Plot to Station button to waypoint editor to allow testing of the waypoint bookmark.
+ - Disable disengage detection when not in cockpit view.
+ - Added Debug_ShowCompassOverlay and Debug_ShowTargetOverlay to config file (not GUI).
+
 # 11/3/2025 v1.8.0 b14
  - Added function to track last EDAP speed command.
  - Added hold > 0 check.

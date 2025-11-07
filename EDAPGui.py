@@ -62,7 +62,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.8.0 beta 14"
+EDAP_VERSION = "V1.8.0 beta 15"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -642,6 +642,7 @@ class APGui:
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
         self.save_ocr_calibration_data()
+        self.log_msg("Saved all settings.")
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
@@ -1344,7 +1345,7 @@ class APGui:
             # "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
             # "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
             # "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
-            "EDCodex.full_panel": {"rect": [0.0589, 0.0983, 0.9406, 0.8617], "text": "1. Open the Codex from right hand cockpit panel.\n2. Draw a rectangle from the top left corner of the codex 'book' to the end of the line above the exit button at the bottom right."},
+            "EDCodex.full_panel": {"rect": [0.0589, 0.0983, 0.9406, 0.8617], "text": "1. Open the Codex from right hand cockpit panel.\n2. Draw a rectangle from the top left corner of the codex 'book' to the end \nof the line above the exit button at the bottom right."},
             "EDInternalStatusPanel.panel_bounds1": {"rect": [0.1197, 0.2733, 0.6937, 0.7125], "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the top left corner of the nav panel to the bottom right corner."},
             "EDInternalStatusPanel.panel_bounds2": {"rect": [0.1541, 0.2408, 0.6781, 0.8], "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the bottom left corner of the nav panel to the top right corner."},
             # "EDInternalStatusPanel.tab_bar": {"rect": [0.35, 0.2, 0.85, 0.26]},
@@ -1421,7 +1422,7 @@ class APGui:
         with open(calibration_file, 'w') as f:
             json.dump(self.ocr_calibration_data, f, indent=4)
         self.log_msg("OCR calibration data saved.")
-        messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
+        # messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
 
     def reset_all_calibrations(self):
         if messagebox.askyesno("Reset All Calibrations", "Are you sure you want to reset all OCR calibrations to their default values? This cannot be undone."):
