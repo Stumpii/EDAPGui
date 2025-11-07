@@ -1860,26 +1860,28 @@ class EDAutopilot:
                     self.ap_ckb('log', 'Target is behind us')
                     return ScTargetAlignReturn.Lost
 
-            # Check diff from before and after movement
-            pit_delta = tar_off2['pit'] - tar_off1['pit']
-            yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-            if abs(pit_delta) > (abs(tar_off1['pit']) + 0.25):
-                self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {abs(tar_off1['pit']) + 0.25}. Reducing Pitch Factor.")
-                # Correct factor
-                self.pitchfactor = self.pitchfactor - 1.0
-                # Update GUI with ship config
-                self.ap_ckb('update_ship_cfg')
+            if tar_off1 and tar_off2:
+                # Check diff from before and after movement
+                pit_delta = tar_off2['pit'] - tar_off1['pit']
+                yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
+                if abs(pit_delta) > (abs(tar_off1['pit']) + 0.25):
+                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {abs(tar_off1['pit']) + 0.25}. Reducing Pitch Factor.")
+                    # Correct factor
+                    self.pitchfactor = self.pitchfactor - 1.0
+                    # Update GUI with ship config
+                    self.ap_ckb('update_ship_cfg')
 
-            if abs(yaw_delta) > (abs(tar_off1['yaw']) + 0.25):
-                self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {abs(tar_off1['yaw']) + 0.25}. Reducing Yaw Factor.")
-                # Correct factor
-                self.yawfactor = self.yawfactor - 1.0
-                # Update GUI with ship config
-                self.ap_ckb('update_ship_cfg')
+                if abs(yaw_delta) > (abs(tar_off1['yaw']) + 0.25):
+                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {abs(tar_off1['yaw']) + 0.25}. Reducing Yaw Factor.")
+                    # Correct factor
+                    self.yawfactor = self.yawfactor - 1.0
+                    # Update GUI with ship config
+                    self.ap_ckb('update_ship_cfg')
 
-            # Store current offsets
-            tar_off1['pit'] = tar_off2['pit']
-            tar_off1['yaw'] = tar_off2['yaw']
+            if tar_off2:
+	        # Store current offsets
+                tar_off1['pit'] = tar_off2['pit']
+                tar_off1['yaw'] = tar_off2['yaw']
 
             # Check if target occluded
             if tar_off2 and tar_off2['occ']:
