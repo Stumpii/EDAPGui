@@ -1,7 +1,10 @@
 from __future__ import annotations
+
+import os
 from time import sleep
 from CargoParser import CargoParser
 from EDAP_data import *
+from EDJournal import StationType
 from EDKeys import EDKeys
 from EDlogger import logger
 import json
@@ -228,18 +231,15 @@ class EDWayPoint:
             return
 
         # Determine type of station we are at
-        colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
-        orbital_construction_site = ap.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
-        fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-        outpost = ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
+        station_type = ap.jn.ship_state()['exp_station_type']
 
-        if colonisation_ship or orbital_construction_site:
-            if colonisation_ship:
+        if station_type == StationType.ColonisationShip or station_type == StationType.SpaceConstructionDepot:
+            if station_type == StationType.ColonisationShip:
                 # Colonisation Ship
                 self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
                 self.ap.ap_ckb('log', f"Executing trade with Colonisation Ship.")
                 logger.debug(f"Execute Trade: On Colonisation Ship")
-            if orbital_construction_site:
+            if station_type == StationType.SpaceConstructionDepot:
                 # Construction Ship
                 self.stats_log['Construction'] = self.stats_log['Construction'] + 1
                 self.ap.ap_ckb('log', f"Executing trade with Orbital Construction Ship.")
@@ -253,7 +253,8 @@ class EDWayPoint:
                 # Sell all to colonisation/construction ship
                 self.sell_to_colonisation_ship(ap)
 
-        elif fleet_carrier and fleetcarrier_transfer:
+        elif (station_type == StationType.FleetCarrier and fleetcarrier_transfer or
+              station_type == StationType.SquadronCarrier and fleetcarrier_transfer):
             # Fleet Carrier in Transfer mode
             self.stats_log['Fleet Carrier'] = self.stats_log['Fleet Carrier'] + 1
             # --------- SELL ----------
@@ -266,7 +267,7 @@ class EDWayPoint:
                 self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
-            # Regular Station or Fleet Carrier in Buy/Sell mode
+            # Regular Station or Fleet Carrier or Squadron Carrier in Buy/Sell mode
             self.ap.ap_ckb('log', "Executing trade.")
             logger.debug(f"Execute Trade: On Regular Station")
             self.stats_log['Station'] = self.stats_log['Station'] + 1
@@ -477,7 +478,7 @@ class EDWayPoint:
             # Current location
             cur_star_system = self.ap.jn.ship_state()['cur_star_system'].upper()
             cur_station = self.ap.jn.ship_state()['cur_station'].upper()
-            cur_station_type = self.ap.jn.ship_state()['cur_station_type'].upper()
+            cur_station_type = self.ap.jn.ship_state()['exp_station_type']
 
             # Current in game destination
             status = self.ap.status.get_cleaned_data()
@@ -578,11 +579,12 @@ class EDWayPoint:
                 # Check if we are at the correct station. Note that for FCs, the station name
                 # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
                 # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
-                if cur_station_type == 'FleetCarrier'.upper():
+                if cur_station_type == StationType.FleetCarrier:
+                    docked_at_stn = next_wp_station.endswith(cur_station)
+                elif cur_station_type == StationType.SquadronCarrier:
                     docked_at_stn = next_wp_station.endswith(cur_station)
                 elif 'System Colonisation Ship'.upper() in next_wp_station:
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
+                    if cur_station_type == StationType.ColonisationShip:
                         docked_at_stn = True
                 # elif next_wp_station.startswith('Orbital Construction Site'.upper()):
                 #     if (cur_station_type == 'SurfaceStation'.upper() and

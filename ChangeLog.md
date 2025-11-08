@@ -1,3 +1,6 @@
+# 11/8/2025 v1.8.0 b16
+- Allow detection of squadron carrier and commodity buy/sell and transfer .
+
 # 11/6/2025 v1.8.0 b15
  - Changed RPY factor calculation.
  - Added automatic factor modification based on overshoot.

@@ -1879,7 +1879,7 @@ class EDAutopilot:
                     self.ap_ckb('update_ship_cfg')
 
             if tar_off2:
-	        # Store current offsets
+                # Store current offsets
                 tar_off1['pit'] = tar_off2['pit']
                 tar_off1['yaw'] = tar_off2['yaw']
 
@@ -2243,9 +2243,10 @@ class EDAutopilot:
 
         # Store current location (on planet or in space)
         on_planet = self.status.get_flag(FlagsHasLatLong)
-        on_orbital_construction_site = self.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
-        fleet_carrier = self.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-        starport_outpost = not on_planet and not on_orbital_construction_site and not fleet_carrier
+        on_orbital_construction_site = self.jn.ship_state()['exp_station_type'] == StationType.SpaceConstructionDepot
+        fleet_carrier = self.jn.ship_state()['exp_station_type'] == StationType.FleetCarrier
+        squadron_fleet_carrier = self.jn.ship_state()['exp_station_type'] == StationType.SquadronCarrier
+        starport_outpost = not on_planet and not on_orbital_construction_site and not fleet_carrier and not squadron_fleet_carrier
 
         # Leave starport or planetary port
         if not on_planet:

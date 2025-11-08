@@ -5,6 +5,7 @@ from copy import copy
 
 import cv2
 
+from EDJournal import StationType
 from MarketParser import MarketParser
 from StatusParser import StatusParser
 from time import sleep
@@ -113,15 +114,19 @@ class EDStationServicesInShip:
         There is probably a better way to do this!
         @return: The string of the positions (i.e. RRD for Right-Right-Down).
         """
-        fleet_carrier = self.ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-        outpost = self.ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
+        station_type = self.ap.jn.ship_state()['exp_station_type']
         # CONNECTED TO menu is different between stations and fleet carriers
-        if fleet_carrier:
+        if station_type == StationType.FleetCarrier:
             # Fleet Carrier COMMODITIES MARKET location top right, with:
             # uni cart, redemption, tritium depot, shipyard, crew lounge
             return "RR"
 
-        elif outpost:
+        elif station_type == StationType.SquadronCarrier:
+            # Fleet Carrier COMMODITIES MARKET location top right, with:
+            # uni cart, redemption, tritium depot, shipyard, crew lounge
+            return "RD"
+
+        elif station_type == StationType.Outpost:
             # Outpost COMMODITIES MARKET location in middle column
             return "R"
 
@@ -150,6 +155,12 @@ class EDStationServicesInShip:
             # Fleet Carrier COMMODITIES MARKET location top right, with:
             # uni cart, redemption, tritium depot, shipyard, crew lounge
             self.keys.send('UI_Right', repeat=2)
+            self.keys.send('UI_Select')  # Select Commodities
+
+        elif res == "RD":
+            # Squadron Fleet Carrier COMMODITIES MARKET location right and one down
+            self.keys.send('UI_Right')
+            self.keys.send('UI_Down')
             self.keys.send('UI_Select')  # Select Commodities
 
         elif res == "R":

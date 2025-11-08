@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from enum import Enum
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
 from json import loads
@@ -39,6 +40,18 @@ Author: sumzer0@yahoo.com
 """                             
 TODO: thinking self.ship()[name]  uses the same names as in the journal, so can lookup same construct     
 """
+
+
+class StationType(Enum):
+    Unknown = 0
+    Starport = 1  # Coriolis or...
+    Outpost = 2  # Outpost
+    FleetCarrier = 3  # Fleet Carrier
+    SquadronCarrier = 4  # Squadron Fleet Carrier
+    ColonisationShip = 5  # Colonisation Ship
+    SpaceConstructionDepot = 6  # Orbital Construction Depot
+    PlanetaryConstructionDepot = 7  # Planet Construction Depot
+    SurfaceStation = 8  # Surface Station
 
 
 def get_ship_size(ship: str) -> str:
@@ -128,6 +141,54 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
     return False
 
 
+def check_station_type(station_type: str, station_name: str, station_services: list[str]) -> StationType:
+    """ Gets the station type.
+        @station_type:  The station type from the journal (i.e. 'Coriolis').
+        @station_name:  The station name from the journal (i.e. 'ColonisationShip').
+        @return: The station type:
+            Starport
+            Outpost
+            etc.
+    """
+    station_type_upper = station_type.upper()
+    station_name_upper = station_name.upper()
+    station_services_upper = [s.upper() for s in station_services]
+
+    if station_type_upper == 'SurfaceStation'.upper():
+        # Special case, for some reason the colonisation ship is a SurfaceStation in the journal.
+        if station_name_upper == 'ColonisationShip'.upper():
+            return StationType.ColonisationShip
+        else:
+            return StationType.SurfaceStation
+
+    elif station_type_upper == 'FleetCarrier'.upper():
+        if 'squadronBank'.upper() in station_services_upper:
+            return StationType.SquadronCarrier
+        else:
+            return StationType.FleetCarrier
+
+    elif station_type_upper == 'SpaceConstructionDepot'.upper():
+        return StationType.SpaceConstructionDepot
+    elif station_type_upper == 'PlanetaryConstructionDepot'.upper():
+        return StationType.PlanetaryConstructionDepot
+
+    elif station_type_upper == 'Coriolis'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Orbis'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Ocellus'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Dodec'.upper():
+        return StationType.Starport
+
+    elif station_type_upper == 'Outpost'.upper():
+        return StationType.Outpost
+    else:
+        # Default to starport
+        print(f"Unknown station type: {station_type}. Please contact the developers for it to be added.")
+        return StationType.Unknown
+
+
 class EDJournal:
     def __init__(self, cb):
         self.ap_ckb = cb
@@ -162,6 +223,7 @@ class EDJournal:
             'cur_star_system': "",
             'cur_station': "",
             'cur_station_type': "",
+            'exp_station_type': StationType.Unknown,
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
@@ -303,6 +365,7 @@ class EDJournal:
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
                 self.ship['StationServices'] = log['StationServices']
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
                 self.ship['MarketID'] = log['MarketID']
 
                 # parse location
@@ -311,6 +374,11 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                if 'StationServices' in log:
+                    self.ship['StationServices'] = log['StationServices']
+                else:
+                    self.ship['StationServices'] = []
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
                 self.ship['MarketID'] = log['MarketID']
                 if log['Docked'] == True:
                     self.ship['status'] = 'in_station'
@@ -394,6 +462,8 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                self.ship['StationServices'] = log['StationServices']
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
                 self.ship['MarketID'] = log['MarketID']
 
             elif log_event == 'ColonisationConstructionDepot':
