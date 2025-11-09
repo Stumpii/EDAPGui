@@ -1027,7 +1027,10 @@ class EDAutopilot:
 
         # find the nav point within the compass box
         navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
+        navpt_image_beh, (n_minVal, n_maxVal_beh, n_minLoc, n_maxLoc_beh), match_beh = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
+
         n_pt = n_maxLoc
+        n_pt_beh = n_maxLoc_beh
 
         compass_x_min = pad
         compass_x_max = c_wid + pad - wid
@@ -1035,14 +1038,12 @@ class EDAutopilot:
         compass_y_max = c_hgt + pad - hgt
 
         # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
-        if n_maxVal < scr_reg.navpoint_match_thresh:
-            final_z_pct = -1.0  # Behind
-
-            # find the nav point within the compass box using the -behind template
-            navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
+        if n_maxVal > scr_reg.navpoint_match_thresh:
+            final_z_pct = 1.0  # Ahead
             n_pt = n_maxLoc
         else:
-            final_z_pct = 1.0  # Ahead
+            final_z_pct = -1.0  # Behind
+            n_pt = n_maxLoc_beh
 
         # Continue calc
         final_x_pct = 2*(((n_pt[0]-compass_x_min)/(compass_x_max-compass_x_min))-0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
@@ -1098,7 +1099,9 @@ class EDAutopilot:
             left = c_left + maxLoc[0]
             top = c_top + maxLoc[1]
             self.overlay.overlay_rect('compass', (left - border, top - border), (left + c_wid + border, top + c_hgt + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('compass', f'Match: {maxVal:5.4f}', left - border, top - border - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('compass', f'Com: {maxVal:5.2f} > {scr_reg.compass_match_thresh}', left - border, top - border - 65, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav', f'Nav: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh}', left - border, top - border - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav_beh', f'NavB: {n_maxVal_beh:5.2f}', left - border, top - border - 25, (0, 255, 0))
             self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + c_hgt + border, (0, 255, 0))
             self.overlay.overlay_paint()
 
@@ -1646,6 +1649,8 @@ class EDAutopilot:
                         if self.debug_overlay:
                             self.overlay.overlay_remove_rect('compass')
                             self.overlay.overlay_remove_floating_text('compass')
+                            self.overlay.overlay_remove_floating_text('nav')
+                            self.overlay.overlay_remove_floating_text('nav_beh')
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
@@ -1665,6 +1670,8 @@ class EDAutopilot:
                     if self.debug_overlay:
                         self.overlay.overlay_remove_rect('compass')
                         self.overlay.overlay_remove_floating_text('compass')
+                        self.overlay.overlay_remove_floating_text('nav')
+                        self.overlay.overlay_remove_floating_text('nav_beh')
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
@@ -1684,6 +1691,8 @@ class EDAutopilot:
                     if self.debug_overlay:
                         self.overlay.overlay_remove_rect('compass')
                         self.overlay.overlay_remove_floating_text('compass')
+                        self.overlay.overlay_remove_floating_text('nav')
+                        self.overlay.overlay_remove_floating_text('nav_beh')
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
@@ -1740,7 +1749,7 @@ class EDAutopilot:
             'found': Target found
             'disengage': Disengage text found
         """
-        target_align_compass_mult = 5  # Multiplier to close and target_align_inner_lim when using compass for align.
+        target_align_compass_mult = 3  # Multiplier to close and target_align_inner_lim when using compass for align.
         target_align_pit_off = 0.25  # In deg. To keep the target above the center line (prevent it going down out of view).
 
         target_pit = target_align_pit_off
@@ -1820,6 +1829,8 @@ class EDAutopilot:
             if self.debug_overlay:
                 self.overlay.overlay_remove_rect('compass')
                 self.overlay.overlay_remove_floating_text('compass')
+                self.overlay.overlay_remove_floating_text('nav')
+                self.overlay.overlay_remove_floating_text('nav_beh')
                 self.overlay.overlay_remove_floating_text('compass_rpy')
                 self.overlay.overlay_remove_rect('target')
                 self.overlay.overlay_remove_floating_text('target')
@@ -1864,15 +1875,15 @@ class EDAutopilot:
                 # Check diff from before and after movement
                 pit_delta = tar_off2['pit'] - tar_off1['pit']
                 yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if abs(pit_delta) > (abs(tar_off1['pit']) + 0.25):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {abs(tar_off1['pit']) + 0.25}. Reducing Pitch Factor.")
+                if abs(pit_delta) > (abs(tar_off1['pit']) + target_align_outer_lim):
+                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {round(abs(tar_off1['pit']),2) + target_align_outer_lim}. Reducing Pitch Factor.")
                     # Correct factor
                     self.pitchfactor = self.pitchfactor - 1.0
                     # Update GUI with ship config
                     self.ap_ckb('update_ship_cfg')
 
-                if abs(yaw_delta) > (abs(tar_off1['yaw']) + 0.25):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {abs(tar_off1['yaw']) + 0.25}. Reducing Yaw Factor.")
+                if abs(yaw_delta) > (abs(tar_off1['yaw']) + target_align_outer_lim):
+                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {round(abs(tar_off1['yaw']),2) + target_align_outer_lim}. Reducing Yaw Factor.")
                     # Correct factor
                     self.yawfactor = self.yawfactor - 1.0
                     # Update GUI with ship config
@@ -1880,8 +1891,7 @@ class EDAutopilot:
 
             if tar_off2:
                 # Store current offsets
-                tar_off1['pit'] = tar_off2['pit']
-                tar_off1['yaw'] = tar_off2['yaw']
+                tar_off1 = tar_off2.copy()
 
             # Check if target occluded
             if tar_off2 and tar_off2['occ']:
