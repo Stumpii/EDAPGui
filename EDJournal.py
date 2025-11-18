@@ -44,15 +44,14 @@ TODO: thinking self.ship()[name]  uses the same names as in the journal, so can 
 
 class StationType(Enum):
     Unknown = 0
-    Starport = 1  # Coriolis or...
+    Starport = 1  # Coriolis, Orbis, Ocellus, Dodec or Asteroid Base...
     Outpost = 2  # Outpost
     FleetCarrier = 3  # Fleet Carrier
     SquadronCarrier = 4  # Squadron Fleet Carrier
     ColonisationShip = 5  # Colonisation Ship
     SpaceConstructionDepot = 6  # Orbital Construction Depot
     PlanetaryConstructionDepot = 7  # Planet Construction Depot
-    SurfaceStation = 8  # Surface Station
-
+    SurfaceStation = 8  # Surface Station or Crater Outpost (Crater Outpost appears to be an Engineer's Surface Base)
 
 def get_ship_size(ship: str) -> str:
     """ Gets the ship size from the journal ship name.
@@ -160,6 +159,8 @@ def check_station_type(station_type: str, station_name: str, station_services: l
             return StationType.ColonisationShip
         else:
             return StationType.SurfaceStation
+    elif station_type_upper == 'CraterOutpost'.upper():
+        return StationType.SurfaceStation
 
     elif station_type_upper == 'FleetCarrier'.upper():
         if 'squadronBank'.upper() in station_services_upper:
@@ -180,12 +181,14 @@ def check_station_type(station_type: str, station_name: str, station_services: l
         return StationType.Starport
     elif station_type_upper == 'Dodec'.upper():
         return StationType.Starport
+    elif station_type_upper == 'AsteroidBase'.upper():
+        return StationType.Starport
 
     elif station_type_upper == 'Outpost'.upper():
         return StationType.Outpost
     else:
         # Default to starport
-        print(f"Unknown station type: {station_type}. Please contact the developers for it to be added.")
+        print(f"Unknown station type: {station_type}. Please contact the developers for it to be added to 'check_station_type'.")
         return StationType.Unknown
 
 
@@ -516,9 +519,13 @@ class EDJournal:
                 if str_mrk not in const:
                     const[str_mrk] = {}
 
+                system = self.ship['cur_star_system']
+
                 # Add station to the dictionary
+                const[str_mrk]['SystemName'] = system
                 const[str_mrk]['StationName'] = stn
                 const[str_mrk]['MarketID'] = dic.get('MarketID')
+                const[str_mrk]['Include'] = True
                 const[str_mrk]['ConstructionProgress'] = dic.get('ConstructionProgress')
                 const[str_mrk]['ConstructionComplete'] = dic.get('ConstructionComplete')
                 const[str_mrk]['ConstructionFailed'] = dic.get('ConstructionFailed')

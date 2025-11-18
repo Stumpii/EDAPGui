@@ -26,6 +26,7 @@ class EDGalaxyMap:
                     'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     }
         self.sub_reg = {'cartographics': {'rect': [0.0, 0.0, 0.15, 0.15]}}
+        self.SystemSelectDelay = 0.5  # Delay selecting the system when in galaxy map
 
         self.load_calibrated_regions()
 
@@ -183,7 +184,7 @@ class EDGalaxyMap:
 
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
-            sleep(0.5)
+            sleep(self.SystemSelectDelay)
 
             # zoom camera which puts focus back on the map
             ap.keys.send('CamZoomIn')

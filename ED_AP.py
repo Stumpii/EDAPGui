@@ -129,6 +129,7 @@ class EDAutopilot:
             "target_align_inner_lim": 0.5, # For test
             "Debug_ShowCompassOverlay": False, # For test
             "Debug_ShowTargetOverlay": False, # For test
+            "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -208,6 +209,8 @@ class EDAutopilot:
                 cnf['Debug_ShowCompassOverlay'] = False # For test
             if 'Debug_ShowTargetOverlay' not in cnf:
                 cnf['Debug_ShowTargetOverlay'] = False # For test
+            if 'GalMap_SystemSelectDelay' not in cnf:
+                cnf['GalMap_SystemSelectDelay'] = 0.5
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
         else:
@@ -559,6 +562,9 @@ class EDAutopilot:
             self.keys.key_mod_delay = self.config['Key_ModDelay']
             self.keys.key_def_hold_time = self.config['Key_DefHoldTime']
             self.keys.key_repeat_delay = self.config['Key_RepeatDelay']
+
+        if self.galaxy_map:
+            self.galaxy_map.SystemSelectDelay = self.config['GalMap_SystemSelectDelay']
 
         self.target_align_outer_lim = self.config['target_align_outer_lim']
         self.target_align_inner_lim = self.config['target_align_inner_lim']
@@ -1214,7 +1220,8 @@ class EDAutopilot:
             left = destination_left + sel_loc[0]
             top = destination_top + sel_loc[1]
             self.overlay.overlay_rect('target', (left - border, top - border), (left + width + border, top + height + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('target', f'Match: {maxVal:5.4f} Occ: {maxVal_occ:5.4f}', left - border, top - border - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('target', f'Tar: {maxVal:5.2f} > {scr_reg.target_thresh}', left - border, top - border - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', left - border, top - border - 25, (0, 255, 0))
             self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + height + border, (0, 255, 0))
             self.overlay.overlay_paint()
 
@@ -1834,6 +1841,7 @@ class EDAutopilot:
                 self.overlay.overlay_remove_floating_text('compass_rpy')
                 self.overlay.overlay_remove_rect('target')
                 self.overlay.overlay_remove_floating_text('target')
+                self.overlay.overlay_remove_floating_text('target_occ')
                 self.overlay.overlay_remove_floating_text('target_rpy')
                 self.overlay.overlay_paint()
 
