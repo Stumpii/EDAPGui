@@ -179,6 +179,8 @@ def check_station_type(station_type: str, station_name: str, station_services: l
         return StationType.Starport
     elif station_type_upper == 'Ocellus'.upper():
         return StationType.Starport
+    elif station_type_upper == 'Bernal'.upper():  # Bernal (Sphere) is an Ocellus.
+        return StationType.Starport
     elif station_type_upper == 'Dodec'.upper():
         return StationType.Starport
     elif station_type_upper == 'AsteroidBase'.upper():

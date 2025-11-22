@@ -110,6 +110,8 @@ class EDAutopilot:
             "TCEInstallationPath": "C:\\TCE",
             "AutomaticLogout": False,      # Logout when we are done with the mission
             "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
+            "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
+            "OCDepartureAngle": 90.0,      # Angle to pitch up when leaving an Orbital Construction Site
             "Language": 'en',              # Language (matching ./locales/xx.json file)
             "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
             "EnableEDMesg": False,
@@ -211,6 +213,10 @@ class EDAutopilot:
                 cnf['Debug_ShowTargetOverlay'] = False # For test
             if 'GalMap_SystemSelectDelay' not in cnf:
                 cnf['GalMap_SystemSelectDelay'] = 0.5
+            if 'FCDepartureAngle' not in cnf:
+                cnf['FCDepartureAngle'] = 90.0
+            if 'OCDepartureAngle' not in cnf:
+                cnf['OCDepartureAngle'] = 90.0
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
         else:
@@ -2288,7 +2294,7 @@ class EDAutopilot:
                 if fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(90 * 1.25)
+                    self.pitch_up_down(self.config['FCDepartureAngle'])
 
                     self.update_ap_status("Undock Complete, accelerating")
 
@@ -2303,7 +2309,7 @@ class EDAutopilot:
                 if on_orbital_construction_site:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(90 * 1.25)
+                    self.pitch_up_down(self.config['OCDepartureAngle'])
 
                 if starport_outpost or on_orbital_construction_site:
                     # In space (launched from starport or outpost etc.) OR construction site

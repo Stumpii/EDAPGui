@@ -1,5 +1,13 @@
+# 11/22/2025 v1.8.0 b17
+- Add config parms for FC Leaving Angle and Obital Const Site Angle.
+- Added delay for gal map system select to config file.
+- Added some additional base types.
+- Added more compass debug overlay.
+- Reduced compass align multiplier to help PC2 when target is covered by cockpit.
+- Increased the margin for P/Y factor reduction.
+
 # 11/8/2025 v1.8.0 b16
-- Allow detection of squadron carrier and commodity buy/sell and transfer .
+- Allow detection of squadron carrier and commodity buy/sell and transfer.
 
 # 11/6/2025 v1.8.0 b15
  - Changed RPY factor calculation.
