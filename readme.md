@@ -270,8 +270,8 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
 https://pythonhosted.org/pynput/keyboard.html
 
-## Config File: config-AP.json
-The following settings from the AP.json file are **not** available through the GUI and must be changed directly within AP.json:
+## Additional Configuration Settings
+The following settings from the AP.json file (in the configs folder) are **not** available through the GUI and must be changed directly within AP.json using any text editor:
   ```py
     "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
     "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
@@ -281,8 +281,21 @@ The following settings from the AP.json file are **not** available through the G
     "DiscordWebhookURL": "",
     "DiscordUserID": "",
     "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-    "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
     "Language": "en"               # Language for OCR checks (i.e. 'en', 'fr', 'de')
+
+    "DisengageUseMatch": false,    # For 'Disengage' use old image match instead of OCR
+
+    "Debug_ShowCompassOverlay": false,  # For testing
+    "Debug_ShowTargetOverlay": false,   # For testing
+
+    "GalMap_SystemSelectDelay": 2.0,  # Delay selecting the system when in galaxy map
+    
+    "target_align_outer_lim": 1.0,
+    "target_align_inner_lim": 0.5,
+
+    "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
+    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
+    "OCDepartureAngle": 90.0       # Angle to pitch up when leaving an Orbital Construction Site
 ```
                                                               
 ## Elite Dangerous, Role Play and Autopilot
