@@ -522,29 +522,29 @@ class EDAutopilot:
         """ Draw the overlay data on the ED Window """
         if self.config['OverlayTextEnable']:
             ap_mode = "Offline"
-            if self.fsd_assist_enabled == True:
+            if self.fsd_assist_enabled:
                 ap_mode = "FSD Route Assist"
-            elif self.robigo_assist_enabled == True:
+            elif self.robigo_assist_enabled:
                 ap_mode = "Robigo Assist"
-            elif self.sc_assist_enabled == True:
+            elif self.sc_assist_enabled:
                 ap_mode = "SC Assist"
-            elif self.waypoint_assist_enabled == True:
+            elif self.waypoint_assist_enabled:
                 ap_mode = "Waypoint Assist"
-            elif self.afk_combat_assist_enabled == True:
+            elif self.afk_combat_assist_enabled:
                 ap_mode = "AFK Combat Assist"
-            elif self.dss_assist_enabled == True:
+            elif self.dss_assist_enabled:
                 ap_mode = "DSS Assist"
 
             ship_state = self.jn.ship_state()['status']
-            if ship_state == None:
+            if ship_state is None:
                 ship_state = '<init>'
 
             sclass = self.jn.ship_state()['star_class']
-            if sclass == None:
+            if sclass is None:
                 sclass = "<init>"
 
             location = self.jn.ship_state()['location']
-            if location == None:
+            if location is None:
                 location = "<init>"
             self.overlay.overlay_text('1', "AP MODE: "+ap_mode, 1, 1, (136, 53, 0), -1)
             self.overlay.overlay_text('2', "AP STATUS: "+self.ap_state, 2, 1, (136, 53, 0), -1)

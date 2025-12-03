@@ -1,3 +1,7 @@
+# 12/2/2025 v1.8.0 b18
+- Added Caspian Explorer.
+- Updated readme to include options not on the GUI.
+
 # 11/22/2025 v1.8.0 b17
 - Add config parms for FC Leaving Angle and Obital Const Site Angle.
 - Added delay for gal map system select to config file.
