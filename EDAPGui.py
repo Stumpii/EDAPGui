@@ -62,7 +62,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.8.0 beta 18"
+EDAP_VERSION = "V1.8.0 beta 19"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -581,13 +581,19 @@ class APGui:
         self.log_msg(f"Status update: {txt}")
 
     def ship_tst_pitch(self):
-        self.ed_ap.ship_tst_pitch(360)
+        # self.ed_ap.ship_tst_pitch(360)
+        # self.ed_ap.ship_tst_pitch_new(360)
+        self.ed_ap.ship_tst_pitch_enabled = True
 
     def ship_tst_roll(self):
-        self.ed_ap.ship_tst_roll(360)
+        # self.ed_ap.ship_tst_roll(360)
+        # self.ed_ap.ship_tst_roll_new(360)
+        self.ed_ap.ship_tst_roll_enabled = True
 
     def ship_tst_yaw(self):
-        self.ed_ap.ship_tst_yaw(360)
+        # self.ed_ap.ship_tst_yaw(360)
+        # self.ed_ap.ship_tst_yaw_new(360)
+        self.ed_ap.ship_tst_yaw_enabled = True
 
     def ship_tst_pitch_30(self):
         self.ed_ap.ship_tst_pitch(30)
@@ -1084,7 +1090,7 @@ class APGui:
         # ship values block
         blk_ship = ttk.LabelFrame(blk_main, text="SHIP", padding=(10, 5))
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky="NSEW")
-        self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 0, 0.5)
+        self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 1, 0.5)
 
         lbl_sun_pitch_up = ttk.Label(blk_ship, text='SunPitchUp +/- Time:')
         lbl_sun_pitch_up.grid(row=6, column=0, pady=3, sticky=tk.W)
@@ -1093,27 +1099,21 @@ class APGui:
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
-        btn_tst_roll = ttk.Button(blk_ship, text='Test Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
-        btn_tst_pitch = ttk.Button(blk_ship, text='Test Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
-        btn_tst_yaw = ttk.Button(blk_ship, text='Test Yaw Rate', command=self.ship_tst_yaw)
+        lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%\n"
+                                                      "2. Target remote System\n"
+                                                      "3. Maneuver target to 12 o'clock on compass.")
+        lbl_calibrate_note.grid(row=7, columnspan=2, pady=5, sticky=tk.W)
+        btn_tst_roll = ttk.Button(blk_ship, text='Calibrate Roll Rate', command=self.ship_tst_roll)
+        btn_tst_roll.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
-        # waypoints button block
-        blk_wp_buttons = ttk.LabelFrame(page0, text="Waypoints", padding=(10, 5))
-        blk_wp_buttons.grid(row=1, column=0, padx=10, pady=5, columnspan=2, sticky="NSEW")
-        blk_wp_buttons.columnconfigure([0, 1], weight=1, minsize=100, uniform="group1")
-
-        self.wp_filelabel = tk.StringVar()
-        self.wp_filelabel.set("<no list loaded>")
-        btn_wp_file = ttk.Button(blk_wp_buttons, textvariable=self.wp_filelabel, command=self.open_wp_file)
-        btn_wp_file.grid(row=0, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
-        tip_wp_file = ToolTip(btn_wp_file, msg=self.tooltips['Waypoint List Button'], delay=1.0, bg="#808080", fg="#FFFFFF")
-
-        btn_reset = ttk.Button(blk_wp_buttons, text='Reset List', command=self.reset_wp_file)
-        btn_reset.grid(row=1, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
-        tip_reset = ToolTip(btn_reset, msg=self.tooltips['Reset Waypoint List'], delay=1.0, bg="#808080", fg="#FFFFFF")
-        btn_tst_yaw.grid(row=9, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%\n"
+                                                       "2. Target remote System\n"
+                                                       "3. Maneuver target to center of screen (and compass).")
+        lbl_calibrate_note2.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
+        btn_tst_pitch = ttk.Button(blk_ship, text='Calibrate Pitch Rate', command=self.ship_tst_pitch)
+        btn_tst_pitch.grid(row=10, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_yaw = ttk.Button(blk_ship, text='Calibrate Yaw Rate', command=self.ship_tst_yaw)
+        btn_tst_yaw.grid(row=11, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))

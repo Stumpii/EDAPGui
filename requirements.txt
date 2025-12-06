@@ -6,8 +6,9 @@ logger==1.4
 mss==8.0.3
 numpy==2.0.2
 opencv_python==4.5.5.64
-paddleocr==3.2.0
-paddlepaddle==3.2.0
+paddleocr==3.3.2
+paddlepaddle==3.2.2
+paddlex==3.3.10
 Pillow==10.4.0
 PyAutoGUI==0.9.54
 pydantic>=2.9.1 # For EDMesg

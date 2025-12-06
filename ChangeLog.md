@@ -1,3 +1,8 @@
+# 12/6/2025 v1.8.0 b19
+- Rewrite of RPY calibration routines.
+- RPY movements now uses calibrated sample rates from calibration.
+- Updated PaddleOCR to latest version.
+
 # 12/2/2025 v1.8.0 b18
 - Added Caspian Explorer.
 - Updated readme to include options not on the GUI.

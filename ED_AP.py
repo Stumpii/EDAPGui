@@ -64,6 +64,9 @@ class FSDAssistReturn(Enum):
     Partial = 1  # Reached final system, but there is a local destination
     Complete = 2  # Reached final system and there is no local destination
 
+def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
+    """ Does scaling of the input based on input and output min/max."""
+    return (inp - in_min)/(in_max - in_min) * (out_max - out_min) + out_min
 
 class EDAutopilot:
 
@@ -151,6 +154,9 @@ class EDAutopilot:
         self._tce_integration = None
         self._ocr = None
         self._sc_disengage_active = False  # Is SC Disengage active
+        self.ship_tst_roll_enabled = False
+        self.ship_tst_pitch_enabled = False
+        self.ship_tst_yaw_enabled = False
 
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
@@ -299,6 +305,8 @@ class EDAutopilot:
         self.rollfactor = 0.0
         self.pitchfactor = 0.0
 
+        self.ap_ckb = cb
+
         self.load_ship_configs()
 
         self.jump_cnt = 0
@@ -315,8 +323,6 @@ class EDAutopilot:
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
         self.debug_show_target_overlay = False
-
-        self.ap_ckb = cb
 
         # Overlay vars
         self.ap_state = "Idle"
@@ -471,7 +477,39 @@ class EDAutopilot:
             2. Default ship values from default_ships_cfg_sc_50.json file
             3. Hardcoded default values
         """
-        # Step 1: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        self.ap_ckb('log', f"Loading ship configuration for your {ship_type}")
+
+        # Step 1: Use hardcoded defaults
+        self.compass_scale = self.scr.scaleX
+        self.rollrate = 80.0
+        self.pitchrate = 33.0
+        self.yawrate = 8.0
+        self.sunpitchuptime = 0.0
+        self.rollfactor = 20.0
+        self.pitchfactor = 12.0
+        self.yawfactor = 12.0
+        logger.info(f"Loaded hardcoded default configuration for {ship_type}")
+
+        # Step 2: Try to load defaults from ship file
+        if ship_type in ship_rpy_sc_50:
+            ship_defaults = ship_rpy_sc_50[ship_type]
+            # Use default configuration - this means it's been modified and saved to ship_configs.json
+            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
+            self.rollrate = ship_defaults.get('RollRate', 80.0)
+            self.pitchrate = ship_defaults.get('PitchRate', 33.0)
+            self.yawrate = ship_defaults.get('YawRate', 8.0)
+            self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
+            logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
+
+        # if ship_type in ship_rpy_factor_sc_50:
+        #     ship_defaults = ship_rpy_factor_sc_50[ship_type]
+        #     # Use default configuration - this means it's been modified and saved to ship_configs.json
+        #     self.rollfactor = ship_defaults.get('RollFactor', 20.0)
+        #     self.pitchfactor = ship_defaults.get('PitchFactor', 12.0)
+        #     self.yawfactor = ship_defaults.get('YawFactor', 12.0)
+        #     # return
+
+        # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
         if ship_type in self.ship_configs['Ship_Configs']:
             current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
             # Check if the custom config has actual values (not just empty dict)
@@ -482,38 +520,28 @@ class EDAutopilot:
                 self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
                 self.yawrate = current_ship_cfg.get('YawRate', 8.0)
                 self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
-                self.rollfactor = current_ship_cfg.get('RollFactor', 30.0)
-                self.pitchfactor = current_ship_cfg.get('PitchFactor', 30.0)
-                self.yawfactor = current_ship_cfg.get('YawFactor', 30.0)
                 logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
-                return
-        
-        # Step 2: Try to load defaults from ship file
-        if ship_type in ship_rpy_sc_50:
-            ship_defaults = ship_rpy_sc_50[ship_type]
-            # Use default configuration - this means it's been modified and saved to ship_configs.json
-            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
-            self.rollrate = ship_defaults.get('RollRate', 80.0)
-            self.pitchrate = ship_defaults.get('PitchRate', 33.0)
-            self.yawrate = ship_defaults.get('YawRate', 8.0)
-            self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
-            self.rollfactor = ship_defaults.get('RollFactor', 30.0)
-            self.pitchfactor = ship_defaults.get('PitchFactor', 30.0)
-            self.yawfactor = ship_defaults.get('YawFactor', 30.0)
-            logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
-            return
 
-        # Step 3: Use hardcoded defaults
-        self.compass_scale = self.scr.scaleX
-        self.rollrate = 80.0
-        self.pitchrate = 33.0
-        self.yawrate = 8.0
-        self.sunpitchuptime = 0.0
-        self.rollfactor = 30.0
-        self.pitchfactor = 30.0
-        self.yawfactor = 30.0
-        logger.info(f"Using hardcoded default configuration for {ship_type}")
-        
+            if any(key in current_ship_cfg for key in ['RollFactor', 'PitchFactor', 'YawFactor']):
+                # Use custom configuration - this means it's been modified and saved to ship_configs.json
+                self.rollfactor = current_ship_cfg.get('RollFactor', 20.0)
+                self.pitchfactor = current_ship_cfg.get('PitchFactor', 12.0)
+                self.yawfactor = current_ship_cfg.get('YawFactor', 12.0)
+                # return
+
+            # Check RPY Calibration
+            spd_dmd = 'SCSpeed50'
+            if spd_dmd not in current_ship_cfg:
+                self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
+            else:
+                speed_demand = current_ship_cfg[spd_dmd]
+                if 'RollRate' not in speed_demand:
+                    self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
+                if 'PitchRate' not in speed_demand:
+                    self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
+                if 'YawRate' not in speed_demand:
+                    self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
+
         # Add empty entry to ship_configs for future customization
         if ship_type not in self.ship_configs['Ship_Configs']:
             self.ship_configs['Ship_Configs'][ship_type] = dict()
@@ -1845,6 +1873,7 @@ class EDAutopilot:
                 self.overlay.overlay_remove_floating_text('nav')
                 self.overlay.overlay_remove_floating_text('nav_beh')
                 self.overlay.overlay_remove_floating_text('compass_rpy')
+
                 self.overlay.overlay_remove_rect('target')
                 self.overlay.overlay_remove_floating_text('target')
                 self.overlay.overlay_remove_floating_text('target_occ')
@@ -1866,7 +1895,7 @@ class EDAutopilot:
                 self.yaw_right_left(y_deg)
 
             # Wait for ship to finish moving and picture to stabilize
-            sleep(0.75)
+            sleep(1.0)
 
             # Check Target and Compass
             nav_off2 = self.get_nav_offset(scr_reg)  # For cv view only
@@ -1889,17 +1918,19 @@ class EDAutopilot:
                 # Check diff from before and after movement
                 pit_delta = tar_off2['pit'] - tar_off1['pit']
                 yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if abs(pit_delta) > (abs(tar_off1['pit']) + target_align_outer_lim):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {round(abs(tar_off1['pit']),2) + target_align_outer_lim}. Reducing Pitch Factor.")
+                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
+                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
+                    self.ap_ckb('log', f"TEST - Pitch correction gone too far. Reducing Pitch Factor.")
                     # Correct factor
-                    self.pitchfactor = self.pitchfactor - 1.0
+                    # self.pitchfactor = self.pitchfactor - 1.0
                     # Update GUI with ship config
                     self.ap_ckb('update_ship_cfg')
 
-                if abs(yaw_delta) > (abs(tar_off1['yaw']) + target_align_outer_lim):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {round(abs(tar_off1['yaw']),2) + target_align_outer_lim}. Reducing Yaw Factor.")
+                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
+                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
+                    self.ap_ckb('log', f"TEST - Yaw correction gone too far. Reducing Yaw Factor.")
                     # Correct factor
-                    self.yawfactor = self.yawfactor - 1.0
+                    # self.yawfactor = self.yawfactor - 1.0
                     # Update GUI with ship config
                     self.ap_ckb('update_ship_cfg')
 
@@ -2092,20 +2123,45 @@ class EDAutopilot:
         # a set of convience routes to pitch, rotate by specified degress
 
     def roll_clockwise_anticlockwise(self, deg):
-        # def rotate_right(self, deg):
         abs_deg = abs(deg)
         htime = abs_deg/self.rollrate
 
-        if self.speed_demand is None:
-            self.set_speed_50()
+        # if self.speed_demand is None:
+        #     self.set_speed_50()
 
+        # # Using Power calc for roll rate
         # if 0 < abs_deg < 45:
-        #     value = self.rollrate * pow(abs_deg / 45, self.rollfactor / 100)
+        #     value = self.rollrate * math.pow((abs_deg / 45), (1 / self.roll_factor))
+        #     value = min(value, self.rollrate)
+        #     value = max(value, 0.01)
         #     htime = abs_deg / value
 
-        if 0 < abs_deg < self.rollfactor:
-            value = 0.5 * self.rollrate * math.log10(100.0 * abs_deg / self.rollfactor)
-            htime = abs_deg / value
+        # Calculate rate for less than 45 degrees, else use default
+        if abs_deg < 45:
+            # Roll rate from ship config
+            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+            if self.speed_demand not in ship_type:
+                ship_type[self.speed_demand] = dict()
+            speed_demand = ship_type[self.speed_demand]
+            if 'RollRate' not in speed_demand:
+                speed_demand['RollRate'] = dict()
+
+            last_deg = 0.0
+            last_val = 0.0
+            for key, value in speed_demand['RollRate'].items():
+                key_deg = float(int(key)) / 10
+                if abs_deg <= key_deg:
+                    print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
+
+                    # Ratio based on the last value and this value
+                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                    print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+
+                    htime = abs_deg / ratio_val
+                    break
+                else:
+                    last_deg = key_deg
+                    last_val = value
 
         # Check if we are rolling right or left
         if deg > 0.0:
@@ -2113,30 +2169,52 @@ class EDAutopilot:
         else:
             self.keys.send('RollLeftButton', hold=htime)
 
-        return htime
-
     def pitch_up_down(self, deg):
         abs_deg = abs(deg)
         htime = abs_deg/self.pitchrate
 
-        if self.speed_demand is None:
-            self.set_speed_50()
+        # if self.speed_demand is None:
+        #     self.set_speed_50()
 
+        # # Using Power calc for pitch rate
         # if 0 < abs_deg < 30:
-        #     value = self.pitchrate * pow(abs_deg / 30, self.pitchfactor / 100)
+        #     value = self.pitchrate * math.pow((abs_deg / 30), (1 / self.pitch_factor))
+        #     value = min(value, self.pitchrate)
+        #     value = max(value, 0.01)
         #     htime = abs_deg / value
 
-        if 0 < abs_deg < self.pitchfactor:
-            value = 0.5 * self.pitchrate * math.log10(100.0 * abs_deg / self.pitchfactor)
-            htime = abs_deg / value
+        # Calculate rate for less than 30 degrees, else use default
+        if abs_deg < 30:
+            # Pitch rate from ship config
+            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+            if self.speed_demand not in ship_type:
+                ship_type[self.speed_demand] = dict()
+            speed_demand = ship_type[self.speed_demand]
+            if 'PitchRate' not in speed_demand:
+                speed_demand['PitchRate'] = dict()
+
+            last_deg = 0.0
+            last_val = 0.0
+            for key, value in speed_demand['PitchRate'].items():
+                key_deg = float(int(key)) / 10
+                if abs_deg <= key_deg:
+                    print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
+
+                    # Ratio based on the last value and this value
+                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                    print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+
+                    htime = abs_deg / ratio_val
+                    break
+                else:
+                    last_deg = key_deg
+                    last_val = value
 
         # Check if we are pitching up or down
         if deg > 0.0:
             self.keys.send('PitchUpButton', hold=htime)
         else:
             self.keys.send('PitchDownButton', hold=htime)
-
-        return htime
 
     def yaw_right_left(self, deg):
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
@@ -2145,24 +2223,48 @@ class EDAutopilot:
         abs_deg = abs(deg)
         htime = abs_deg/self.yawrate
 
-        if self.speed_demand is None:
-            self.set_speed_50()
+        # if self.speed_demand is None:
+        #     self.set_speed_50()
 
+        # # Using Power calc for yaw rate
         # if 0 < abs_deg < 30:
-        #     value = self.yawrate * pow(abs_deg / 30, self.yawfactor / 100)
+        #     value = self.yawrate * math.pow((abs_deg / 30), (1 / self.yaw_factor))
+        #     value = min(value, self.yawrate)
+        #     value = max(value, 0.01)
         #     htime = abs_deg / value
 
-        if 0 < abs_deg < self.yawfactor:
-            value = 0.5 * self.yawrate * math.log10(100.0 * abs_deg / self.yawfactor)
-            htime = abs_deg / value
+        # Calculate rate for less than 30 degrees, else use default
+        if abs_deg < 30:
+            # Yaw rate from ship config
+            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+            if self.speed_demand not in ship_type:
+                ship_type[self.speed_demand] = dict()
+            speed_demand = ship_type[self.speed_demand]
+            if 'YawRate' not in speed_demand:
+                speed_demand['YawRate'] = dict()
+
+            last_deg = 0.0
+            last_val = 0.0
+            for key, value in speed_demand['YawRate'].items():
+                key_deg = float(int(key)) / 10
+                if abs_deg <= key_deg:
+                    print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
+
+                    # Ratio based on the last value and this value
+                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                    print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+
+                    htime = abs_deg / ratio_val
+                    break
+                else:
+                    last_deg = key_deg
+                    last_val = value
 
         # Check if we are yawing right or left
         if deg > 0.0:
             self.keys.send('YawRightButton', hold=htime)
         else:
             self.keys.send('YawLeftButton', hold=htime)
-
-        return htime
 
     def refuel(self, scr_reg):
         """ Check if refueling needed, ensure correct start type. """
@@ -2883,6 +2985,17 @@ class EDAutopilot:
             # TODO - Enable for test
             # self.start_sco_monitoring()
 
+            # Ship calibration functions
+            if self.ship_tst_roll_enabled:
+                self.ship_tst_roll_new(0)
+                self.ship_tst_roll_enabled = False
+            if self.ship_tst_pitch_enabled:
+                self.ship_tst_pitch_new(0)
+                self.ship_tst_pitch_enabled = False
+            if self.ship_tst_yaw_enabled:
+                self.ship_tst_yaw_new(0)
+                self.ship_tst_yaw_enabled = False
+
             if self.fsd_assist_enabled:
                 logger.debug("Running fsd_assist")
                 set_focus_elite_window()
@@ -3083,6 +3196,175 @@ class EDAutopilot:
         # self.set_speed_50()
         self.pitch_up_down(angle)
 
+    def ship_tst_pitch_new(self, angle: float):
+        """ Performs a ship pitch test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the pitch value.
+        If the ship rotates too much, increase the pitch value.
+        """
+        self.ap_ckb('log', "Starting Pitch Calibration.")
+        if not self.speed_demand == 'SCSpeed50':
+            self.set_speed_50()
+            # sleep(10)
+
+        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+        if self.speed_demand not in ship_type:
+            ship_type[self.speed_demand] = dict()
+
+        # Clear existing data
+        ship_type[self.speed_demand]['PitchRate'] = dict()
+
+        test_time = 0.05
+        delta_int = 0.0
+        for targ_ang in [5, 10, 20, 40, 80, 160]:
+            while 1:
+                set_focus_elite_window()
+                off = self.get_target_offset(self.scrReg)
+                if not off:
+                    print(f"Target lost")
+                    break
+
+                # Clear the overlays before moving
+                if self.debug_overlay:
+                    self.overlay.overlay_remove_rect('target')
+                    self.overlay.overlay_remove_floating_text('target')
+                    self.overlay.overlay_remove_floating_text('target_occ')
+                    self.overlay.overlay_remove_floating_text('target_rpy')
+                    self.overlay.overlay_paint()
+
+                if off['pit'] > 0:
+                    self.keys.send('PitchUpButton', hold=test_time)
+                else:
+                    self.keys.send('PitchDownButton', hold=test_time)
+
+                sleep(1)
+
+                off2 = self.get_target_offset(self.scrReg)
+                if not off2:
+                    print(f"Target lost")
+                    break
+
+                delta = abs(off2['pit'] - off['pit'])
+                delta_int_lst = delta_int
+                delta_int = int(round(delta * 10, 0))
+
+                test_time = test_time * 1.04
+                rate = round(delta / test_time, 2)
+                rate = min(rate, self.pitchrate)  # Limit rate to no higher than the default
+                if delta_int >= targ_ang and delta_int > delta_int_lst:
+                    ship_type[self.speed_demand]['PitchRate'][delta_int] = rate
+
+                    print(f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    break
+                else:
+                    print(f"Ignored Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+
+        # If we have logged values, add the ship default rate at 30 deg
+        if len(ship_type[self.speed_demand]['PitchRate']) > 0:
+            ship_type[self.speed_demand]['PitchRate'][300] = self.pitchrate
+            self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.pitchrate}")
+
+        self.ap_ckb('log', "Completed Pitch Calibration.")
+        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+
+    def ship_tst_pitch_calc_power(self, angle: float):
+        """ Performs a ship pitch test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the pitch value.
+        If the ship rotates too much, increase the pitch value.
+        """
+        # if not self.status.get_flag(FlagsSupercruise):
+        #     self.ap_ckb('log', "Enter Supercruise and try again.")
+        #     return
+        #
+        # if self.jn.ship_state()['target'] is None:
+        #     self.ap_ckb('log', "Select a target system and try again.")
+        #     return
+
+        set_focus_elite_window()
+        # sleep(0.25)
+        # # self.set_speed_50()
+        # self.pitch_up_down(angle)
+
+        target_align_outer_lim = 1.0
+        target_align_inner_lim = 0.5
+
+        off = None
+        tar_off1 = None
+        tar_off2 = None
+
+        # Try to get the target 5 times before quiting
+        for i in range(5):
+            # Check Target and Compass
+            tar_off1 = self.get_target_offset(self.scrReg)
+            if tar_off1:
+                # Target detected
+                off = tar_off1
+
+            # Quit loop if we found Target or Compass
+            if off:
+                break
+
+        # We have Target or Compass. Are we close to Target?
+        while ((abs(off['yaw']) > target_align_outer_lim) or
+               (abs(off['pit']) > target_align_outer_lim)):
+
+            target_align_outer_lim = target_align_inner_lim  # Keep aligning until we are within this lower range.
+
+            # Clear the overlays before moving
+            if self.debug_overlay:
+                self.overlay.overlay_remove_rect('target')
+                self.overlay.overlay_remove_floating_text('target')
+                self.overlay.overlay_remove_floating_text('target_occ')
+                self.overlay.overlay_remove_floating_text('target_rpy')
+                self.overlay.overlay_paint()
+
+            # Calc pitch time based on nav point location
+            logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
+
+            p_deg = 0.0
+            if abs(off['pit']) > target_align_outer_lim:
+                p_deg = off['pit']
+                self.pitch_up_down(p_deg)
+
+            # Calc yaw time based on nav point location
+            y_deg = 0.0
+            if abs(off['yaw']) > target_align_outer_lim:
+                y_deg = off['yaw']
+                self.yaw_right_left(y_deg)
+
+            # Wait for ship to finish moving and picture to stabilize
+            sleep(2.0)
+
+            # Check Target and Compass
+            tar_off2 = self.get_target_offset(self.scrReg)
+            if tar_off2:
+                off = tar_off2
+                logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']}")
+
+            if tar_off1 and tar_off2:
+                # Check diff from before and after movement
+                pit_delta = tar_off2['pit'] - tar_off1['pit']
+                yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
+                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
+                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
+                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {round(abs(tar_off1['pit']),2) + target_align_outer_lim}. Reducing Pitch Factor.")
+                    # Correct factor
+                    # self.pitchfactor = self.pitchfactor - 1.0
+                    # Update GUI with ship config
+                    self.ap_ckb('update_ship_cfg')
+
+                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
+                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
+                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {round(abs(tar_off1['yaw']),2) + target_align_outer_lim}. Reducing Yaw Factor.")
+                    # Correct factor
+                    # self.yawfactor = self.yawfactor + 0.1
+                    # Update GUI with ship config
+                    self.ap_ckb('update_ship_cfg')
+
+            if tar_off2:
+                # Store current offsets
+                tar_off1 = tar_off2.copy()
+
     def ship_tst_roll(self, angle: float):
         """ Performs a ship roll test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the roll value.
@@ -3101,6 +3383,76 @@ class EDAutopilot:
         # self.set_speed_50()
         self.roll_clockwise_anticlockwise(angle)
 
+    def ship_tst_roll_new(self, angle: float):
+        """ Performs a ship roll test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the roll value.
+        If the ship rotates too much, increase the roll value.
+        """
+        self.ap_ckb('log', "Starting Roll Calibration.")
+        if not self.speed_demand == 'SCSpeed50':
+            self.set_speed_50()
+            #sleep(10)
+
+        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+        if self.speed_demand not in ship_type:
+            ship_type[self.speed_demand] = dict()
+
+        # Clear existing data
+        ship_type[self.speed_demand]['RollRate'] = dict()
+
+        test_time = 0.05
+        delta_int = 0.0
+        for targ_ang in [40, 80, 160, 320]:
+            while 1:
+                set_focus_elite_window()
+                off = self.get_nav_offset(self.scrReg)
+                if not off:
+                    break
+
+                # Clear the overlays before moving
+                if self.debug_overlay:
+                    self.overlay.overlay_remove_rect('compass')
+                    self.overlay.overlay_remove_floating_text('compass')
+                    self.overlay.overlay_remove_floating_text('nav')
+                    self.overlay.overlay_remove_floating_text('nav_beh')
+                    self.overlay.overlay_remove_floating_text('compass_rpy')
+                    self.overlay.overlay_paint()
+
+                if off['roll'] > 0:
+                    self.keys.send('RollRightButton', hold=test_time)
+                else:
+                    self.keys.send('RollLeftButton', hold=test_time)
+
+                sleep(1)
+
+                off2 = self.get_nav_offset(self.scrReg)
+                if not off2:
+                    break
+
+                delta = abs(off2['roll'] - off['roll'])
+                delta_int_lst = delta_int
+                delta_int = int(round(delta * 10, 0))
+
+                test_time = test_time * 1.03
+                rate = round(delta / test_time, 2)
+                rate = min(rate, self.rollrate)  # Limit rate to no higher than the default
+                if delta_int >= targ_ang and delta_int > delta_int_lst:
+                    ship_type[self.speed_demand]['RollRate'][delta_int] = rate
+
+                    print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    break
+                else:
+                    print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+
+        # If we have logged values, add the ship default rate at 45 deg
+        if len(ship_type[self.speed_demand]['RollRate']) > 0:
+            ship_type[self.speed_demand]['RollRate'][450] = self.rollrate
+            self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.rollrate}")
+
+        self.ap_ckb('log', "Completed Roll Calibration.")
+        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+
     def ship_tst_yaw(self, angle: float):
         """ Performs a ship yaw test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the yaw value.
@@ -3118,6 +3470,78 @@ class EDAutopilot:
         sleep(0.25)
         # self.set_speed_50()
         self.yaw_right_left(angle)
+
+    def ship_tst_yaw_new(self, angle: float):
+        """ Performs a ship yaw test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the yaw value.
+        If the ship rotates too much, increase the yaw value.
+        """
+        self.ap_ckb('log', "Starting Yaw Calibration.")
+        # self.compass_align(self.scrReg)
+        # self.sc_target_align(self.scrReg)
+
+        if not self.speed_demand == 'SCSpeed50':
+            self.set_speed_50()
+            # sleep(10)
+
+        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
+        if self.speed_demand not in ship_type:
+            ship_type[self.speed_demand] = dict()
+
+        # Clear existing data
+        ship_type[self.speed_demand]['YawRate'] = dict()
+
+        test_time = 0.07
+        delta_int = 0.0
+        for targ_ang in [5, 10, 20, 40, 80, 160]:
+            while 1:
+                set_focus_elite_window()
+                off = self.get_target_offset(self.scrReg)
+                if not off:
+                    break
+
+                # Clear the overlays before moving
+                if self.debug_overlay:
+                    self.overlay.overlay_remove_rect('target')
+                    self.overlay.overlay_remove_floating_text('target')
+                    self.overlay.overlay_remove_floating_text('target_occ')
+                    self.overlay.overlay_remove_floating_text('target_rpy')
+                    self.overlay.overlay_paint()
+
+                if off['yaw'] > 0:
+                    self.keys.send('YawRightButton', hold=test_time)
+                else:
+                    self.keys.send('YawLeftButton', hold=test_time)
+
+                sleep(1)
+
+                off2 = self.get_target_offset(self.scrReg)
+                if not off2:
+                    break
+
+                delta = abs(off2['yaw'] - off['yaw'])
+                delta_int_lst = delta_int
+                delta_int = int(round(delta * 10, 0))
+
+                test_time = test_time * 1.05
+                rate = round(delta / test_time, 2)
+                rate = min(rate, self.yawrate)  # Limit rate to no higher than the default
+                if delta_int >= targ_ang and delta_int > delta_int_lst:
+                    ship_type[self.speed_demand]['YawRate'][delta_int] = rate
+
+                    print(f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    break
+                else:
+                    print(f"Ignored Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+
+        # If we have logged values, add the ship default rate at 30 deg
+        if len(ship_type[self.speed_demand]['YawRate']) > 0:
+            ship_type[self.speed_demand]['YawRate'][300] = self.yawrate
+            self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.yawrate}")
+
+        self.ap_ckb('log', "Completed Yaw Calibration.")
+        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
 
     def set_speed_0(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
