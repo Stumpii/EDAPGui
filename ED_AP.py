@@ -1761,19 +1761,22 @@ class EDAutopilot:
 
         self.sun_avoid(scr_reg)
 
+        self.set_speed_50()
         res = self.compass_align(scr_reg)
         # Quick calibrate the compass
         if res:
             self.quick_calibrate_compass()
-        self.set_speed_100()
 
         self.ap_ckb('log+vce', 'Target Align')
         for i in range(5):
+            self.set_speed_50()
             align_res = self.sc_target_align(scr_reg)
             if align_res == ScTargetAlignReturn.Lost:
+                self.set_speed_50()
                 self.compass_align(scr_reg)  # Compass Align
 
             elif align_res == ScTargetAlignReturn.Found:
+                self.set_speed_100()
                 return
 
             elif align_res == ScTargetAlignReturn.Disengage:
@@ -2126,8 +2129,8 @@ class EDAutopilot:
         abs_deg = abs(deg)
         htime = abs_deg/self.rollrate
 
-        # if self.speed_demand is None:
-        #     self.set_speed_50()
+        if self.speed_demand is None:
+            self.set_speed_50()
 
         # # Using Power calc for roll rate
         # if 0 < abs_deg < 45:
@@ -2173,8 +2176,8 @@ class EDAutopilot:
         abs_deg = abs(deg)
         htime = abs_deg/self.pitchrate
 
-        # if self.speed_demand is None:
-        #     self.set_speed_50()
+        if self.speed_demand is None:
+            self.set_speed_50()
 
         # # Using Power calc for pitch rate
         # if 0 < abs_deg < 30:
@@ -2223,8 +2226,8 @@ class EDAutopilot:
         abs_deg = abs(deg)
         htime = abs_deg/self.yawrate
 
-        # if self.speed_demand is None:
-        #     self.set_speed_50()
+        if self.speed_demand is None:
+            self.set_speed_50()
 
         # # Using Power calc for yaw rate
         # if 0 < abs_deg < 30:
@@ -2687,10 +2690,10 @@ class EDAutopilot:
         # Align Nav to target
         self.set_speed_50()
         res = self.compass_align(scr_reg)  # Compass Align
-        self.set_speed_50()
 
         # self.quick_calibrate_target()
         self.ap_ckb('log+vce', 'Target Align')
+        self.set_speed_50()
         align_res = self.sc_target_align(scr_reg)
         # Quick calibrate with the target in front
         # if align_res == ScTargetAlignReturn.Found:
@@ -2701,6 +2704,7 @@ class EDAutopilot:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
                 # Align and stay on target. If false is returned, we have lost the target behind us.
+                self.set_speed_50()
                 align_res = self.sc_target_align(scr_reg)
                 if align_res == ScTargetAlignReturn.Lost:
                     # Continue ahead before aligning to prevent us circling the target
