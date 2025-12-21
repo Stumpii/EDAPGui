@@ -1,3 +1,6 @@
+# 12/21/2025 v1.8.0
+- Minor update for release.
+
 # 12/6/2025 v1.8.0 b19
 - Rewrite of RPY calibration routines.
 - RPY movements now uses calibrated sample rates from calibration.
