@@ -14,7 +14,8 @@ will keep you on target and when "TO DISENGAGE" is presented and will autodrop o
 ## Waypoint assist
 With Waypoint Assist you define the route in a file and this assist will jump to those waypoints.  If a Station is defined to dock at, the assistant will transition to SC Assist and
 dock with the station.  A early version of a trading capability is also included.<br>
-Additional information can be found [here](docs/Waypoint.md).
+Additional information on Waypoints can be found [here](docs/Waypoint.md).
+Additional information on the Waypoint Editor tab can be found [here](docs/WaypointEditor.md).
 ## Robigo Mines assist
 The Robigo Assist performs the Robigo Mines passenger mission loop which includes mission selection, mission completetion, and the full loop to Sirius Atmospherics.<br>
 Additional information can be found [here](docs/Robigo.md). 
@@ -84,7 +85,10 @@ Also Note: This repository is provided for educational purposes as a in depth pr
 _Requires **python 3** and **git**_
 
 _Python 3.11 is the recommended version of Python. Python 3.9 or 3.10 may also be used._
-If you don't have Python installed, here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). Scroll to the bottom and select the installer with the description "Recommended".
+If you don't have Python installed:
+* Here is a link to [Python 3.11 installer](https://www.python.org/downloads/release/python-3110/). 
+* Scroll to the bottom and select the installer with the description "Recommended".
+* **Note**: To avoid a 'py is not recognized error' later, in the Python installation wizard, make sure to check the box “Add Python 3.xx to PATH”.
 
 ## Simple
 If you just want to download and run EDAP and have no interest in the source code, use this method:
@@ -266,8 +270,8 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
 https://pythonhosted.org/pynput/keyboard.html
 
-## Config File: config-AP.json
-The following settings from the AP.json file are **not** available through the GUI and must be changed directly within AP.json:
+## Additional Configuration Settings
+The following settings from the AP.json file (in the configs folder) are **not** available through the GUI and must be changed directly within AP.json using any text editor:
   ```py
     "Robigo_Single_Loop": False,   # True means only 1 loop will execute and then terminate upon docking, will not perform mission processing
     "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
@@ -277,8 +281,21 @@ The following settings from the AP.json file are **not** available through the G
     "DiscordWebhookURL": "",
     "DiscordUserID": "",
     "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-    "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
     "Language": "en"               # Language for OCR checks (i.e. 'en', 'fr', 'de')
+
+    "DisengageUseMatch": false,    # For 'Disengage' use old image match instead of OCR
+
+    "Debug_ShowCompassOverlay": false,  # For testing
+    "Debug_ShowTargetOverlay": false,   # For testing
+
+    "GalMap_SystemSelectDelay": 2.0,  # Delay selecting the system when in galaxy map
+    
+    "target_align_outer_lim": 1.0,
+    "target_align_inner_lim": 0.5,
+
+    "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, this is the amount of time in Secs to fly away before enabling SC.
+    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
+    "OCDepartureAngle": 90.0       # Angle to pitch up when leaving an Orbital Construction Site
 ```
                                                               
 ## Elite Dangerous, Role Play and Autopilot

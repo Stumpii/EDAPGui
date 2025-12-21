@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import os
+
 from EDAP_data import GuiFocusGalaxyMap
-from Screen_Regions import reg_scale_for_station
+from Screen_Regions import scale_region, Quad
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
@@ -19,8 +22,28 @@ class EDGalaxyMap:
         self.status_parser = StatusParser()
         self.ap_ckb = cb
         # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg = {'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
+        self.reg = {'full_panel': {'rect': [0.1, 0.1, 0.9, 0.9]},
+                    'cartographics': {'rect': [0.0, 0.0, 0.25, 0.25]},
                     }
+        self.sub_reg = {'cartographics': {'rect': [0.0, 0.0, 0.15, 0.15]}}
+        self.SystemSelectDelay = 0.5  # Delay selecting the system when in galaxy map
+
+        self.load_calibrated_regions()
+
+    def load_calibrated_regions(self):
+        calibration_file = 'configs/ocr_calibration.json'
+        if os.path.exists(calibration_file):
+            with open(calibration_file, 'r') as f:
+                calibrated_regions = json.load(f)
+
+            for key, value in self.reg.items():
+                calibrated_key = f"EDGalaxyMap.{key}"
+                if calibrated_key in calibrated_regions:
+                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
+
+            # Scale the regions based on the sub-region.
+            self.reg['cartographics']['rect'] = scale_region(self.reg['full_panel']['rect'],
+                                                             self.sub_reg['cartographics']['rect'])
 
     def set_gal_map_dest_bookmark(self, ap, bookmark_type: str, bookmark_position: int) -> bool:
         """ Set the gal map destination using a bookmark.
@@ -31,7 +54,9 @@ class EDGalaxyMap:
         @return: True if bookmark could be selected, else False
         """
         if self.is_odyssey and bookmark_position > 0:
-            self.goto_galaxy_map()
+            res = self.goto_galaxy_map()
+            if not res:
+                return False
 
             ap.keys.send('UI_Left')  # Go to BOOKMARKS
             sleep(.5)
@@ -73,7 +98,9 @@ class EDGalaxyMap:
 
     def set_gal_map_destination_text_horizons(self, ap, target_name, target_select_cb=None) -> bool:
         """ This sequence for the Horizons. """
-        self.goto_galaxy_map()
+        res = self.goto_galaxy_map()
+        if not res:
+            return False
 
         ap.keys.send('CycleNextPanel')
         sleep(1)
@@ -106,7 +133,9 @@ class EDGalaxyMap:
 
     def set_gal_map_destination_text_odyssey(self, ap, target_name) -> bool:
         """ This sequence for the Odyssey. """
-        self.goto_galaxy_map()
+        res = self.goto_galaxy_map()
+        if not res:
+            return False
 
         target_name_uc = target_name.upper()
 
@@ -155,11 +184,11 @@ class EDGalaxyMap:
 
             # Select first (or next) system
             ap.keys.send('UI_Select')  # Select >| button
-            sleep(0.5)
+            sleep(self.SystemSelectDelay)
 
             # zoom camera which puts focus back on the map
             ap.keys.send('CamZoomIn')
-            sleep(0.05)
+            sleep(0.5)
 
             # plot route. Not that once the system has been selected, as shown in the info panel
             # and the gal map has focus, there is no need to wait for the map to bring the system
@@ -212,7 +241,7 @@ class EDGalaxyMap:
             logger.warning("Error setting waypoint, breaking")
             return False
 
-    def goto_galaxy_map(self):
+    def goto_galaxy_map(self) -> bool:
         """Open Galaxy Map if we are not there. Waits for map to load. Selects the search bar.
         """
         if self.status_parser.get_gui_focus() != GuiFocusGalaxyMap:
@@ -222,21 +251,22 @@ class EDGalaxyMap:
             # Goto Galaxy Map
             self.keys.send('GalaxyMapOpen')
 
-            # Wait for map to load
-            # if not self.status_parser.wait_for_gui_focus(GuiFocusGalaxyMap):
-            #     logger.debug("goto_galaxy_map: Galaxy map did not open.")
-
-            # TODO - check this to OCR check
-            #sleep(2)
-            # Scale the regions based on the target resolution.
-            scl_reg = reg_scale_for_station(self.reg['cartographics'], self.screen.screen_width,
-                                            self.screen.screen_height)
+            if self.ap.debug_overlay:
+                stn_svcs = Quad.from_rect(self.reg['full_panel']['rect'])
+                self.ap.overlay.overlay_quad_pct('system map', stn_svcs, (0, 255, 0), 2, 5)
+                self.ap.overlay.overlay_paint()
 
             # Wait for screen to appear. The text is the same, regardless of language.
-            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], scl_reg)
+            res = self.ocr.wait_for_text(self.ap, ["CARTOGRAPHICS"], self.reg['cartographics'], timeout=15)
+            if not res:
+                if self.status_parser.get_gui_focus() != GuiFocusGalaxyMap:
+                    logger.warning("Unable to open Galaxy Map")
+                    return False
 
             self.keys.send('UI_Up')  # Go up to search bar
+            return True
         else:
             logger.debug("Galaxy Map is already open")
             self.keys.send('UI_Left', repeat=2)
             self.keys.send('UI_Up', hold=2)  # Go up to search bar. Allows 1 left to bookmarks.
+            return True
