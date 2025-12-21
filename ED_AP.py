@@ -1420,7 +1420,7 @@ class EDAutopilot:
             elapsed_time = time.time() - start_time
             abs_rect = scr_reg.reg['disengage']['rect']
             self.overlay.overlay_rect1('sc_disengage_active', abs_rect, (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('sc_disengage_active', f'{str(ocr_textlist)} ({round(elapsed_time, 4)} Secs)', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('sc_disengage_active', f'Diseng: {str(ocr_textlist)} ({round(elapsed_time, 4)} Secs)', abs_rect[0], abs_rect[1] - 25, (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
@@ -1456,6 +1456,11 @@ class EDAutopilot:
         """ A loop to determine is Supercruise Overcharge is active.
         This runs on a separate thread monitoring the status in the background. """
         while self._sc_sco_active_loop_enable:
+            # deactivate if not in SC
+            if not self.status.get_flag(FlagsSupercruise):
+                self.stop_sco_monitoring()
+                break
+
             start_time = time.time()
 
             # Try to determine if the disengage/sco text is there
@@ -2704,7 +2709,7 @@ class EDAutopilot:
             sleep(0.05)
             if self.jn.ship_state()['status'] == 'in_supercruise':
                 # Align and stay on target. If false is returned, we have lost the target behind us.
-                self.set_speed_50()
+                # self.set_speed_50()
                 align_res = self.sc_target_align(scr_reg)
                 if align_res == ScTargetAlignReturn.Lost:
                     # Continue ahead before aligning to prevent us circling the target
@@ -3019,6 +3024,7 @@ class EDAutopilot:
                     print("Trapped generic:"+str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 self.fsd_assist_enabled = False
                 self.ap_ckb('fsd_stop')
                 self.update_overlay()
@@ -3048,6 +3054,7 @@ class EDAutopilot:
                     logger.debug("SC Assist trapped generic:"+str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 logger.debug("Completed sc_assist")
                 self.sc_assist_enabled = False
                 self.ap_ckb('sc_stop')
@@ -3071,6 +3078,7 @@ class EDAutopilot:
                     logger.debug("Waypoint Assist trapped generic:"+str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 self.waypoint_assist_enabled = False
                 self.ap_ckb('waypoint_stop')
                 self.update_overlay()
@@ -3088,6 +3096,7 @@ class EDAutopilot:
                     logger.debug("Robigo Assist trapped generic:"+str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 self.robigo_assist_enabled = False
                 self.ap_ckb('robigo_stop')
                 self.update_overlay()
@@ -3103,6 +3112,7 @@ class EDAutopilot:
                     logger.debug("AFK Combat Assist trapped generic:" + str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 self.afk_combat_assist_enabled = False
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
@@ -3135,6 +3145,7 @@ class EDAutopilot:
                     logger.debug("Single Waypoint Assist trapped generic:" + str(e))
                     traceback.print_exc()
 
+                self.stop_sco_monitoring()
                 self.single_waypoint_enabled = False
                 self.ap_ckb('single_waypoint_stop')
                 self.update_overlay()
