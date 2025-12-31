@@ -408,19 +408,12 @@ class EDAutopilot:
         except Exception as e:
             logger.warning("EDAPGui.py write_config error:"+str(e))
 
-    def read_ship_configs(self, filename='./configs/ship_configs.json'):
-        """ Read the user's ship configuration file."""
-        s = None
-        try:
-            with open(filename, "r") as fp:
-                s = json.load(fp)
-        except  Exception as e:
-            logger.warning("EDAPGui.py read_ship_configs error :"+str(e))
 
         return s
 
     def load_ship_configs(self):
-        shp_cnf = self.read_ship_configs()
+        shp_cnf = read_json_file(filepath='./configs/ship_configs.json')
+
         # if we read it then point to it, otherwise use the default table above
         if shp_cnf is not None:
             if len(shp_cnf) != len(self.ship_configs):
@@ -435,7 +428,7 @@ class EDAutopilot:
                 self.ship_configs = shp_cnf
                 logger.debug("read Ships Config json:" + str(shp_cnf))
         else:
-            self.write_ship_configs(self.ship_configs)
+            write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
 
         # Load ship configuration with proper hierarchy
         if self.jn:
@@ -461,16 +454,8 @@ class EDAutopilot:
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollFactor'] = self.rollfactor
             self.ship_configs['Ship_Configs'][self.current_ship_type]['YawFactor'] = self.yawfactor
 
-            self.write_ship_configs(self.ship_configs)
+            write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
-
-    def write_ship_configs(self, data, filename='./configs/ship_configs.json'):
-        """ Write the user's ship configuration file."""
-        try:
-            with open(filename, "w") as fp:
-                json.dump(data, fp, indent=4)
-        except Exception as e:
-            logger.warning("EDAPGui.py write_ship_configs error:"+str(e))
 
     def load_ship_configuration(self, ship_type):
         """ Load ship configuration with the following priority:

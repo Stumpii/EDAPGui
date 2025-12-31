@@ -337,7 +337,7 @@ def write_json_file(data, filepath: str):
             json.dump(data, fp, indent=4)
             return True
     except Exception as e:
-        logger.warning("write_json_file error:" + str(e))
+        logger.warning(f"write_json_file error for filepath '{filepath}':" + str(e))
         return False
 
 
@@ -351,7 +351,7 @@ def read_json_file(filepath: str):
         with open(filepath, "r", encoding='utf-8') as fp:
             s = json.load(fp)
     except Exception as e:
-        logger.warning("read_json_file error:"+str(e))
+        logger.warning(f"read_json_file error for filepath '{filepath}':" + str(e))
     return s
 
 
