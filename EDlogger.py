@@ -1,3 +1,5 @@
+import sys
+
 import colorlog
 import datetime
 import logging
@@ -23,6 +25,7 @@ logger = colorlog.getLogger('ed_log')
 
 # Change this to debug if want to see debug lines in log file
 logger.setLevel(logging.INFO)    # change to INFO for more... DEBUG for much more
+logger.info(f'Python version: {sys.version}')
 
 handler = logging.StreamHandler()
 handler.setLevel(logging.WARNING)  # change this to what is shown on console

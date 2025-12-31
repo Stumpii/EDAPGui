@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+from enum import Enum
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
 from json import loads
@@ -39,6 +41,17 @@ Author: sumzer0@yahoo.com
 TODO: thinking self.ship()[name]  uses the same names as in the journal, so can lookup same construct     
 """
 
+
+class StationType(Enum):
+    Unknown = 0
+    Starport = 1  # Coriolis, Orbis, Ocellus, Dodec or Asteroid Base...
+    Outpost = 2  # Outpost
+    FleetCarrier = 3  # Fleet Carrier
+    SquadronCarrier = 4  # Squadron Fleet Carrier
+    ColonisationShip = 5  # Colonisation Ship
+    SpaceConstructionDepot = 6  # Orbital Construction Depot
+    PlanetaryConstructionDepot = 7  # Planet Construction Depot
+    SurfaceStation = 8  # Surface Station or Crater Outpost (Crater Outpost appears to be an Engineer's Surface Base)
 
 def get_ship_size(ship: str) -> str:
     """ Gets the ship size from the journal ship name.
@@ -143,6 +156,60 @@ def check_sco_fsd(modules: list[dict[str, any]] | None) -> bool:
     return False
 
 
+def check_station_type(station_type: str, station_name: str, station_services: list[str]) -> StationType:
+    """ Gets the station type.
+        @station_type:  The station type from the journal (i.e. 'Coriolis').
+        @station_name:  The station name from the journal (i.e. 'ColonisationShip').
+        @return: The station type:
+            Starport
+            Outpost
+            etc.
+    """
+    station_type_upper = station_type.upper()
+    station_name_upper = station_name.upper()
+    station_services_upper = [s.upper() for s in station_services]
+
+    if station_type_upper == 'SurfaceStation'.upper():
+        # Special case, for some reason the colonisation ship is a SurfaceStation in the journal.
+        if station_name_upper == 'ColonisationShip'.upper():
+            return StationType.ColonisationShip
+        else:
+            return StationType.SurfaceStation
+    elif station_type_upper == 'CraterOutpost'.upper():
+        return StationType.SurfaceStation
+
+    elif station_type_upper == 'FleetCarrier'.upper():
+        if 'squadronBank'.upper() in station_services_upper:
+            return StationType.SquadronCarrier
+        else:
+            return StationType.FleetCarrier
+
+    elif station_type_upper == 'SpaceConstructionDepot'.upper():
+        return StationType.SpaceConstructionDepot
+    elif station_type_upper == 'PlanetaryConstructionDepot'.upper():
+        return StationType.PlanetaryConstructionDepot
+
+    elif station_type_upper == 'Coriolis'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Orbis'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Ocellus'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'Bernal'.upper():  # Bernal (Sphere) is an Ocellus.
+        return StationType.Starport
+    elif station_type_upper == 'Dodec'.upper():
+        return StationType.Starport
+    elif station_type_upper == 'AsteroidBase'.upper():
+        return StationType.Starport
+
+    elif station_type_upper == 'Outpost'.upper():
+        return StationType.Outpost
+    else:
+        # Default to starport
+        print(f"Unknown station type: {station_type}. Please contact the developers for it to be added to 'check_station_type'.")
+        return StationType.Unknown
+
+
 class EDJournal:
     def __init__(self, cb):
         self.ap_ckb = cb
@@ -150,6 +217,7 @@ class EDJournal:
         self.log_file = None
         self.current_log = self.get_latest_log()
         self.open_journal(self.current_log)
+        self._prev_const_depot_details = None
 
         self.ship = {
             'time': (datetime.now() - datetime.fromtimestamp(getmtime(self.current_log))).seconds,
@@ -176,6 +244,7 @@ class EDJournal:
             'cur_star_system': "",
             'cur_station': "",
             'cur_station_type': "",
+            'exp_station_type': StationType.Unknown,
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
@@ -185,6 +254,8 @@ class EDJournal:
             'has_std_dock_comp': None,
             'has_sco_fsd': None,
             'StationServices': None,
+            'ConstructionDepotDetails': dict[str, any],
+            'MarketID': 0,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -316,6 +387,8 @@ class EDJournal:
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
                 self.ship['StationServices'] = log['StationServices']
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
+                self.ship['MarketID'] = log['MarketID']
 
                 # parse location
             elif log_event == 'Location':
@@ -323,6 +396,12 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                if 'StationServices' in log:
+                    self.ship['StationServices'] = log['StationServices']
+                else:
+                    self.ship['StationServices'] = []
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
+                self.ship['MarketID'] = log['MarketID']
                 if log['Docked'] == True:
                     self.ship['status'] = 'in_station'
 
@@ -406,11 +485,87 @@ class EDJournal:
                 self.ship['cur_star_system'] = log['StarSystem']
                 self.ship['cur_station'] = log['StationName']
                 self.ship['cur_station_type'] = log['StationType']
+                self.ship['StationServices'] = log['StationServices']
+                self.ship['exp_station_type'] = check_station_type(log['StationType'], log['StationName'], self.ship['StationServices'])
+                self.ship['MarketID'] = log['MarketID']
+
+            elif log_event == 'ColonisationConstructionDepot':
+                # {"timestamp": "2025-06-24T02:20:26Z", "event": "ColonisationConstructionDepot",
+                #  "MarketID": 3953149698, "ConstructionProgress": 0.396292, "ConstructionComplete": false,
+                #  "ConstructionFailed": false, "ResourcesRequired": [
+                #      {"Name": "$aluminium_name;", "Name_Localised": "Aluminium", "RequiredAmount": 1278,
+                #       "ProvidedAmount": 1278, "Payment": 3239},
+                #      {"Name": "$fruitandvegetables_name;", "Name_Localised": "Fruit and Vegetables",
+                #       "RequiredAmount": 9, "ProvidedAmount": 9, "Payment": 865},
+                #      {"Name": "$waterpurifiers_name;", "Name_Localised": "Water Purifiers", "RequiredAmount": 13,
+                #       "ProvidedAmount": 13, "Payment": 849}]}
+                self._prev_const_depot_details = self.ship['ConstructionDepotDetails']
+                self.ship['ConstructionDepotDetails'] = {'MarketID': log['MarketID'],
+                                                         'ConstructionProgress': log['ConstructionProgress'],
+                                                         'ConstructionComplete': log['ConstructionComplete'],
+                                                         'ConstructionFailed': log['ConstructionFailed'],
+                                                         'ResourcesRequired': log['ResourcesRequired']}
+                # Process the construction depot details
+                self.process_construction_depot_details()
 
         # exceptions
         except Exception as e:
             #logger.exception("Exception occurred")
             print(e)
+
+    def process_construction_depot_details(self):
+        # TODO - save this construction data to a construction.json with multiple markets and update it
+        #  locally and from Inara in case other commanders deliver goods.
+        if self._prev_const_depot_details != self.ship['ConstructionDepotDetails']:
+            # Load construction dict
+            filepath = './configs/construction.json'
+            if os.path.exists(filepath):
+                const = read_construction(filepath)
+            else:
+                const = {}
+
+            # Get construction details
+            dic = self.ship['ConstructionDepotDetails']
+            if isinstance(dic, dict):
+                # If Market is the current location, use the station name
+                mrk = dic.get('MarketID')
+                str_mrk = str(mrk)
+                if mrk == self.ship['MarketID']:
+                    stn = self.ship['cur_station']
+                else:
+                    stn = dic.get('MarketID')
+
+                # Check if market in construction dict
+                if str_mrk not in const:
+                    const[str_mrk] = {}
+
+                system = self.ship['cur_star_system']
+
+                # Add station to the dictionary
+                const[str_mrk]['SystemName'] = system
+                const[str_mrk]['StationName'] = stn
+                const[str_mrk]['MarketID'] = dic.get('MarketID')
+                const[str_mrk]['Include'] = True
+                const[str_mrk]['ConstructionProgress'] = dic.get('ConstructionProgress')
+                const[str_mrk]['ConstructionComplete'] = dic.get('ConstructionComplete')
+                const[str_mrk]['ConstructionFailed'] = dic.get('ConstructionFailed')
+                const[str_mrk]['ResourcesRequired'] = dic.get('ResourcesRequired')
+
+                # Get the list of resources required.
+                res = dic.get('ResourcesRequired')
+                if isinstance(res, list):
+                    first = True
+                    for good in res:
+                        if good['RequiredAmount'] > good['ProvidedAmount']:
+                            need = good['RequiredAmount'] - good['ProvidedAmount']
+                            if first:
+                                self.ap_ckb('log', f"Construction Depot Details for '{stn}'...")
+                                first = False
+                            self.ap_ckb('log', f"   Need {need} of {good['Name_Localised']}.")
+
+                # Save file
+                filepath = './configs/construction.json'
+                write_construction(const, filepath)
 
     def ship_state(self):
         latest_log = self.get_latest_log()
@@ -440,6 +595,30 @@ class EDJournal:
 
         self.last_mod_time = self.get_file_modified_time()
         return self.ship
+
+
+def write_construction(data, filename='./configs/construction.json'):
+    #  TODO - move to separate class/file
+    if data is None:
+        return False
+    try:
+        with open(filename, "w") as fp:
+            json.dump(data, fp, indent=4)
+            return True
+    except Exception as e:
+        logger.warning("EDJournal.py write_construction error:" + str(e))
+        return False
+
+
+def read_construction(filename='./configs/construction.json'):
+    #  TODO - move to separate class/file
+    s = None
+    try:
+        with open(filename, "r") as fp:
+            s = json.load(fp)
+    except Exception as e:
+        logger.warning("EDJournal.py read_construction error:"+str(e))
+    return s
 
 
 def dummy_cb(msg, body=None):

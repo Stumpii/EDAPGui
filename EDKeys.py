@@ -28,9 +28,10 @@ class EDKeys:
 
     def __init__(self, cb):
         self.ap_ckb = cb
-        self.key_mod_delay = 0.010
-        self.key_default_delay = 0.200
-        self.key_repeat_delay = 0.100
+        self.key_mod_delay = 0.01  # Delay for key modifiers to ensure modifier is detected before/after the key
+        self.key_def_hold_time = 0.2  # Default hold time for a key press
+        self.key_repeat_delay = 0.1  # Delay between key press repeats
+        self.activate_window = False
 
         self.keys_to_obtain = [
             'YawLeftButton',
@@ -73,12 +74,12 @@ class EDKeys:
             'TargetNextRouteSystem',  # Target next system in route
             'CamTranslateForward',
             'CamTranslateRight',
+            'OrderAggressiveBehaviour',
             'ForwardKey',  # Increase forward thrust
             'BackwardKey',  # Decrease forward thrust
         ]
         self.keys = self.get_bindings()
         self.bindings = self.get_bindings_dict()
-        self.activate_window = False
 
         self.missing_keys = []
         # We want to log the keyboard name instead of just the key number so we build a reverse dictionary
@@ -276,6 +277,16 @@ class EDKeys:
             PressKey(key)
 
     def send(self, key_binding, hold=None, repeat=1, repeat_delay=None, state=None):
+        """ Send a key based on the defined keybind
+        @param key_binding: The key bind name (i.e. UseBoostJuice).
+        @param hold: The time to hold the key down in seconds.
+        @param repeat: Number of times to repeat the key.
+        @param repeat_delay: Time delay in seconds between repeats. If None, uses the default repeat delay.
+        @param state: Key state:
+            None - press and release (default).
+            1 - press (but don't release).
+            0 - release (a previous press state).
+        """
         key = self.keys.get(key_binding)
         if key is None:
             logger.warning('SEND=NONE !!!!!!!!')
@@ -303,9 +314,11 @@ class EDKeys:
 
             if state is None:
                 if hold:
-                    sleep(hold)
+                    if hold > 0.0:
+                        sleep(hold)
                 else:
-                    sleep(self.key_default_delay)
+                    if self.key_def_hold_time > 0.0:
+                        sleep(self.key_def_hold_time)
 
             if 'hold' in key:
                 sleep(0.1)

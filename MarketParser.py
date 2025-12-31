@@ -136,7 +136,7 @@ class MarketParser:
             return None
 
         sellable_items = [x for x in data['Items'] if x['Consumer'] or
-                          ((x['Demand'] > 1 or x['Demand']) and cargo_parser.get_item(x['Name_Localised']) is not None)]
+                          ((x['Demand'] > 1 or x['Demand'] or x['Rare']) and cargo_parser.get_item(x['Name_Localised']) is not None)]
         # DemandBracket: 0=Not listed, 1=Low Demand, 2=Medium Demand, 3=High Demand
         # sellable_items = [x for x in data['Items'] if x['DemandBracket'] > 0]
         # sellable_items = [x for x in data['Items'] if self.can_sell_item(x['Name_Localised'])]
