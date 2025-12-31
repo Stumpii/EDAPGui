@@ -162,7 +162,7 @@ class EDAutopilot:
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
 
-        cnf = self.read_config()
+        cnf = read_json_file(filepath='./configs/AP.json')
         # if we read it then point to it, otherwise use the default table above
         if cnf is not None:
             # NOTE!!! Add default values for new entries below!
@@ -227,7 +227,7 @@ class EDAutopilot:
             self.config = cnf
             logger.debug("read AP json:"+str(cnf))
         else:
-            self.write_config(self.config)
+            write_json_file(self.config, filepath='./configs/AP.json')
 
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
@@ -375,18 +375,6 @@ class EDAutopilot:
             self._ocr = OCR(self, self.scr)
         return self._ocr
 
-    # Loads the configuration file
-    #
-    def read_config(self, fileName='./configs/AP.json'):
-        s = None
-        try:
-            with open(fileName, "r") as fp:
-                s = json.load(fp)
-        except  Exception as e:
-            logger.warning("EDAPGui.py read_config error :"+str(e))
-
-        return s
-
     def update_config(self):
         # Get values from classes
         if self.keys:
@@ -399,14 +387,7 @@ class EDAutopilot:
         self.config.pop('target_align_inertia_pitch_factor', None)
         self.config.pop('target_align_inertia_yaw_factor', None)
 
-        self.write_config(self.config)
-
-    def write_config(self, data, fileName='./configs/AP.json'):
-        try:
-            with open(fileName, "w") as fp:
-                json.dump(data, fp, indent=4)
-        except Exception as e:
-            logger.warning("EDAPGui.py write_config error:"+str(e))
+        write_json_file(self.config, filepath='./configs/AP.json')
 
 
         return s
