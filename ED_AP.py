@@ -72,74 +72,7 @@ def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: flo
 class EDAutopilot:
 
     def __init__(self, cb, doThread=True):
-
-        # NOTE!!! When adding a new config value below, add the same after read_config() to set
-        # a default value or an error will occur reading the new value!
-        self.config = {
-            "DSSButton": "Primary",        # if anything other than "Primary", it will use the Secondary Fire button for DSS
-            "JumpTries": 3,                #
-            "NavAlignTries": 3,            #
-            "RefuelThreshold": 65,         # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10,   # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 240,   # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125,     # The low level for brightness detection, range 0-255, want to mask out darker items
-            "FuelScoopTimeOut": 35,        # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
-            "DockingRetries": 30,          # number of time to attempt docking
-            "HotKey_StartFSD": "home",     # if going to use other keys, need to look at the python keyboard package
-            "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
-            "HotKey_StartRobigo": "pgup",  #
-            "HotKey_StopAllAssists": "end",
-            "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
-            "EnableRandomness": False,     # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
-            "ActivateEliteEachKey": False, # Activate Elite window before each key or group of keys
-            "OverlayTextEnable": False,    # Experimental at this stage
-            "OverlayTextYOffset": 400,     # offset down the screen to start place overlay text
-            "OverlayTextXOffset": 50,      # offset left the screen to start place overlay text
-            "OverlayTextFont": "Eurostyle",
-            "OverlayTextFontSize": 14,
-            "OverlayGraphicEnable": False, # not implemented yet
-            "DiscordWebhook": False,       # discord not implemented yet
-            "DiscordWebhookURL": "",
-            "DiscordUserID": "",
-            "VoiceEnable": False,
-            "VoiceID": 1,                  # my Windows only have 3 defined (0-2)
-            "ElwScannerEnable": False,
-            "LogDEBUG": False,             # enable for debug messages
-            "LogINFO": True,
-            "Enable_CV_View": 0,           # Should CV View be enabled by default
-            "ShipConfigFile": None,        # Ship config to load on start - deprecated
-            "TargetScale": 1.0,            # Scaling of the target when a system is selected
-            "ScreenScale": 1.0,            # Scaling of the target when a system is selected
-            "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
-            "TCEInstallationPath": "C:\\TCE",
-            "AutomaticLogout": False,      # Logout when we are done with the mission
-            "FCDepartureTime": 5.0,        # Extra time to fly away from a Fleet Carrier
-            "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
-            "OCDepartureAngle": 90.0,      # Angle to pitch up when leaving an Orbital Construction Site
-            "Language": 'en',              # Language (matching ./locales/xx.json file)
-            "OCRLanguage": 'en',           # Language for OCR detection (see OCR language doc in \docs)
-            "EnableEDMesg": False,
-            "EDMesgActionsPort": 15570,
-            "EDMesgEventsPort": 15571,
-            "DebugOverlay": False,
-            "AFKCombat_AttackAtWill": False,
-            "HotkeysEnable": False,        # Enable hotkeys
-            "WaypointFilepath": "",        # The previous waypoint file path
-            "DebugOCR": False,             # For debug, write all OCR data to output folder
-            "DebugImages": False,          # For debug, write debug images to output folder
-            "Key_ModDelay": 0.01,          # Delay for key modifiers to ensure modifier is detected before/after the key
-            "Key_DefHoldTime": 0.2,        # Default hold time for a key press
-            "Key_RepeatDelay": 0.1,        # Delay between key press repeats
-            "DisengageUseMatch": False,    # For 'Disengage' use old image match instead of OCR
-            "target_align_outer_lim": 1.0, # For test
-            "target_align_inner_lim": 0.5, # For test
-            "Debug_ShowCompassOverlay": False, # For test
-            "Debug_ShowTargetOverlay": False, # For test
-            "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
-        }
-        # NOTE!!! When adding a new config value above, add the same after read_config() to set
-        # a default value or an error will occur reading the new value!
-
+        self.config = {}
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
         }
@@ -162,72 +95,8 @@ class EDAutopilot:
         # used this to write the self.config table to the json file
         # self.write_config(self.config)
 
-        cnf = read_json_file(filepath='./configs/AP.json')
-        # if we read it then point to it, otherwise use the default table above
-        if cnf is not None:
-            # NOTE!!! Add default values for new entries below!
-            if 'SunBrightThreshold' not in cnf:
-                cnf['SunBrightThreshold'] = 125
-            if 'TargetScale' not in cnf:
-                cnf['TargetScale'] = 1.0
-            if 'ScreenScale' not in cnf:
-                cnf['ScreenScale'] = 1.0
-            if 'TCEDestinationFilepath' not in cnf:
-                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
-            if 'TCEInstallationPath' not in cnf:
-                cnf['TCEInstallationPath'] = "C:\\TCE"
-            if 'AutomaticLogout' not in cnf:
-                cnf['AutomaticLogout'] = False
-            if 'FCDepartureTime' not in cnf:
-                cnf['FCDepartureTime'] = 5.0
-            if 'Language' not in cnf:
-                cnf['Language'] = 'en'
-            if 'OCRLanguage' not in cnf:
-                cnf['OCRLanguage'] = 'en'
-            if 'EnableEDMesg' not in cnf:
-                cnf['EnableEDMesg'] = False
-            if 'EDMesgActionsPort' not in cnf:
-                cnf['EDMesgActionsPort'] = 15570
-            if 'EDMesgEventsPort' not in cnf:
-                cnf['EDMesgEventsPort'] = 15571
-            if 'DebugOverlay' not in cnf:
-                cnf['DebugOverlay'] = False
-            if 'AFKCombat_AttackAtWill' not in cnf:
-                cnf['AFKCombat_AttackAtWill'] = False
-            if 'HotkeysEnable' not in cnf:
-                cnf['HotkeysEnable'] = False
-            if 'WaypointFilepath' not in cnf:
-                cnf['WaypointFilepath'] = ""
-            if 'DebugOCR' not in cnf:
-                cnf['DebugOCR'] = False
-            if 'DebugImages' not in cnf:
-                cnf['DebugImages'] = False
-            if 'Key_ModDelay' not in cnf:
-                cnf['Key_ModDelay'] = 0.01
-            if 'Key_DefHoldTime' not in cnf:
-                cnf['Key_DefHoldTime'] = 0.2
-            if 'Key_RepeatDelay' not in cnf:
-                cnf['Key_RepeatDelay'] = 0.1
-            if 'DisengageUseMatch' not in cnf:
-                cnf['DisengageUseMatch'] = False
-            if 'target_align_outer_lim' not in cnf:
-                cnf['target_align_outer_lim'] = 1.0 # For test
-            if 'target_align_inner_lim' not in cnf:
-                cnf['target_align_inner_lim'] = 0.5 # For test
-            if 'Debug_ShowCompassOverlay' not in cnf:
-                cnf['Debug_ShowCompassOverlay'] = False # For test
-            if 'Debug_ShowTargetOverlay' not in cnf:
-                cnf['Debug_ShowTargetOverlay'] = False # For test
-            if 'GalMap_SystemSelectDelay' not in cnf:
-                cnf['GalMap_SystemSelectDelay'] = 0.5
-            if 'FCDepartureAngle' not in cnf:
-                cnf['FCDepartureAngle'] = 90.0
-            if 'OCDepartureAngle' not in cnf:
-                cnf['OCDepartureAngle'] = 90.0
-            self.config = cnf
-            logger.debug("read AP json:"+str(cnf))
-        else:
-            write_json_file(self.config, filepath='./configs/AP.json')
+        # Load AP.json config
+        self.load_config()
 
         # Load selected language
         self.locale = LocalizationManager('locales', self.config['Language'])
@@ -389,8 +258,144 @@ class EDAutopilot:
 
         write_json_file(self.config, filepath='./configs/AP.json')
 
+    def load_config(self):
+        """ Load AP.Json Config File. """
+        # NOTE!!! When adding a new config value below, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
+        self.config = {
+            "DSSButton": "Primary",  # if anything other than "Primary", it will use the Secondary Fire button for DSS
+            "JumpTries": 3,  #
+            "NavAlignTries": 3,  #
+            "RefuelThreshold": 65,  # if fuel level get below this level, it will attempt refuel
+            "FuelThreasholdAbortAP": 10, # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 240, # After docking granted, wait this amount of time for us to get docked with autodocking
+            "SunBrightThreshold": 125, # The low level for brightness detection, range 0-255, want to mask out darker items
+            "FuelScoopTimeOut": 35, # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "DockingRetries": 30,  # number of time to attempt docking
+            "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
+            "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
+            "HotKey_StartRobigo": "pgup",  #
+            "HotKey_StopAllAssists": "end",
+            "Robigo_Single_Loop": False,  # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
+            "EnableRandomness": False,  # add some additional random sleep times to avoid AP detection (0-3sec at specific locations)
+            "ActivateEliteEachKey": False,  # Activate Elite window before each key or group of keys
+            "OverlayTextEnable": False,  # Experimental at this stage
+            "OverlayTextYOffset": 400,  # offset down the screen to start place overlay text
+            "OverlayTextXOffset": 50,  # offset left the screen to start place overlay text
+            "OverlayTextFont": "Eurostyle",
+            "OverlayTextFontSize": 14,
+            "OverlayGraphicEnable": False,  # not implemented yet
+            "DiscordWebhook": False,  # discord not implemented yet
+            "DiscordWebhookURL": "",
+            "DiscordUserID": "",
+            "VoiceEnable": False,
+            "VoiceID": 1,  # my Windows only have 3 defined (0-2)
+            "ElwScannerEnable": False,
+            "LogDEBUG": False,  # enable for debug messages
+            "LogINFO": True,
+            "Enable_CV_View": 0,  # Should CV View be enabled by default
+            "ShipConfigFile": None,  # Ship config to load on start - deprecated
+            "TargetScale": 1.0,  # Scaling of the target when a system is selected
+            "ScreenScale": 1.0,  # Scaling of the target when a system is selected
+            "TCEDestinationFilepath": "C:\\TCE\\DUMP\\Destination.json",  # Destination file for TCE
+            "TCEInstallationPath": "C:\\TCE",
+            "AutomaticLogout": False,  # Logout when we are done with the mission
+            "FCDepartureTime": 5.0,  # Extra time to fly away from a Fleet Carrier
+            "FCDepartureAngle": 90.0,  # Angle to pitch up when leaving a Fleet Carrier
+            "OCDepartureAngle": 90.0,  # Angle to pitch up when leaving an Orbital Construction Site
+            "Language": 'en',  # Language (matching ./locales/xx.json file)
+            "OCRLanguage": 'en',  # Language for OCR detection (see OCR language doc in \docs)
+            "EnableEDMesg": False,
+            "EDMesgActionsPort": 15570,
+            "EDMesgEventsPort": 15571,
+            "DebugOverlay": False,
+            "AFKCombat_AttackAtWill": False,
+            "HotkeysEnable": False,  # Enable hotkeys
+            "WaypointFilepath": "",  # The previous waypoint file path
+            "DebugOCR": False,  # For debug, write all OCR data to output folder
+            "DebugImages": False,  # For debug, write debug images to output folder
+            "Key_ModDelay": 0.01,  # Delay for key modifiers to ensure modifier is detected before/after the key
+            "Key_DefHoldTime": 0.2,  # Default hold time for a key press
+            "Key_RepeatDelay": 0.1,  # Delay between key press repeats
+            "DisengageUseMatch": False,  # For 'Disengage' use old image match instead of OCR
+            "target_align_outer_lim": 1.0,  # For test
+            "target_align_inner_lim": 0.5,  # For test
+            "Debug_ShowCompassOverlay": False,  # For test
+            "Debug_ShowTargetOverlay": False,  # For test
+            "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
+            "PlanetDepartureSCOTime": 5.0,  # SCO boost time when leaving planet in secs
+        }
+        # NOTE!!! When adding a new config value above, add the same after read_config() to set
+        # a default value or an error will occur reading the new value!
 
-        return s
+        cnf = read_json_file(filepath='./configs/AP.json')
+        # if we read it then point to it, otherwise use the default table above
+        if cnf is not None:
+            # NOTE!!! Add default values for new entries below!
+            if 'SunBrightThreshold' not in cnf:
+                cnf['SunBrightThreshold'] = 125
+            if 'TargetScale' not in cnf:
+                cnf['TargetScale'] = 1.0
+            if 'ScreenScale' not in cnf:
+                cnf['ScreenScale'] = 1.0
+            if 'TCEDestinationFilepath' not in cnf:
+                cnf['TCEDestinationFilepath'] = "C:\\TCE\\DUMP\\Destination.json"
+            if 'TCEInstallationPath' not in cnf:
+                cnf['TCEInstallationPath'] = "C:\\TCE"
+            if 'AutomaticLogout' not in cnf:
+                cnf['AutomaticLogout'] = False
+            if 'FCDepartureTime' not in cnf:
+                cnf['FCDepartureTime'] = 5.0
+            if 'Language' not in cnf:
+                cnf['Language'] = 'en'
+            if 'OCRLanguage' not in cnf:
+                cnf['OCRLanguage'] = 'en'
+            if 'EnableEDMesg' not in cnf:
+                cnf['EnableEDMesg'] = False
+            if 'EDMesgActionsPort' not in cnf:
+                cnf['EDMesgActionsPort'] = 15570
+            if 'EDMesgEventsPort' not in cnf:
+                cnf['EDMesgEventsPort'] = 15571
+            if 'DebugOverlay' not in cnf:
+                cnf['DebugOverlay'] = False
+            if 'AFKCombat_AttackAtWill' not in cnf:
+                cnf['AFKCombat_AttackAtWill'] = False
+            if 'HotkeysEnable' not in cnf:
+                cnf['HotkeysEnable'] = False
+            if 'WaypointFilepath' not in cnf:
+                cnf['WaypointFilepath'] = ""
+            if 'DebugOCR' not in cnf:
+                cnf['DebugOCR'] = False
+            if 'DebugImages' not in cnf:
+                cnf['DebugImages'] = False
+            if 'Key_ModDelay' not in cnf:
+                cnf['Key_ModDelay'] = 0.01
+            if 'Key_DefHoldTime' not in cnf:
+                cnf['Key_DefHoldTime'] = 0.2
+            if 'Key_RepeatDelay' not in cnf:
+                cnf['Key_RepeatDelay'] = 0.1
+            if 'DisengageUseMatch' not in cnf:
+                cnf['DisengageUseMatch'] = False
+            if 'target_align_outer_lim' not in cnf:
+                cnf['target_align_outer_lim'] = 1.0  # For test
+            if 'target_align_inner_lim' not in cnf:
+                cnf['target_align_inner_lim'] = 0.5  # For test
+            if 'Debug_ShowCompassOverlay' not in cnf:
+                cnf['Debug_ShowCompassOverlay'] = False  # For test
+            if 'Debug_ShowTargetOverlay' not in cnf:
+                cnf['Debug_ShowTargetOverlay'] = False  # For test
+            if 'GalMap_SystemSelectDelay' not in cnf:
+                cnf['GalMap_SystemSelectDelay'] = 0.5
+            if 'FCDepartureAngle' not in cnf:
+                cnf['FCDepartureAngle'] = 90.0
+            if 'OCDepartureAngle' not in cnf:
+                cnf['OCDepartureAngle'] = 90.0
+            if 'PlanetDepartureSCOTime' not in cnf:
+                cnf['PlanetDepartureSCOTime'] = 5.0
+            self.config = cnf
+            logger.debug("read AP json:" + str(cnf))
+        else:
+            write_json_file(self.config, filepath='./configs/AP.json')
 
     def load_ship_configs(self):
         shp_cnf = read_json_file(filepath='./configs/ship_configs.json')
