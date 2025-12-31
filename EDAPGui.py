@@ -25,6 +25,7 @@ import pywinstyles
 import sys  # Do not delete - prevents a 'super' error from tktoolip.
 from tktooltip import ToolTip  # In requirements.txt as 'tkinter-tooltip'.
 
+from EDAPColonizeEditor import ColonizeEditorTab
 # from OCR import RegionCalibration
 # from Voice import *
 # from MousePt import MousePoint
@@ -62,7 +63,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.8.0"
+EDAP_VERSION = "V1.9.0 b1"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -154,6 +155,7 @@ class APGui:
         self.single_waypoint_station = tk.StringVar()
         self._global_shopping_list_tab = None
         self.waypoint_editor_tab = None
+        self.colonize_tab = None
 
         self.FSD_A_running = False
         self.SC_A_running = False
@@ -1066,9 +1068,17 @@ class APGui:
         # === Waypoint Editor Tab ===
         page_waypoint_editor = ttk.Frame(nb)
         page_waypoint_editor.grid_columnconfigure(0, weight=1)
-        nb.add(page_waypoint_editor, text="Waypoint Editor")
+        nb.add(page_waypoint_editor, text="Waypoints")
         self.waypoint_editor_tab = WaypointEditorTab(page_waypoint_editor, self.ed_ap.waypoint)
         self.waypoint_editor_tab.frame.pack(fill="both", expand=True)
+
+        # === Colonization Editor Tab ===
+        colonize_editor = ttk.Frame(nb)
+        colonize_editor.grid_columnconfigure(0, weight=1)
+        nb.add(colonize_editor, text="Colonization")
+        self.colonize_tab = ColonizeEditorTab(self.ed_ap, self.check_cb)
+        self.colonize_tab.create_waypoints_tab(colonize_editor)
+        self.colonize_tab.frame.pack(fill="both", expand=True)
 
         # === TCE Integration ===
         page_tce_integration = ttk.Frame(nb)

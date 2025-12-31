@@ -10,6 +10,7 @@ from tkinter import messagebox
 
 import cv2
 
+from EDAPColonizeEditor import read_json_file, write_json_file
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer

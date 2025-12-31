@@ -1,3 +1,6 @@
+# 12/6/2025 v1.9.0 b1
+- Added Colonization Tab.
+
 # 12/21/2025 v1.8.0
 - Minor update for release.
 

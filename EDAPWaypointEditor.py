@@ -313,7 +313,7 @@ class WaypointEditorTab:
         sell_commodities_frame.pack(side="right", fill="both", expand=True, padx=(5, 0))
         self.sell_commodities_list = self.create_commodity_list(sell_commodities_frame, "sell")
 
-        # === WAYPOINT TAB ===
+        # === GLOBAL SHOPPING LIST TAB ===
         # Top frame for waypoints list and buttons
         top_frame1 = ttk.Frame(page1)
         top_frame1.pack(fill="both", expand=False, pady=5)
