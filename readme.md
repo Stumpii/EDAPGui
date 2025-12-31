@@ -49,6 +49,9 @@ Note: this autopilot is based on https://github.com/skai2/EDAutopilot , some of 
  
 Also Note: This repository is provided for educational purposes as a in depth programming example of interacting with file based data, computer vision processing, user feedback via voice, win32 integration using python, threading interaction, and python classes.  
 
+## Colonization (Construction Projects) Editor
+Aids with colonization construction projects, determining what commodities are needed for each project. Additional information can be found [here](docs/ColonizationEditor.md). 
+
 # Limitations:
 * Will only work with Windows (not Linux)
 * Default HUD colors must be used, if you changed those colors, this autopilot will not work
