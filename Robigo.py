@@ -149,7 +149,7 @@ class Robigo:
         # tries is the number of rows to go through to find the item looking for
         # the Nav Panel should be filtered to reduce the number of rows in the list
         while not found and tries < 50:
-            found = self.is_found(ap, "nav_panel", templ)   
+            found = self.is_found(ap, 'nav_panel', templ)
             if found:
                 ap.keys.send("UI_Select", repeat=2)  # Select it and lock target
             else:
@@ -250,7 +250,7 @@ class Robigo:
 
             # give a few more seconds
             sleep(2)
-            ap.keys.send("SetSpeedZero")
+            ap.set_speed_0()
             ap.keys.send("SelectTarget")    # target the marker so missions will complete
             # takes about 10-22 sec to acknowledge missions
             sleep(15)
@@ -336,7 +336,7 @@ class Robigo:
   
             elif self.state == STATE_UNDOCK: 
                 # if we got the destination and perform undocking
-                ap.keys.send("SetSpeedZero")  # ensure 0 so auto undock will work 
+                ap.set_speed_0()  # ensure 0 so auto undock will work
                         
                 ap.waypoint_undock_seq()
                 self.state = STATE_FSD_TO_SOTHIS
@@ -346,7 +346,7 @@ class Robigo:
                 
                 # away from station, time for Route Assist to get us to SOTHIS
                 ap.fsd_assist(ap.scrReg)
-                ap.keys.send("SetSpeed50")   # reset speed
+                ap.set_speed_50()   # reset speed
                 self.state = STATE_TARGET_SIRIUS
             
             elif self.state == STATE_TARGET_SIRIUS:
@@ -383,7 +383,7 @@ class Robigo:
                 ap.update_ap_status("FSD to Robigo")      
                 # have Route Assist bring us back to Robigo system
                 ap.fsd_assist(ap.scrReg)
-                ap.keys.send("SetSpeed50")
+                ap.set_speed_50()
                 sleep(2)
                 self.state = STATE_TARGET_ROBIGO_MINES
       

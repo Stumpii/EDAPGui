@@ -1,7 +1,10 @@
 from __future__ import annotations
+
+import os
 from time import sleep
 from CargoParser import CargoParser
 from EDAP_data import *
+from EDJournal import StationType
 from EDKeys import EDKeys
 from EDlogger import logger
 import json
@@ -59,6 +62,7 @@ class EDWayPoint:
         if ss is not None:
             self.waypoints = ss
             self.filename = filename
+            self.ap.config['WaypointFilepath'] = filename
             self.ap.ap_ckb('log', f"Loaded Waypoint file: {filename}")
             logger.debug("EDWayPoint: read json:" + str(ss))
             return True
@@ -68,6 +72,7 @@ class EDWayPoint:
 
     def read_waypoints(self, filename='./waypoints/waypoints.json'):
         s = None
+        self.ap.config['WaypointFilepath'] = filename
         try:
             with open(filename, "r") as fp:
                 s = json.load(fp)
@@ -145,6 +150,7 @@ class EDWayPoint:
         if data is None:
             data = self.waypoints
         try:
+            self.ap.config['WaypointFilepath'] = filename
             with open(filename, "w") as fp:
                 json.dump(data, fp, indent=4)
         except Exception as e:
@@ -225,18 +231,15 @@ class EDWayPoint:
             return
 
         # Determine type of station we are at
-        colonisation_ship = "ColonisationShip".upper() in ap.jn.ship_state()['cur_station'].upper()
-        orbital_construction_site = ap.jn.ship_state()['cur_station_type'].upper() == "SpaceConstructionDepot".upper()
-        fleet_carrier = ap.jn.ship_state()['cur_station_type'].upper() == "FleetCarrier".upper()
-        outpost = ap.jn.ship_state()['cur_station_type'].upper() == "Outpost".upper()
+        station_type = ap.jn.ship_state()['exp_station_type']
 
-        if colonisation_ship or orbital_construction_site:
-            if colonisation_ship:
+        if station_type == StationType.ColonisationShip or station_type == StationType.SpaceConstructionDepot:
+            if station_type == StationType.ColonisationShip:
                 # Colonisation Ship
                 self.stats_log['Colonisation'] = self.stats_log['Colonisation'] + 1
                 self.ap.ap_ckb('log', f"Executing trade with Colonisation Ship.")
                 logger.debug(f"Execute Trade: On Colonisation Ship")
-            if orbital_construction_site:
+            if station_type == StationType.SpaceConstructionDepot:
                 # Construction Ship
                 self.stats_log['Construction'] = self.stats_log['Construction'] + 1
                 self.ap.ap_ckb('log', f"Executing trade with Orbital Construction Ship.")
@@ -250,7 +253,8 @@ class EDWayPoint:
                 # Sell all to colonisation/construction ship
                 self.sell_to_colonisation_ship(ap)
 
-        elif fleet_carrier and fleetcarrier_transfer:
+        elif (station_type == StationType.FleetCarrier and fleetcarrier_transfer or
+              station_type == StationType.SquadronCarrier and fleetcarrier_transfer):
             # Fleet Carrier in Transfer mode
             self.stats_log['Fleet Carrier'] = self.stats_log['Fleet Carrier'] + 1
             # --------- SELL ----------
@@ -263,7 +267,7 @@ class EDWayPoint:
                 self.ap.internal_panel.transfer_from_fleetcarrier(ap, buy_commodities)
 
         else:
-            # Regular Station or Fleet Carrier in Buy/Sell mode
+            # Regular Station or Fleet Carrier or Squadron Carrier in Buy/Sell mode
             self.ap.ap_ckb('log', "Executing trade.")
             logger.debug(f"Execute Trade: On Regular Station")
             self.stats_log['Station'] = self.stats_log['Station'] + 1
@@ -273,25 +277,25 @@ class EDWayPoint:
             if data is not None:
                 market_time_old = self.market_parser.current_data['timestamp']
 
-            # We start off on the Main Menu in the Station
-            self.ap.stn_svcs_in_ship.goto_station_services()
+            # Go to the Station Commodities Market
+            self.ap.stn_svcs_in_ship.goto_commodities_market()
 
-            # CONNECTED TO menu is different between stations and fleet carriers
-            if fleet_carrier:
-                # Fleet Carrier COMMODITIES MARKET location top right, with:
-                # uni cart, redemption, trit depot, shipyard, crew lounge
-                ap.keys.send('UI_Right', repeat=2)
-                ap.keys.send('UI_Select')  # Select Commodities
-
-            elif outpost:
-                # Outpost COMMODITIES MARKET location in middle column
-                ap.keys.send('UI_Right')
-                ap.keys.send('UI_Select')  # Select Commodities
-
-            else:
-                # Orbital station COMMODITIES MARKET location bottom left
-                ap.keys.send('UI_Down')
-                ap.keys.send('UI_Select')  # Select Commodities
+            # # CONNECTED TO menu is different between stations and fleet carriers
+            # if fleet_carrier:
+            #     # Fleet Carrier COMMODITIES MARKET location top right, with:
+            #     # uni cart, redemption, trit depot, shipyard, crew lounge
+            #     ap.keys.send('UI_Right', repeat=2)
+            #     ap.keys.send('UI_Select')  # Select Commodities
+            #
+            # elif outpost:
+            #     # Outpost COMMODITIES MARKET location in middle column
+            #     ap.keys.send('UI_Right')
+            #     ap.keys.send('UI_Select')  # Select Commodities
+            #
+            # else:
+            #     # Orbital station COMMODITIES MARKET location bottom left
+            #     ap.keys.send('UI_Down')
+            #     ap.keys.send('UI_Select')  # Select Commodities
 
             self.ap.ap_ckb('log+vce', "Downloading commodities data from market.")
 
@@ -314,23 +318,41 @@ class EDWayPoint:
             # --------- SELL ----------
             if len(sell_commodities) > 0:
                 # Select the SELL option
-                self.ap.stn_svcs_in_ship.select_sell(ap.keys)
+                self.ap.stn_svcs_in_ship.commodities_market.select_sell(ap.keys)
 
                 for i, key in enumerate(sell_commodities):
                     # Check if we have any of the item to sell
                     self.cargo_parser.get_cargo_data()
-                    cargo_item = self.cargo_parser.get_item(key)
-                    if cargo_item is None:
-                        logger.info(f"Unable to sell {key}. None in cargo hold.")
-                        continue
+                    cargo_parser_timestamp = self.cargo_parser.current_data['timestamp']
 
-                    # Sell the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.sell_commodity(ap.keys, key, sell_commodities[key],
-                                                                          self.cargo_parser)
+                    # Check if we want to sell ALL commodities
+                    if key == "ALL":
+                        for cargo_item in self.cargo_parser.get_items():
+                            name = cargo_item.get('Name')
+                            name_loc = cargo_item.get('Name_Localised', name)
 
-                    # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
-                        sell_commodities[key] = sell_commodities[key] - qty
+                            # Sell all we have of the commodity
+                            result, qty = self.ap.stn_svcs_in_ship.commodities_market.sell_commodity(ap.keys, name_loc, sell_commodities[key], self.cargo_parser)
+
+                            # If we sold any goods, wait for cargo parser file to update with cargo available to sell
+                            if qty > 0:
+                                self.cargo_parser.wait_for_file_change(cargo_parser_timestamp, 5)
+
+                                # Check if we have any of the item to sell
+                                self.cargo_parser.get_cargo_data()
+                                cargo_parser_timestamp = self.cargo_parser.current_data['timestamp']
+                    else:
+                        cargo_item = self.cargo_parser.get_item(key)
+                        if cargo_item is None:
+                            logger.info(f"Unable to sell {key}. None in cargo hold.")
+                            continue
+
+                        # Sell the commodity
+                        result, qty = self.ap.stn_svcs_in_ship.commodities_market.sell_commodity(ap.keys, key, sell_commodities[key], self.cargo_parser)
+
+                        # Update counts if necessary
+                        if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
+                            sell_commodities[key] = sell_commodities[key] - qty
 
                 # Save changes
                 self.write_waypoints(data=None, filename='./waypoints/' + Path(self.filename).name)
@@ -340,35 +362,68 @@ class EDWayPoint:
             # --------- BUY ----------
             if len(buy_commodities) > 0 or len(global_buy_commodities) > 0:
                 # Select the BUY option
-                self.ap.stn_svcs_in_ship.select_buy(ap.keys)
+                self.ap.stn_svcs_in_ship.commodities_market.select_buy(ap.keys)
 
                 # Go through buy commodities list
                 for i, key in enumerate(buy_commodities):
-                    curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
-                    cargo_timestamp = ap.status.current_data['timestamp']
+                    # Check if we want to buy ALL commodities. Makes sense for buying from FCs.
+                    if key == "ALL":
+                        # Go through all buyable items
+                        buyable_items = self.market_parser.get_buyable_items()
+                        if buyable_items is not None:
+                            for ii, value in enumerate(buyable_items):
+                                name = value['Name_Localised']
 
-                    free_cargo = cargo_capacity - curr_cargo_qty
-                    logger.info(f"Execute trade: Free cargo space: {free_cargo}")
+                                # Buy the commodity
+                                curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
+                                cargo_timestamp = ap.status.current_data['timestamp']
 
-                    if free_cargo == 0:
-                        logger.info(f"Execute trade: No space for additional cargo")
-                        break
+                                free_cargo = cargo_capacity - curr_cargo_qty
+                                logger.info(f"Execute trade: Free cargo space: {free_cargo}")
 
-                    qty_to_buy = buy_commodities[key]
-                    logger.info(f"Execute trade: Shopping list requests {qty_to_buy} units of {key}")
+                                if free_cargo == 0:
+                                    logger.info(f"Execute trade: No space for additional cargo")
+                                    break
 
-                    # Attempt to buy the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
-                    logger.info(f"Execute trade: Bought {qty} units of {key}")
+                                qty_to_buy = buy_commodities[key]
+                                logger.info(f"Execute trade: Shopping list requests {qty_to_buy} units of {key}")
 
-                    # If we bought any goods, wait for status file to update with
-                    # new cargo count for next commodity
-                    if qty > 0:
-                        ap.status.wait_for_file_change(cargo_timestamp, 5)
+                                # Attempt to buy the commodity
+                                result, qty = self.ap.stn_svcs_in_ship.commodities_market.buy_commodity(ap.keys, name, qty_to_buy, free_cargo)
+                                logger.info(f"Execute trade: Bought {qty} units of {name}")
 
-                    # Update counts if necessary
-                    if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
-                        buy_commodities[key] = qty_to_buy - qty
+                                # If we bought any goods, wait for status file to update with
+                                # new cargo count for next commodity
+                                if qty > 0:
+                                    ap.status.wait_for_file_change(cargo_timestamp, 5)
+
+                    else:
+                        # Buy the commodity
+                        curr_cargo_qty = int(ap.status.get_cleaned_data()['Cargo'])
+                        cargo_timestamp = ap.status.current_data['timestamp']
+
+                        free_cargo = cargo_capacity - curr_cargo_qty
+                        logger.info(f"Execute trade: Free cargo space: {free_cargo}")
+
+                        if free_cargo == 0:
+                            logger.info(f"Execute trade: No space for additional cargo")
+                            break
+
+                        qty_to_buy = buy_commodities[key]
+                        logger.info(f"Execute trade: Shopping list requests {qty_to_buy} units of {key}")
+
+                        # Attempt to buy the commodity
+                        result, qty = self.ap.stn_svcs_in_ship.commodities_market.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
+                        logger.info(f"Execute trade: Bought {qty} units of {key}")
+
+                        # If we bought any goods, wait for status file to update with
+                        # new cargo count for next commodity
+                        if qty > 0:
+                            ap.status.wait_for_file_change(cargo_timestamp, 5)
+
+                        # Update counts if necessary
+                        if qty > 0 and self.waypoints[dest_key]['UpdateCommodityCount']:
+                            buy_commodities[key] = qty_to_buy - qty
 
                 # Go through global buy commodities list
                 for i, key in enumerate(global_buy_commodities):
@@ -386,7 +441,7 @@ class EDWayPoint:
                     logger.info(f"Execute trade: Global shopping list requests {qty_to_buy} units of {key}")
 
                     # Attempt to buy the commodity
-                    result, qty = self.ap.stn_svcs_in_ship.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
+                    result, qty = self.ap.stn_svcs_in_ship.commodities_market.buy_commodity(ap.keys, key, qty_to_buy, free_cargo)
                     logger.info(f"Execute trade: Bought {qty} units of {key}")
 
                     # If we bought any goods, wait for status file to update with
@@ -404,26 +459,6 @@ class EDWayPoint:
             sleep(1.5)  # give time to popdown
             # Go to ship view
             ap.ship_control.goto_cockpit_view()
-
-    def sell_to_colonisation_ship(self, ap):
-        """ Sell all cargo to a colonisation/construction ship.
-        """
-        ap.keys.send('UI_Left', repeat=3)  # Go to table
-        ap.keys.send('UI_Down', hold=2)  # Go to bottom
-        ap.keys.send('UI_Up')  # Select RESET/CONFIRM TRANSFER/TRANSFER ALL
-        ap.keys.send('UI_Left', repeat=2)  # Go to RESET
-        ap.keys.send('UI_Right', repeat=2)  # Go to TRANSFER ALL
-        ap.keys.send('UI_Select')  # Select TRANSFER ALL
-        sleep(0.5)
-
-        ap.keys.send('UI_Left')  # Go to CONFIRM TRANSFER
-        ap.keys.send('UI_Select')  # Select CONFIRM TRANSFER
-        sleep(2)
-
-        ap.keys.send('UI_Down')  # Go to EXIT
-        ap.keys.send('UI_Select')  # Select EXIT
-
-        sleep(2)  # give time to popdown menu
 
     def waypoint_assist(self, keys, scr_reg):
         """ Processes the waypoints, performing jumps and sc assist if going to a station
@@ -443,7 +478,7 @@ class EDWayPoint:
             # Current location
             cur_star_system = self.ap.jn.ship_state()['cur_star_system'].upper()
             cur_station = self.ap.jn.ship_state()['cur_station'].upper()
-            cur_station_type = self.ap.jn.ship_state()['cur_station_type'].upper()
+            cur_station_type = self.ap.jn.ship_state()['exp_station_type']
 
             # Current in game destination
             status = self.ap.status.get_cleaned_data()
@@ -455,9 +490,17 @@ class EDWayPoint:
             # Get next Waypoint
             # ====================================
 
-            # Get the waypoint details
             old_step = self.step
-            dest_key, next_waypoint = self.get_waypoint()
+            # Loop through waypoints to find next waypoint
+            while True:
+                skip_waypoint = False
+                # Get the waypoint details
+                dest_key, next_waypoint = self.get_waypoint()
+
+                # End loop if we are not skipping this waypoint, or we are at the end
+                if (not skip_waypoint) or (dest_key is None):
+                    break
+
             if dest_key is None:
                 self.ap.ap_ckb('log+vce', "Waypoint list has been completed.")
                 break
@@ -536,11 +579,12 @@ class EDWayPoint:
                 # Check if we are at the correct station. Note that for FCs, the station name
                 # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
                 # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
-                if cur_station_type == 'FleetCarrier'.upper():
+                if cur_station_type == StationType.FleetCarrier:
                     docked_at_stn = next_wp_station.endswith(cur_station)
-                elif next_wp_station == 'System Colonisation Ship'.upper():
-                    if (cur_station_type == 'SurfaceStation'.upper() and
-                            'ColonisationShip'.upper() in cur_station.upper()):
+                elif cur_station_type == StationType.SquadronCarrier:
+                    docked_at_stn = next_wp_station.endswith(cur_station)
+                elif 'System Colonisation Ship'.upper() in next_wp_station:
+                    if cur_station_type == StationType.ColonisationShip:
                         docked_at_stn = True
                 # elif next_wp_station.startswith('Orbital Construction Site'.upper()):
                 #     if (cur_station_type == 'SurfaceStation'.upper() and
@@ -568,7 +612,7 @@ class EDWayPoint:
                             _abort = True
                             break
 
-                    elif sys_bookmark:
+                    elif sys_bookmark and sys_bookmark_type != 'Nav Panel OCR':
                         # Set destination via system bookmark
                         res = self.ap.system_map.set_sys_map_dest_bookmark(self.ap, sys_bookmark_type, sys_bookmark_num)
                         if not res:
@@ -576,11 +620,16 @@ class EDWayPoint:
                             _abort = True
                             break
 
-                    elif next_wp_station != "":
-                        # Need OCR added in for this (WIP)
-                        need_ocr = True
-                        self.ap.ap_ckb('log+vce', f"No bookmark defined. Target by Station text not supported.")
-                        # res = self.nav_panel.lock_destination(station_name)
+                    elif sys_bookmark_type == 'Nav Panel OCR' and next_wp_station != "":
+                        # Set destination via system name
+                        res = self.ap.nav_panel.lock_destination(next_wp_station)
+                        if not res:
+                            self.ap.ap_ckb('log+vce', f"Unable to set Nav Panel OCR bookmark.")
+                            _abort = True
+                            break
+
+                    else:
+                        self.ap.ap_ckb('log+vce', f"No bookmark defined.")
                         _abort = True
                         break
 
@@ -621,6 +670,9 @@ class EDWayPoint:
         self.stats_log['Fleet Carrier'] = 0
         self.stats_log['Station'] = 0
 
+    def sell_to_colonisation_ship(self, ap):
+        self.ap.stn_svcs_in_ship.sell_to_colonisation_ship(self.ap)
+
 
 def main():
     from ED_AP import EDAutopilot
@@ -630,10 +682,10 @@ def main():
     wp.step = 0  # start at first waypoint
     keys = EDKeys(cb=None)
     keys.activate_window = True
-    wp.ap.stn_svcs_in_ship.select_sell(keys)
-    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
-    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
-    wp.ap.stn_svcs_in_ship.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
+    wp.ap.stn_svcs_in_ship.commodities_market.select_sell(keys)
+    wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
+    wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
+    wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
     #wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
 
     # dest = 'Enayex'
