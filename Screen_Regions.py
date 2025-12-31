@@ -1,7 +1,9 @@
+from copy import copy
+
 import numpy as np
 from numpy import array, sum
 import cv2
-
+from datetime import datetime
 
 """
 File:Screen_Regions.py    
@@ -14,75 +16,12 @@ Author: sumzer0@yahoo.com
 """
 
 
-def reg_scale_for_station(region, w: int, h: int) -> [int, int, int, int]:
-    """ Scale a station services region based on the target resolution.
-    This is performed because the tables on the station services screen do
-    not increase proportionally with the screen size. The width changes with
-    the screen size, the height does not change based on the screen size
-    height, but on the screen width and the position stays consistent to the
-    center of the screen.
-    To calculate the new region height, we take the initial region defined at
-    1920x1080 and scale up the height based on the target width and apply the
-    new proportion against the center line.
-    @param h: The screen height in pixels
-    @param w: The screen width in pixels
-    @param region: The region at 1920x1080
-    @return: The new region in %
-    """
-    ref_w = 1920
-    ref_h = 1080
-
-    # Calc the x and y scaling.
-    x_scale = w / ref_w
-    y_scale = h / ref_h
-
-    # Determine centre of the region
-    reg_avg = 0.5
-    # This alternate method below is based on the centre of the region instead of the centre of screen.
-    # This will generally NOT work for station screens that are obviously centred vertically.
-    # reg_avg = (region['rect'][1] + region['rect'][3]) / 2
-
-    # Recalc the region as a % above and below the center line.
-    pct_abv = (reg_avg - region['rect'][1]) * x_scale / y_scale
-    pct_blw = (region['rect'][3] - reg_avg) * x_scale / y_scale
-
-    # Apply new % to the center line.
-    new_rect1 = reg_avg - pct_abv
-    new_rect3 = reg_avg + pct_blw
-
-    # Return the update top and bottom Y percentages with the original X percentages.
-    new_reg = {'rect': [region['rect'][0], new_rect1, region['rect'][2], new_rect3]}
-    return new_reg
-
-
-def size_scale_for_station(width: int, height: int, w: int, h: int) -> (int, int):
-    """ Scale an item in the station services region based on the target resolution.
-    This is performed because the tables on the station services screen do
-    not increase proportionally with the screen size. The width changes with
-    the screen size, the height does not change based on the screen size
-    height, but on the screen width and the position stays consistent to the
-    center of the screen.
-    To calculate the new region height, we take the initial region defined at
-    1920x1080 and scale up the height based on the target width and apply the
-    new proportion against the center line.
-    @param width: The width of the item in pixels
-    @param height: The height of the item in pixels
-    @param h: The screen height in pixels
-    @param w: The screen width in pixels
-    """
-    ref_w = 1920
-    ref_h = 1080
-
-    # Calc the x and y scaling.
-    x_scale = w / ref_w
-    y_scale = h / ref_h
-
-    # Increase the height by the ratio of the width
-    new_width = width * x_scale
-    new_height = height * x_scale
-
-    # Return the new height in pixels.
-    return new_width, new_height
+def scale_region(region, sub_region) -> [float, float, float, float]:
+    """ Converts a sub region scale to a region scale """
+    r = Quad.from_rect(region)
+    sr = Quad.from_rect(sub_region)
+    r.subregion_from_quad(sr)
+    return r.to_rect_list()
 
 
 class Screen_Regions:
@@ -91,17 +30,17 @@ class Screen_Regions:
         self.templates = templ
 
         # Define the thresholds for template matching to be consistent throughout the program
-        self.compass_match_thresh = 0.35
+        self.compass_match_thresh = 0.50
         self.navpoint_match_thresh = 0.8
-        self.target_thresh = 0.54
+        self.target_thresh = 0.50
         self.target_occluded_thresh = 0.55
         self.sun_threshold = 125
-        self.disengage_thresh = 0.25
+        self.disengage_thresh = 0.35
 
         # array is in HSV order which represents color ranges for filtering
         self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
-        self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 212])]
+        self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 255])]
         self.blue_color_range     = [array([0, 28, 170]), array([180, 100, 255])]
         self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
         self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
@@ -111,7 +50,7 @@ class Screen_Regions:
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
         self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
-        self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range} 
+        self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
         self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
         self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
         self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
@@ -120,7 +59,7 @@ class Screen_Regions:
         self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
         self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}  
         self.reg['GotoYourHangar']    = {'rect': [0.273, 0.325, 0.726, 0.629], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        
+
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
             xx = self.reg[key]['rect']
@@ -149,7 +88,14 @@ class Screen_Regions:
         """ Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask. """
         img_region = self.capture_region_filtered(self.screen, region_name, inv_col)    # which would call, reg.capture_region('compass') and apply defined filter
-        match = cv2.matchTemplate(img_region, self.templates.template[templ_name]['image'], cv2.TM_CCOEFF_NORMED)
+        img_templ = self.templates.template[templ_name]['image']
+
+        # now = datetime.now()
+        # x = now.strftime("%Y-%m-%d %H-%M-%S.%f")[:-3]  # Date time with mS.
+        # cv2.imwrite(f'test/match/{templ_name} {x} region.png', img_region)
+        # cv2.imwrite(f'test/match/{templ_name} {x} templ.png', img_templ)
+
+        match = cv2.matchTemplate(img_region, img_templ, cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
         return img_region, (minVal, maxVal, minLoc, maxLoc), match
 
@@ -276,3 +222,179 @@ class Screen_Regions:
         result = int((wht / (wht+blk))*100)
 
         return result
+
+
+class Point:
+    """Creates a point on a coordinate plane with values x and y."""
+    def __init__(self, x, y):
+        """Defines x and y variables"""
+        self.x: float = x
+        self.y: float = y
+
+    def __str__(self):
+        return "Point(%s, %s)" % (self.x, self.y)
+
+    def get_x(self) -> float:
+        return self.x
+
+    def get_y(self) -> float:
+        return self.y
+
+    def to_list(self) -> [float, float]:
+        return [self.x, self.y]
+
+    @classmethod
+    def from_xy(cls, xy_tuple: (float, float)):
+        """ From (x, y) """
+        return cls(xy_tuple[0], xy_tuple[1])
+
+    @classmethod
+    def from_list(cls, xy_list: [float, float]):
+        """ From (x, y) """
+        return cls(xy_list[0], xy_list[1])
+
+
+class Quad:
+    """ Represents a quadrilateral (a four-sided polygon that has four edges and four vertices).
+    It can be classified into various types, such as squares, rectangles, trapezoids, and rhombuses.
+    """
+    def __init__(self, p1: Point = None, p2: Point = None, p3: Point = None, p4: Point = None):
+        self.pt1: Point = p1
+        self.pt2: Point = p2
+        self.pt3: Point = p3
+        self.pt4: Point = p4
+
+    @classmethod
+    def from_list(cls, pt_list: [[float, float], [float, float], [float, float], [float, float]]):
+        """ Creates a quad from a list of points as
+        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
+        return cls(Point.from_list(pt_list[0]), Point.from_list(pt_list[1]),
+                   Point.from_list(pt_list[2]), Point.from_list(pt_list[3]))
+
+    @classmethod
+    def from_rect(cls, pt_list: [float, float, float, float]):
+        """ Creates a quad from a list of points as [left, top, right, bottom] """
+        return cls(Point(pt_list[0], pt_list[1]), Point(pt_list[2], pt_list[1]),
+                   Point(pt_list[2], pt_list[3]), Point(pt_list[0], pt_list[3]))
+
+    def to_rect_list(self, round_dp: int = -1) -> [float, float, float, float]:
+        """ Returns the bounds of the quadrilateral as a list of values [left, top, right, bottom].
+        @param: round_dp: If >=0, the number of decimal places to round numbers to, otherwise no rounding.
+        """
+        if round_dp < 0:
+            return [self.get_left(), self.get_top(), self.get_right(), self.get_bottom()]
+        else:
+            return [round(self.get_left(), round_dp), round(self.get_top(), round_dp),
+                    round(self.get_right(), round_dp), round(self.get_bottom(), round_dp)]
+
+    def to_list(self) -> [[float, float], [float, float], [float, float], [float, float]]:
+        """ Returns the list of points of the quadrilateral as
+        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
+        return [self.pt1.to_list(), self.pt2.to_list(), self.pt3.to_list(), self.pt4.to_list()]
+
+    def get_left(self) -> float:
+        """ Returns the value of the left most point. """
+        return min(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
+
+    def get_top(self) -> float:
+        """ Returns the value of the top most point. """
+        return min(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
+
+    def get_right(self) -> float:
+        """ Returns the value of the right most point. """
+        return max(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
+
+    def get_bottom(self) -> float:
+        """ Returns the value of the bottom most point. """
+        return max(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
+
+    def get_width(self):
+        """Returns the maximum width."""
+        return self.get_right() - self.get_left()
+
+    def get_height(self):
+        """Returns the maximum height."""
+        return self.get_bottom() - self.get_top()
+
+    def get_bounds(self) -> (Point, Point):
+        """ Returns the bounds of the quadrilateral as a rectangle defined by two points,
+        the top-left and bottom-right."""
+        return Point(self.get_left(), self.get_top()), Point(self.get_right(), self.get_bottom())
+
+    def get_center(self) -> Point:
+        cx = (self.pt1.x + self.pt2.x + self.pt3.x + self.pt4.x) / 4
+        cy = (self.pt1.y + self.pt2.y + self.pt3.y + self.pt4.y) / 4
+        return Point(cx, cy)
+
+    def scale(self, fx: float, fy: float):
+        """ Scales the quad from the center.
+        @param fy: Scaling in the Y direction.
+        @param fx: Scaling in the X direction.
+        """
+        center = self.get_center()
+        self.pt1 = self._scale_point(self.pt1, center, fx, fy)
+        self.pt2 = self._scale_point(self.pt2, center, fx, fy)
+        self.pt3 = self._scale_point(self.pt3, center, fx, fy)
+        self.pt4 = self._scale_point(self.pt4, center, fx, fy)
+
+    def subregion_from_quad(self, quad):
+        """ Crops the quad as region specified by the % (0.0-1.0) inputs.
+        NOTE: This assumes that the quad is a rectangle or square. Won't work with other shapes!
+        Example: An input of [0.0, 0.0, 1.0, 1.0] returns the quad unchanged.
+        Example: An input of [0.0, 0.0, 0.25, 0.25] returns the top left quarter of the quad.
+        @param quad: A quad.
+        """
+        new_l = (quad.get_left() * self.get_width()) + self.get_left()
+        new_t = (quad.get_top() * self.get_height()) + self.get_top()
+        new_r = (quad.get_right() * self.get_width()) + self.get_left()
+        new_b = (quad.get_bottom() * self.get_height()) + self.get_top()
+
+        self.pt1 = Point(new_l, new_t)
+        self.pt2 = Point(new_r, new_t)
+        self.pt3 = Point(new_r, new_b)
+        self.pt4 = Point(new_l, new_b)
+
+    def scale_from_origin(self, fx: float, fy: float):
+        """ Scales the quad from the origin (0,0).
+        @param fy: Scaling in the Y direction.
+        @param fx: Scaling in the X direction.
+        """
+        origin = Point(0, 0)
+        self.pt1 = self._scale_point(self.pt1, origin, fx, fy)
+        self.pt2 = self._scale_point(self.pt2, origin, fx, fy)
+        self.pt3 = self._scale_point(self.pt3, origin, fx, fy)
+        self.pt4 = self._scale_point(self.pt4, origin, fx, fy)
+
+    def offset(self, dx: float, dy: float):
+        """ Offsets (moves) the quad by the given amount.
+        @param dx: The amount to move in the x direction.
+        @param dy: The amount to move in the y direction.
+        """
+        self.pt1 = self._offset_point(self.pt1, dx, dy)
+        self.pt2 = self._offset_point(self.pt2, dx, dy)
+        self.pt3 = self._offset_point(self.pt3, dx, dy)
+        self.pt4 = self._offset_point(self.pt4, dx, dy)
+
+    @staticmethod
+    def _scale_point(pt: Point, center: Point, fx: float, fy: float) -> Point:
+        return Point(
+            center.x + (pt.x - center.x) * fx,
+            center.y + (pt.y - center.y) * fy
+        )
+
+    @staticmethod
+    def _offset_point(pt: Point, dx: float, dy: float) -> Point:
+        """ Offsets the point.
+        Using this instead of calling offset on the point directly allows shallow copy of the quad."""
+        return Point(pt.x + dx, pt.y + dy)
+
+    def __str__(self):
+        return (f"Quadrilateral:\n"
+                f" pt1: ({self.pt1.x}, {self.pt1.y})\n"
+                f" pt2: ({self.pt2.x}, {self.pt2.y})\n"
+                f" pt3: ({self.pt3.x}, {self.pt3.y})\n"
+                f" pt4: ({self.pt4.x}, {self.pt4.y})")
+
+
+
+

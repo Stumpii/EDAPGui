@@ -12,11 +12,10 @@ class GalaxyMapTestCase(unittest.TestCase):
         from ED_AP import EDAutopilot
         cls.ed_ap = EDAutopilot(cb=dummy_cb)
 
-        scr = cls.ed_ap.scr
         keys = cls.ed_ap.keys
         keys.activate_window = True  # Helps with single steps testing
 
-        cls.gal_map = EDGalaxyMap(cls.ed_ap, scr, keys, dummy_cb, True)
+        cls.gal_map = EDGalaxyMap(cls.ed_ap, cls.ed_ap.scr, keys, dummy_cb, True)
 
     def test_System1(self):
         """ A single system (no duplicates). """
