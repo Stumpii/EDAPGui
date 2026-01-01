@@ -169,8 +169,7 @@ class ColonizeEditorTab:
         # Add global shopping list and waypoints
         waypoints_to_save = self.convert_to_raw_waypoints()
 
-        # write_json_file(waypoints_to_save, self._filepath) # TODO enable after test
-        write_json_file(waypoints_to_save, './configs/construction1.json')  # TODO delete after test
+        write_json_file(waypoints_to_save, self._filepath)
         # read_json_file(self._filepath)
 
     def populate_tk_construction(self):

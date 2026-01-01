@@ -65,9 +65,11 @@ class FSDAssistReturn(Enum):
     Partial = 1  # Reached final system, but there is a local destination
     Complete = 2  # Reached final system and there is no local destination
 
+
 def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
     """ Does scaling of the input based on input and output min/max."""
     return (inp - in_min)/(in_max - in_min) * (out_max - out_min) + out_min
+
 
 class EDAutopilot:
 
@@ -91,9 +93,6 @@ class EDAutopilot:
         self.ship_tst_roll_enabled = False
         self.ship_tst_pitch_enabled = False
         self.ship_tst_yaw_enabled = False
-
-        # used this to write the self.config table to the json file
-        # self.write_config(self.config)
 
         # Load AP.json config
         self.load_config()
@@ -127,7 +126,6 @@ class EDAutopilot:
         self.scr = Screen.Screen(cb)
         self.scr.scaleX = self.config['ScreenScale']
         self.scr.scaleY = self.config['ScreenScale']
-        self.target_scale = self.config['TargetScale']
 
         self.gfx_settings = EDGraphicsSettings()
         # Aspect ratio greater than 1920/1080 (1.7777) seems to be the magic cutoff. At > 1920/1080 (1.7777), the FOV
@@ -189,6 +187,7 @@ class EDAutopilot:
         self.gui_loaded = False
         self._nav_cor_x = 0.0  # Nav Point correction to pitch
         self._nav_cor_y = 0.0  # Nav Point correction to yaw
+        self.target_scale = 0.0
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
@@ -205,15 +204,15 @@ class EDAutopilot:
         # must be called after we initialized the objects above
         self.update_overlay()
 
-        self.debug_overlay = self.config['DebugOverlay']
-        self.debug_ocr = self.config['DebugOCR']
-        self.debug_images = self.config['DebugImages']
+        self.debug_overlay = False
+        self.debug_ocr = False
+        self.debug_images = False
         self.debug_image_folder = './debug-output/images'
         if not os.path.exists(self.debug_image_folder):
             os.makedirs(self.debug_image_folder)
 
         # debug window
-        self.cv_view = self.config['Enable_CV_View']
+        self.cv_view = False
         self.cv_view_x = 10
         self.cv_view_y = 10
 
@@ -572,10 +571,16 @@ class EDAutopilot:
         if self.galaxy_map:
             self.galaxy_map.SystemSelectDelay = self.config['GalMap_SystemSelectDelay']
 
+        self.target_scale = self.config['TargetScale']
         self.target_align_outer_lim = self.config['target_align_outer_lim']
         self.target_align_inner_lim = self.config['target_align_inner_lim']
+
+        self.cv_view = self.config['Enable_CV_View']
         self.debug_show_compass_overlay = self.config['Debug_ShowCompassOverlay']
         self.debug_show_target_overlay = self.config['Debug_ShowTargetOverlay']
+        self.debug_overlay = self.config['DebugOverlay']
+        self.debug_ocr = self.config['DebugOCR']
+        self.debug_images = self.config['DebugImages']
 
     def draw_match_rect(self, img, pt1, pt2, color, thick):
         """ Draws the matching rectangle within the image. """
