@@ -12,8 +12,10 @@ import time
 import csv
 
 import EDAP_data
+from EDAPColonizeEditor import CommodityDict, get_resources_required_dict
 from EDAP_EDMesg_Interface import (create_edap_client, LoadWaypointFileAction, GalaxyMapTargetSystemByNameAction)
 from EDJournal import read_construction
+from FleetCarrierMonitorDataParser import FleetCarrierMonitorDataParser, FleetCarrierCargo
 
 
 def select_treeview_items_by_idx(tree: tkinter.ttk.Treeview, indexes: list[int]):
@@ -194,6 +196,7 @@ class WaypointEditorTab:
         self.commodities = EDAP_data.sorted_commodities()
         self.commodities_with_all = EDAP_data.sorted_commodities()
         self.commodities_with_all.insert(0, 'ALL')
+        self._fleetcarrier_cargo = dict[str, FleetCarrierCargo]
 
         self.root = self.frame.winfo_toplevel()
 
@@ -1046,32 +1049,69 @@ class WaypointEditorTab:
             wp.buy_commodities.clear()
             self.update_commodity_list(wp.buy_commodities, self.gbl_buy_commodities_list)
 
-    def load_const_comm(self):
+    def load_fleetcarrier_file(self):
+        """ Load the fleet carrier commodity data. """
+        parser = FleetCarrierMonitorDataParser()
+        parser.file_path = r"C:\Users\shuttle\AppData\Local\EDMarketConnector\plugins\fleetcarriermonitor\FleetCarrier.V2V-65W.json"
+        parser.get_fleetcarrier_data()
+        if parser.current_data:
+            self._fleetcarrier_cargo = parser.get_consolidated_cargo_dict()
 
+    def load_const_comm(self):
+        self.commodities: dict[str, CommodityDict] = {}
+
+        # Load Fleet Carrier data
+        self.load_fleetcarrier_file()
+
+        # Load Global Shopping List waypoint
         wp = self.get_gbl_shoppinglist_waypoint()
         if wp:
             # Load construction dict
             filepath = './configs/construction.json'
             if os.path.exists(filepath):
-                const = read_construction(filepath)
-                if const:
-                    for key in const:
-                        resources_required = const[key].get('ResourcesRequired')
-                        if resources_required:
-                            for item in resources_required:
-                                name = item['Name_Localised']
-                                need = item['RequiredAmount'] - item['ProvidedAmount']
+                const_sites = read_construction(filepath)
+                if const_sites:
+                    for key, value in const_sites.items():
+                        if value.get('Include', True):
+                            res_required = get_resources_required_dict(const_sites, key)
+                            for name_loc, item in res_required.items():
+                                # Find if the item is in the Fleet Carrier
+                                fc_qty = 0
+                                if self._fleetcarrier_cargo:
+                                    if name_loc in self._fleetcarrier_cargo:
+                                        fc_qty = self._fleetcarrier_cargo[name_loc]['qty']
 
-                                if need > 0:
-                                    found = False
-                                    for comm in wp.buy_commodities:
-                                        if comm.name.get() == name:
-                                            comm.quantity.set(comm.quantity.get() + need)
-                                            found = True
-                                            break
+                                if name_loc in self.commodities:
+                                    com = self.commodities[name_loc]
+                                    com['required_amount'] = com['required_amount'] + item['required_amount']
+                                    com['provided_amount'] = com['provided_amount'] + item['provided_amount']
+                                    com['need'] = com['required_amount'] - com['provided_amount']
+                                    com['to_buy'] = com['need'] - com['on_fleet_carrier']
+                                else:
+                                    self.commodities[name_loc] = CommodityDict(name=item["name"],
+                                                                               name_localised=item["name_localised"],
+                                                                               required_amount=item["required_amount"],
+                                                                               provided_amount=item["provided_amount"],
+                                                                               payment=item["payment"],
+                                                                               need=item['required_amount'] - item['provided_amount'],
+                                                                               on_fleet_carrier=fc_qty,
+                                                                               to_buy=item['required_amount'] - item['provided_amount'] - fc_qty)
 
-                                    if not found:
-                                        wp.buy_commodities.append(ShoppingItem(name, need))
+                    # Process each commodity
+                    for key, com in self.commodities.items():
+                        name_loc = com['name_localised']
+                        to_buy = com['to_buy']
+
+                        if to_buy > 0:
+                            found = False
+                            for comm in wp.buy_commodities:
+                                if comm.name.get() == name_loc:
+                                    comm.quantity.set(comm.quantity.get() + to_buy)
+                                    found = True
+                                    break
+
+                            if not found:
+                                wp.buy_commodities.append(ShoppingItem(name_loc, to_buy))
 
             self.update_commodity_list(wp.buy_commodities, self.gbl_buy_commodities_list)
 
