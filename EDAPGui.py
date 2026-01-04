@@ -652,6 +652,9 @@ class APGui:
         self.save_ocr_calibration_data()
         self.log_msg("Saved all settings.")
 
+    def load_settings(self):
+        self.ed_ap.load_ship_configs()
+
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
         try:
@@ -1038,8 +1041,15 @@ class APGui:
         keys_entry_fields = ('Modifier Key Delay', 'Default Hold Time', 'Repeat Key Delay')
 
         # notebook pages
-        btn_save = ttk.Button(win, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
-        btn_save.grid(row=0, padx=10, pady=5, sticky="W")
+        blk_top_buttons = ttk.Frame(win)
+        blk_top_buttons.grid(row=0, column=0, padx=10, pady=5, sticky="EW")
+        blk_top_buttons.columnconfigure(0)
+        blk_top_buttons.columnconfigure(1, weight=1)
+
+        btn_load = ttk.Button(blk_top_buttons, text='Load All Settings', command=self.load_settings)
+        btn_load.grid(row=0, column=0, padx=5, pady=5, sticky="W")
+        btn_save = ttk.Button(blk_top_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
+        btn_save.grid(row=0, column=1, padx=2, pady=5, sticky="W")
 
         nb = ttk.Notebook(win)
         nb.grid(row=1, padx=10, pady=5, sticky="NSEW")
