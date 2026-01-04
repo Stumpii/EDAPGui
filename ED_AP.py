@@ -323,6 +323,7 @@ class EDAutopilot:
             "Debug_ShowTargetOverlay": False,  # For test
             "GalMap_SystemSelectDelay": 0.5,  # Delay selecting the system when in galaxy map
             "PlanetDepartureSCOTime": 5.0,  # SCO boost time when leaving planet in secs
+            "FleetCarrierMonitorCAPIDataPath": "",  # EDMC Fleet Carrier Monitor plugin data export path
         }
         # NOTE!!! When adding a new config value above, add the same after read_config() to set
         # a default value or an error will occur reading the new value!
@@ -391,6 +392,8 @@ class EDAutopilot:
                 cnf['OCDepartureAngle'] = 90.0
             if 'PlanetDepartureSCOTime' not in cnf:
                 cnf['PlanetDepartureSCOTime'] = 5.0
+            if 'FleetCarrierMonitorCAPIDataPath' not in cnf:
+                cnf['FleetCarrierMonitorCAPIDataPath'] = ""
             self.config = cnf
             logger.debug("read AP json:" + str(cnf))
         else:
