@@ -4,12 +4,15 @@ import ast
 import tkinter as tk
 import tkinter.ttk
 from builtins import enumerate
+from pathlib import Path
 from tkinter import ttk, messagebox
 import json
 import threading
 import os
 import time
 import csv
+
+from tktooltip import ToolTip
 
 import EDAP_data
 from EDAPColonizeEditor import CommodityDict, get_resources_required_dict
@@ -213,12 +216,19 @@ class WaypointEditorTab:
         file_ops_frame.pack(fill="x", pady=5)
         ttk.Button(file_ops_frame, text="New", command=self.new_file).pack(side="left", padx=2)
         ttk.Button(file_ops_frame, text="Open", command=self.open_file).pack(side="left", padx=2)
+        btn_open_last = ttk.Button(file_ops_frame, text="Open Last Saved", command=self.open_last_file)
+        btn_open_last.pack(side="left", padx=2)
+        tip = ToolTip(btn_open_last, msg=f"Opens the last saved waypoint file", delay=1.0, bg="#808080", fg="#FFFFFF")
+
         self.save_button = ttk.Button(file_ops_frame, text="Save", command=self.save_file)
         self.save_button.pack(side="left", padx=2)
         self.save_button.config(state="disabled")
         ttk.Button(file_ops_frame, text="Save As", command=self.save_as_file).pack(side="left", padx=2)
-        ttk.Button(file_ops_frame, text="Import Spansh CSV", command=self.import_spansh_csv).pack(side="left", padx=2)
-        ttk.Button(file_ops_frame, text="Import from Inara", command=self.open_inara_import_window).pack(side="left", padx=2)
+        btn_reset_list = ttk.Button(file_ops_frame, text="Reset List", command=self.reset_wp_file)
+        btn_reset_list.pack(side="left", padx=5)
+        tip = ToolTip(btn_reset_list, msg=f"Resets the Complete flag of all Waypoints and restarts at the first Waypoint", delay=1.0, bg="#808080", fg="#FFFFFF")
+        ttk.Button(file_ops_frame, text="Import Spansh CSV", command=self.import_spansh_csv).pack(side="right", padx=2)
+        ttk.Button(file_ops_frame, text="Import from Inara", command=self.open_inara_import_window).pack(side="right", padx=2)
 
         # notebook pages
         nb = ttk.Notebook(waypoints_container)
@@ -412,6 +422,21 @@ class WaypointEditorTab:
         if filepath:
             self.editor_load_waypoint_file(filepath)
 
+    def open_last_file(self):
+        if self.ed_waypoint.filename:
+            self.editor_load_waypoint_file(self.ed_waypoint.filename)
+
+    def reset_wp_file(self):
+        if self.ed_waypoint.waypoints:
+            if self.ed_waypoint.ap.waypoint_assist_enabled:
+                mb = messagebox.showwarning("Waypoint List Warning", "Disable Waypoint Assist before resetting the list.")
+            else:
+                mb = messagebox.askokcancel("Waypoint List Reset", "Resetting Waypoints will clear the Complete flag on all Waypoints and the first Waypoint will be selected as the next waypoint.")
+                if mb:
+                    self.ed_waypoint.mark_all_waypoints_not_complete()
+        else:
+            mb = messagebox.showwarning("Waypoint List Warning", "Waypoints list not loaded.")
+
     def save_file(self):
         if self.ed_waypoint.filename:
             self.save_waypoint_file(self.ed_waypoint.filename)
@@ -471,15 +496,19 @@ class WaypointEditorTab:
             messagebox.showerror("Import Error", f"Failed to import CSV file: {e}")
 
     def editor_load_waypoint_file(self, filepath):
+        filename = './waypoints/' + Path(filepath).name
+        if not os.path.exists(filename):
+            return False
+
         try:
             # Load the waypoint file in the Waypoint system, and editor
-            if self.ed_waypoint.load_waypoint_file(filepath):
+            if self.ed_waypoint.load_waypoint_file(filename):
                 self.populate_internal_waypoints()
                 self.update_ui()
-                self.start_file_watcher(filepath)
+                self.start_file_watcher(filename)
                 self.save_button.config(state="normal")
         except json.JSONDecodeError:
-            messagebox.showerror("Error", f"Invalid JSON file: {filepath}")
+            messagebox.showerror("Error", f"Invalid JSON file: {filename}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load waypoint file: {e}")
 
@@ -488,9 +517,12 @@ class WaypointEditorTab:
         # Add global shopping list and waypoints
         waypoints_to_save = self.convert_to_raw_waypoints()
 
-        self.ed_waypoint.write_waypoints(waypoints_to_save, filepath)
-        self.ed_waypoint.filename = filepath
-        self.mesg_client.publish(LoadWaypointFileAction(filepath=filepath))
+        # self.ed_waypoint.write_waypoints(waypoints_to_save, filepath)
+        filename = './waypoints/' + Path(filepath).name
+        self.ed_waypoint.write_waypoints(data=waypoints_to_save, filename=filename)
+        self.ed_waypoint.filename = filename
+        self.ed_waypoint.load_waypoint_file(filepath)
+        # self.mesg_client.publish(LoadWaypointFileAction(filepath=filename))
 
     def start_file_watcher(self, filepath):
         if self.file_watcher_thread and self.file_watcher_thread.is_alive():

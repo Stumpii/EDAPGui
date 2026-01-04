@@ -251,6 +251,9 @@ class EDAutopilot:
             self.config['Key_DefHoldTime'] = self.keys.key_def_hold_time
             self.config['Key_RepeatDelay'] = self.keys.key_repeat_delay
 
+        if self.waypoint:
+            self.config['WaypointFilepath'] = self.waypoint.filename
+
         # Delete old settings
         self.config.pop('target_align_inertia_pitch_factor', None)
         self.config.pop('target_align_inertia_yaw_factor', None)

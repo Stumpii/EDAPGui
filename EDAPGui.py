@@ -123,9 +123,7 @@ class APGui:
             'Y Offset': "Offset down the screen to start place overlay text.",
             'Font Size': "Font size of the overlay.",
             'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
-            'Waypoint List Button': "Read in a file with with your Waypoints.",
             'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
-            'Reset Waypoint List': "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list.",
             'Debug Overlay': "Enables debug data to be displayed over the \nElite Dangerous screen while playing the game.",
             'Debug OCR': "Enables OCR debug output to be stored in the 'ocr_output' folder.",
             'Debug Images': "Enables debug images to be stored in the 'debug_output' folder.",
@@ -623,27 +621,6 @@ class APGui:
 
     def ship_tst_yaw_90(self):
         self.ed_ap.ship_tst_yaw(90)
-        
-    def open_wp_file(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
-        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
-        if filename != "":
-            res = self.ed_ap.waypoint.load_waypoint_file(filename)
-            if res:
-                self.wp_filelabel.set("loaded: " + Path(filename).name)
-            else:
-                self.wp_filelabel.set("<no list loaded>")
-
-    def reset_wp_file(self):
-        if not self.WP_A_running:
-            mb = messagebox.askokcancel("Waypoint List Reset", "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.")
-            if mb:
-                self.ed_ap.waypoint.mark_all_waypoints_not_complete()
-        else:
-            mb = messagebox.showerror("Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list.")
 
     def save_settings(self):
         self.entry_update(None)
