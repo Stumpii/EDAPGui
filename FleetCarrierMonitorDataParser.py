@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from dataclasses import dataclass
 from sys import platform
 from time import sleep
 from typing import Dict, TypedDict
@@ -10,7 +11,8 @@ from typing import Dict, TypedDict
 from EDlogger import logger
 
 
-class FleetCarrierRawCargo(TypedDict):
+@dataclass
+class FleetCarrierRawCargo:
     """ The cargo data as stored in the Fleet Carrier data json file. """
     commodity: str  # i.e. "Ceramiccomposites"
     locName: str  # i.e. "Ceramic Composites"
@@ -144,19 +146,19 @@ class FleetCarrierMonitorDataParser:
             return None
 
         # Sort alphabetically
-        sorted_raw_cargo = sorted(raw_cargo, key=lambda x: x['locName'].lower())
+        sorted_raw_cargo = sorted(raw_cargo, key=lambda x: x.locName.lower())
 
         cons_cargo: dict[str, FleetCarrierCargo] = {}
         for item in sorted_raw_cargo:
-            loc_name = item['locName']
+            loc_name = item.locName
             if loc_name in cons_cargo:
                 # Update qty
-                cons_cargo[loc_name]['qty'] = cons_cargo[loc_name]['qty'] + item['qty']
+                cons_cargo[loc_name]['qty'] = cons_cargo[loc_name]['qty'] + item.qty
             else:
                 # Add item
-                cons_cargo[loc_name] = FleetCarrierCargo(commodity=item["commodity"],
-                                                         locName=item["locName"],
-                                                         qty=item["qty"])
+                cons_cargo[loc_name] = FleetCarrierCargo(commodity=item.commodity,
+                                                         locName=item.locName,
+                                                         qty=item.qty)
 
         return cons_cargo
 
