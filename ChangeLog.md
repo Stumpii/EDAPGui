@@ -1,3 +1,11 @@
+# 1/4/2026 v1.9.0 b2
+- Added load last wp function.
+- Added Load Settings button to main form.
+- Refactor colonization editor.
+- Add Fleet Carrier data to colonization editor.
+- Consolidated json reading/writing for ship configs.
+- Added Colonization Editor to docs.
+
 # 12/30/2025 v1.9.0 b1
 - Added Colonization Tab.
 
