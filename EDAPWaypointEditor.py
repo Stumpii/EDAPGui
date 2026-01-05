@@ -275,6 +275,7 @@ class WaypointEditorTab:
         ttk.Button(waypoint_buttons_frame, text="Down", command=self.move_waypoint_down).pack(padx=5, pady=2, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Add", command=self.add_waypoint).pack(padx=5, pady=2, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Del", command=self.delete_waypoint).pack(padx=5, pady=2, fill="x")
+        ttk.Button(waypoint_buttons_frame, text="Add REPEAT", command=self.add_repeat_waypoint).pack(padx=5, pady=2, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Plot to System", command=self.plot_waypoint_system).pack(padx=5, pady=20, fill="x")
         ttk.Button(waypoint_buttons_frame, text="Plot to Station", command=self.plot_waypoint_station).pack(padx=5, pady=2, fill="x")
 
@@ -919,6 +920,15 @@ class WaypointEditorTab:
 
     def add_waypoint(self):
         new_waypoint = InternalWaypoint(system_name="New System")
+        self.waypoints.waypoints.append(new_waypoint)
+        self.update_waypoints_list()
+
+        # Select the new item at the bottom of the list
+        selected_indexes = [len(self.waypoints.waypoints) - 1]
+        select_treeview_items_by_idx(self.waypoints_tree, selected_indexes)
+
+    def add_repeat_waypoint(self):
+        new_waypoint = InternalWaypoint(system_name="REPEAT")
         self.waypoints.waypoints.append(new_waypoint)
         self.update_waypoints_list()
 
