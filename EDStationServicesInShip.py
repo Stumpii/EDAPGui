@@ -386,6 +386,8 @@ class CommoditiesMarket:
         if qty <= 0:
             return False, 0
 
+
+
         # Determine if station buys the commodity!
         self.market_parser.get_market_data()
         if not self.market_parser.can_sell_item(name):
@@ -405,9 +407,15 @@ class CommoditiesMarket:
                     logger.debug(f"Execute trade: Sell {name} ({qty} of {demand} demanded) at position {index + 1}.")
                     break
 
+        # Check how many of the item do we have.
+        qty_in_cargo = 9999
+        if cargo_parser.get_item(name) is not None:
+            cargo_item = cargo_parser.get_item(name)
+            qty_in_cargo = cargo_item['Count']
+
         # Qty we can sell. Unlike buying, we can sell more than the demand
         # But maybe not at all stations!
-        act_qty = qty
+        act_qty = min(qty, qty_in_cargo)
 
         if index > -1:
             keys.send('UI_Up', hold=5.0)  # go up to top of list
@@ -425,8 +433,8 @@ class CommoditiesMarket:
             sleep(0.5)  # give time for popup
             keys.send('UI_Up', repeat=2)  # make sure at top
 
-            # Log the planned quantity
-            if qty >= 9999:
+            # Sell all if quantity is 9999 or if we are selling
+            if act_qty >= 9999 or qty_in_cargo <= act_qty:
                 self.ap_ckb('log+vce', f"Selling all our units of {name}.")
                 logger.info(f"Attempting to sell all our units of {name}")
                 keys.send("UI_Right", hold=4)
@@ -440,8 +448,6 @@ class CommoditiesMarket:
             keys.send('UI_Select')  # Select to Sell all
             sleep(0.5)
             # keys.send('UI_Back')  # Back to commodities list
-
-
 
         return True, act_qty
 
