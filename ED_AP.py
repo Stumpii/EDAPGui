@@ -2383,8 +2383,8 @@ class EDAutopilot:
                 while self.jn.ship_state()['status'] != 'in_space':
                     sleep(1)
 
-                # If we are on a Fleet Carrier we will pitch up 90 deg and fly away to avoid planet
-                if fleet_carrier:
+                # If we are on a Fleet Carrier/Squadron Carrier we will pitch up 90 deg and fly away to avoid planet
+                if fleet_carrier or squadron_fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
                     self.pitch_up_down(self.config['FCDepartureAngle'])
