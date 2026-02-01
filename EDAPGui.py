@@ -40,7 +40,6 @@ from EDAPWaypointEditor import WaypointEditorTab
 
 from EDlogger import logger
 
-
 """
 File:EDAPGui.py
 
@@ -58,7 +57,6 @@ Ideas taken from:  https://github.com/skai2/EDAutopilot
 
 Author: sumzer0@yahoo.com
 """
-
 
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
@@ -186,7 +184,7 @@ class APGui:
         self.entries['ship']['PitchFactor'].delete(0, tk.END)
         self.entries['ship']['RollFactor'].delete(0, tk.END)
         self.entries['ship']['YawFactor'].delete(0, tk.END)
-        
+
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
         self.entries['autopilot']['Nav Align Tries'].delete(0, tk.END)
         self.entries['autopilot']['Jump Tries'].delete(0, tk.END)
@@ -217,7 +215,7 @@ class APGui:
         self.entries['ship']['PitchFactor'].insert(0, float(self.ed_ap.pitchfactor))
         self.entries['ship']['RollFactor'].insert(0, float(self.ed_ap.rollfactor))
         self.entries['ship']['YawFactor'].insert(0, float(self.ed_ap.yawfactor))
-        
+
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
         self.entries['autopilot']['Jump Tries'].insert(0, int(self.ed_ap.config['JumpTries']))
@@ -246,13 +244,8 @@ class APGui:
         else:
             self.radiobuttonvar['debug_mode'].set("Error")
 
-        # global trap for these keys, the 'end' key will stop any current AP action
-        # the 'home' key will start the FSD Assist.  May want another to start SC Assist
-        if self.ed_ap.config['HotkeysEnable']:
-            keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'], self.stop_all_assists)
-            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
-            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'],  self.callback, args=('sc_start',  None))
-            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'],  self.callback, args=('robigo_start',  None))
+        # Hotkeys
+        self.setup_hotkeys()
 
         # check for updates
         self.check_updates()
@@ -263,6 +256,22 @@ class APGui:
         self.gui_loaded = True
         # Send a log entry which will flush out the buffer.
         self.callback('log', 'ED Autopilot loaded successfully.')
+
+    def setup_hotkeys(self):
+        """ Enable or disable hotkeys.
+        Global trap for these keys, the 'end' key will stop any current AP action the 'home' key will start the
+        FSD Assist. May want another to start SC Assist.
+        """
+        # Remove all the hotkeys. Adding a dummy hotkey will eliminate an error if none had been configured.
+        keyboard.add_hotkey(' ', print)
+        keyboard.remove_all_hotkeys()
+
+        if self.ed_ap.config['HotkeysEnable']:
+            # Add the desired hotkeys
+            keyboard.add_hotkey(self.ed_ap.config['HotKey_StopAllAssists'], self.stop_all_assists)
+            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
+            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'], self.callback, args=('sc_start', None))
+            keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'], self.callback, args=('robigo_start', None))
 
     # callback from the EDAP, to configure GUI items
     def callback(self, msg, body=None):
@@ -356,7 +365,7 @@ class APGui:
         self.entries['ship']['PitchFactor'].delete(0, tk.END)
         self.entries['ship']['RollFactor'].delete(0, tk.END)
         self.entries['ship']['YawFactor'].delete(0, tk.END)
-        
+
         self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
@@ -364,7 +373,7 @@ class APGui:
         self.entries['ship']['PitchFactor'].insert(0, self.ed_ap.pitchfactor)
         self.entries['ship']['RollFactor'].insert(0, self.ed_ap.rollfactor)
         self.entries['ship']['YawFactor'].insert(0, self.ed_ap.yawfactor)
-        
+
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
 
@@ -642,7 +651,7 @@ class APGui:
             self.ed_ap.pitchfactor = float(self.entries['ship']['PitchFactor'].get())
             self.ed_ap.rollfactor = float(self.entries['ship']['RollFactor'].get())
             self.ed_ap.yawfactor = float(self.entries['ship']['YawFactor'].get())
-            
+
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
             self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
             self.ed_ap.config['JumpTries'] = int(self.entries['autopilot']['Jump Tries'].get())
@@ -789,7 +798,7 @@ class APGui:
 
         if self.checkboxvar['Activate Elite for each key'].get():
             self.ed_ap.set_activate_elite_eachkey(True)
-            self.ed_ap.keys.activate_window=True
+            self.ed_ap.keys.activate_window = True
         else:
             self.ed_ap.set_activate_elite_eachkey(False)
             self.ed_ap.keys.activate_window = False
@@ -845,7 +854,10 @@ class APGui:
                 self.ed_ap.debug_overlay = False
 
         self.ed_ap.config['AFKCombat_AttackAtWill'] = self.checkboxvar['AFKCombat AttackAtWill'].get()
-        self.ed_ap.config['HotkeysEnable'] = self.checkboxvar['Enable Hotkeys'].get()
+
+        if field == 'Enable Hotkeys':
+            self.ed_ap.config['HotkeysEnable'] = self.checkboxvar['Enable Hotkeys'].get()
+            self.setup_hotkeys()
 
         if field == 'Debug OCR':
             self.ed_ap.debug_ocr = self.checkboxvar['Debug OCR'].get()
@@ -1030,18 +1042,18 @@ class APGui:
 
         nb = ttk.Notebook(win)
         nb.grid(row=1, padx=10, pady=5, sticky="NSEW")
-        
+
         page0 = ttk.Frame(nb)
         page0.grid_columnconfigure(0, weight=1)
         page0.grid_rowconfigure(0, weight=0)
         page0.grid_rowconfigure(1, weight=0)
         page0.grid_rowconfigure(2, weight=1)  # Log row
         nb.add(page0, text="Main")  # main page
-        
+
         page1 = ttk.Frame(nb)
         page1.grid_columnconfigure(0, weight=1)
         nb.add(page1, text="Settings")  # options page
-        
+
         page2 = ttk.Frame(nb)
         page2.grid_columnconfigure([0, 1], weight=1)
         nb.add(page2, text="Debug/Test")  # debug/test page
