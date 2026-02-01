@@ -51,6 +51,8 @@ class OCR:
         s1_new = s1_new.replace("', '",  "")
         s1_new = s1_new.replace("<",  "")
         s1_new = s1_new.replace(">",  "")
+        s1_new = s1_new.replace("-",  "")
+        s1_new = s1_new.replace("—",  "")
         s1_new = s1_new.replace(" ",  "")
 
         s2_new = s2.replace("['",  "")
@@ -60,6 +62,8 @@ class OCR:
         s2_new = s2_new.replace("', '",  "")
         s2_new = s2_new.replace("<",  "")
         s2_new = s2_new.replace(">",  "")
+        s2_new = s2_new.replace("-",  "")
+        s2_new = s2_new.replace("—",  "")
         s2_new = s2_new.replace(" ",  "")
 
         # return self.jarowinkler.similarity(s1, s2)
