@@ -11,7 +11,7 @@ import numpy as np
 
 from EDAP_data import GuiFocusExternalPanel
 from EDlogger import logger
-from Screen_Regions import Quad, Point
+from Screen_Regions import Quad, Point, load_calibrated_regions
 from StatusParser import StatusParser
 from Screen import crop_image_by_pct
 
@@ -59,12 +59,12 @@ def image_perspective_transform(image, src_quad: Quad):
     return dst, m, rev
 
 
-def image_reverse_perspective_transform(image, src_quad: Quad, transform) -> Quad:
-    """ Performs warping of points and returns the transformed points.
+def image_reverse_perspective_transform(image, src_quad: Quad, rev_transform) -> Quad:
+    """ Performs warping of points and returns the transformed (warped) points.
     Used to calculate overlay graphics for display over the navigation panek, which is warped.
-    @param image: The image used to generate the transform.
+    @param image: The straightened image from the perspective transform function.
     @param src_quad: A quad to transform, in percent of the image size.
-    @param transform: The transform created by the perspective transform function.
+    @param rev_transform: The reverse transform created by the perspective transform function.
     @return: A quad representing the input quad, reverse transformed. Return quad is in pixel relative to the origin
     of the image (0, 0).
     """
@@ -81,7 +81,7 @@ def image_reverse_perspective_transform(image, src_quad: Quad, transform) -> Qua
     src_arr = np.float32(source_coord).reshape(-1, 1, 2)
 
     # Transform the array of coordinates to the skew of the nav panel
-    dst_arr = cv2.perspectiveTransform(src_arr, transform)
+    dst_arr = cv2.perspectiveTransform(src_arr, rev_transform)
 
     # Convert 3D results to 2D array for results
     dst_arr_2d = dst_arr.reshape(-1, dst_arr.shape[-1])
@@ -128,34 +128,28 @@ class EDNavigationPanel:
                     'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     }
         self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]}}
-        self.sub_reg_size = {'nav_pnl_tab': {"width": 0.23, "height": 0.7},  # Nav panel tab size in percent
-                             'nav_pnl_location': {"width": 1.0, "height": 0.08}}  # Nav panel location size in percent
+                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]},
+                        'nav_pnl_tab': {'rect': [0.0, 0.0, 0.23, 0.7]},
+                        'nav_pnl_location': {'rect': [0.0, 0.0, 1.0, 0.08]},
+                        }
         self.panel_quad_pct = Quad()
         self.panel_quad_pix = Quad()
         self.panel = None
         self._transform = None  # Warp transform to deskew the Nav panel
         self._rev_transform = None  # Reverse warp transform to skew to match the Nav panel
 
-        self.load_calibrated_regions()
+        # Load custom regions from file
+        load_calibrated_regions('EDNavigationPanel', self.reg)
 
-    def load_calibrated_regions(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        if os.path.exists(calibration_file):
-            with open(calibration_file, 'r') as f:
-                calibrated_regions = json.load(f)
+        self.customize_regions()
 
-            for key, value in self.reg.items():
-                calibrated_key = f"EDNavigationPanel.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
-
-            # Produce quadrilateral from the two bounds rectangles
-            reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
-            reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
-            self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
-            self.panel_quad_pix = copy(self.panel_quad_pct)
-            self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
+    def customize_regions(self):
+        # Produce quadrilateral from the two bounds rectangles
+        reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
+        reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
+        self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
+        self.panel_quad_pix = copy(self.panel_quad_pct)
+        self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
 
     def capture_panel_straightened(self):
         """ Grab the image based on the panel coordinates.
@@ -297,7 +291,8 @@ class EDNavigationPanel:
             if tab_bar is None:
                 return False, ""
 
-            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, self.sub_reg_size['nav_pnl_tab']['width'], self.sub_reg_size['nav_pnl_tab']['height'], 'nav panel')
+            item = Quad.from_rect(self.sub_reg['nav_pnl_tab']['rect'])
+            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, item, 'nav panel')
             if img_selected is not None:
                 if self.ap.debug_overlay:
                     tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
@@ -454,7 +449,8 @@ class EDNavigationPanel:
                 return None
 
             # Find the selected item/menu (solid orange)
-            img_selected, q = self.ocr.get_highlighted_item_in_image(loc_panel, self.sub_reg_size['nav_pnl_location']['width'], self.sub_reg_size['nav_pnl_location']['height'])
+            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            img_selected, q = self.ocr.get_highlighted_item_in_image(loc_panel, item)
 
             # Check if end of list.
             if img_selected is None and in_list:
@@ -498,7 +494,9 @@ class EDNavigationPanel:
                 return False
 
             # Find the selected item/menu (solid orange)
-            img_selected, quad = self.ocr.get_highlighted_item_in_image(loc_panel, self.sub_reg_size['nav_pnl_location']['width'], self.sub_reg_size['nav_pnl_location']['height'])
+            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            img_selected, quad = self.ocr.get_highlighted_item_in_image(loc_panel, item)
+
             # Check if end of list.
             if img_selected is None and in_list:
                 logger.debug(f"Off end of list. Did not find '{dst_name}' in list.")

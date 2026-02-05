@@ -1,4 +1,7 @@
+import json
+import os
 from copy import copy
+from typing import TypedDict
 
 import numpy as np
 from numpy import array, sum
@@ -16,12 +19,193 @@ Author: sumzer0@yahoo.com
 """
 
 
-def scale_region(region, sub_region) -> [float, float, float, float]:
-    """ Converts a sub region scale to a region scale """
-    r = Quad.from_rect(region)
-    sr = Quad.from_rect(sub_region)
+def scale_region(region_rect, sub_region_rect) -> [float, float, float, float]:
+    """ Converts a sub region scale to a region scale.
+    @param region_rect: A rectangle ([float, float, float, float]).
+    @param sub_region_rect: A rectangle ([float, float, float, float]).
+    @return: A rectangle ([float, float, float, float]).
+    """
+    r = Quad.from_rect(region_rect)
+    sr = Quad.from_rect(sub_region_rect)
     r.subregion_from_quad(sr)
     return r.to_rect_list()
+
+
+def load_calibrated_regions(prefix: str, reg: dict):
+    """ Read the custom region sizes from the calibration json file.
+    @param prefix: The dictionary key prefix (i.e. 'EDStationServicesInShip')
+    @param reg: Dictionary of regions which is modified.
+    """
+    if not prefix or prefix == '' or not reg:
+        return
+
+    calibration_file = 'configs/ocr_calibration.json'
+    if os.path.exists(calibration_file):
+        with open(calibration_file, 'r') as f:
+            calibrated_regions = json.load(f)
+
+        # Go through all regions in this class
+        for key1, value1 in reg.items():
+            calibrated_key = f"{prefix}.{key1}"
+            if calibrated_key in calibrated_regions:
+                # Use region details from the calibration file.
+                reg[key1]['rect'] = calibrated_regions[calibrated_key]['rect']
+
+                # Check if this region has any sub-regions
+                for key2, value2 in reg.items():
+                    calibrated_sub_key = f"{prefix}.{key1}.subregion.{key2}"
+                    if calibrated_sub_key in calibrated_regions:
+                        # Scale the regions based on the sub-region.
+                        reg[key2]['rect'] = scale_region(reg[key1]['rect'],
+                                                         calibrated_regions[calibrated_sub_key]['rect'])
+
+
+class SubRegion(TypedDict):
+    """ """
+    rect: list[float]
+    text: str
+
+
+class Objects(TypedDict):
+    """ """
+    width: float
+    height: float
+    text: str
+
+
+class MyRegion(TypedDict):
+    """ """
+    rect: list[float]
+    text: str
+    readonly: bool
+    regions: dict[str, SubRegion]
+    objects: dict[str, Objects]
+
+
+def load_ocr_calibration_data() -> dict[str, MyRegion]:
+    # TODO - Move this into Screen_Regions class
+    ocr_calibration_data = dict[str, MyRegion]
+    calibration_file = 'configs/ocr_calibration.json'
+
+    default_regions = dict[str, MyRegion]
+    default_regions = {
+        # "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
+        # "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
+        # "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
+        # "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
+        # "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
+        # "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
+        "EDCodex.full_panel": {"rect": [0.0589, 0.0983, 0.9406, 0.8617],
+                               "text": "1. Open the Codex from right hand cockpit panel.\n2. Draw a rectangle from the top left corner of the codex 'book' to the end \nof the line above the exit button at the bottom right.",
+                               "readonly": False},
+
+        "EDInternalStatusPanel.panel_bounds1": {
+            "rect": [0.1197, 0.2733, 0.6937, 0.7125],
+            "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the top left corner of the nav panel to the bottom right corner.",
+            "readonly": False},
+        "EDInternalStatusPanel.panel_bounds2": {
+            "rect": [0.1541, 0.2408, 0.6781, 0.8],
+            "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the bottom left corner of the nav panel to the top right corner.",
+            "readonly": False},
+        # "EDInternalStatusPanel.tab_bar": {"rect": [0.35, 0.2, 0.85, 0.26]},
+        # "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
+        # "EDInternalStatusPanel.size.inventory_item": {"width": 100, "height": 20},
+        # "EDInternalStatusPanel.size.nav_pnl_tab": {"width": 100, "height": 20},
+
+        "EDNavigationPanel.panel_bounds1": {
+            "rect": [0.1197, 0.2733, 0.6937, 0.7125],
+            "text": "1. Open Navigation Panel.\n2. Draw a rectangle from the top left corner of the nav panel to the bottom right corner.",
+            "readonly": False},
+        "EDNavigationPanel.panel_bounds2": {
+            "rect": [0.1541, 0.2408, 0.6781, 0.8],
+            "text": "1. Open Navigation Panel.\n2. Draw a rectangle from the bottom left corner of the nav panel to the top right corner.",
+            "readonly": False},
+        # "EDNavigationPanel.tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
+        # "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
+        # "EDNavigationPanel.size.nav_pnl_location": {"width": 500, "height": 35},
+
+        "EDGalaxyMap.full_panel": {
+            "rect": [0.0, 0.0, 0.0, 0.0],
+            "text": "This is calculated automatically from the Codex screen values. Do not change.",
+            "readonly": True},
+        "EDGalaxyMap.full_panel.subregion.cartographics": {
+            "rect": [0.0, 0.0, 0.15, 0.075],
+            "text": "Contains the CARTOGRAPHICS text.",
+            "readonly": False},
+
+        "EDSystemMap.full_panel": {
+            "rect": [0.0, 0.0, 0.0, 0.0],
+            "text": "This is calculated automatically from the Codex screen values. Do not change.",
+            "readonly": True},
+        "EDSystemMap.full_panel.subregion.cartographics": {
+            "rect": [0.0, 0.0, 0.15, 0.075],
+            "text": "Contains the CARTOGRAPHICS text.",
+            "readonly": False},
+
+        "EDStationServicesInShip.station_services": {
+            "rect": [0.0809, 0.1136, 0.9186, 0.8464],
+            "text": "1. Open Station Service.\n2. Draw a rectangle from the top left of the left panel box to the bottom right of the right panel box.",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market": {
+            "rect": [0.0479, 0.0983, 0.9516, 0.8617],
+            "text": "This is calculated automatically from the Codex screen values. Do not change.",
+            "readonly": True},
+        "EDStationServicesInShip.commodities_market.subregion.connected_to": {
+            "rect": [0.0, 0.0, 0.25, 0.1],
+            "text": "The connected to text.",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market.subregion.title": {
+            "rect": [0.0, 0.0, 0.25, 0.1],
+            "text": "The title (station name).",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market.subregion.commodity_column": {
+            "rect": [0.1575, 0.205, 0.4075, 1.0],
+            "text": "The commodity column.",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market.subregion.buy_qty_box": {
+            "rect": [0.275, 0.332, 0.49, 0.402],
+            "text": "The buy quantity box.",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market.subregion.sell_qty_box": {
+            "rect": [0.275, 0.322, 0.49, 0.390],
+            "text": "The sell quantity box.",
+            "readonly": False},
+        "EDStationServicesInShip.commodities_market.subregion.commodity_name": {
+            "rect": [0.1575, 0.252, 0.4075, 0.290],
+            "text": "The first commodity name cell.",
+            "readonly": False},
+        # "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
+        # "EDStationServicesInShip.commodities_list": {"rect": [0.2, 0.2, 0.8, 0.9]},
+        # "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
+        # "EDStationServicesInShip.size.commodity_item": {"width": 100, "height": 15},
+        # "EDStationServicesInShip.mission_board_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
+        # "EDStationServicesInShip.missions_list": {"rect": [0.06, 0.25, 0.48, 0.8]},
+        # "EDStationServicesInShip.mission_loaded": {"rect": [0.06, 0.25, 0.48, 0.35]},
+        # "EDStationServicesInShip.size.mission_item": {"width": 100, "height": 15},
+    }
+
+    if not os.path.exists(calibration_file):
+        # Create the file with default values if it doesn't exist
+        with open(calibration_file, 'w') as f:
+            json.dump(default_regions, f, indent=4)
+        ocr_calibration_data = default_regions
+    else:
+        with open(calibration_file, 'r') as f:
+            ocr_calibration_data = json.load(f)
+
+        # Check for missing keys and add them
+        updated = False
+        for key, value in default_regions.items():
+            if key not in ocr_calibration_data:
+                ocr_calibration_data[key] = value
+                updated = True
+
+        # If we updated the data, save it back to the file
+        if updated:
+            with open(calibration_file, 'w') as f:
+                json.dump(ocr_calibration_data, f, indent=4)
+
+    return ocr_calibration_data
 
 
 class Screen_Regions:
@@ -49,22 +233,24 @@ class Screen_Regions:
         # regions with associated filter and color ranges
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
         self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
-        self.reg['target']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
-        self.reg['target_occluded']    = {'rect': [0.33, 0.27, 0.66, 0.70], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
+        self.reg['target']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}  # also called destination
+        # self.reg['target']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
+        self.reg['target_occluded']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
+        # self.reg['target_occluded']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
         self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
         self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
         self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
         self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}    
-        self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}   
-        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}  
+        self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
 
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
             xx = self.reg[key]['rect']
-            self.reg[key]['rect'] = [int(xx[0]*screen.screen_width), int(xx[1]*screen.screen_height), 
-                                     int(xx[2]*screen.screen_width), int(xx[3]*screen.screen_height)]
-            self.reg[key]['width']  = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
+            self.reg[key]['rect'] = [int(xx[0] * screen.screen_width), int(xx[1] * screen.screen_height),
+                                     int(xx[2] * screen.screen_width), int(xx[3] * screen.screen_height)]
+            self.reg[key]['width'] = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
             self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
 
     def capture_region(self, screen, region_name):
@@ -86,7 +272,7 @@ class Screen_Regions:
     def match_template_in_region(self, region_name, templ_name, inv_col=True):
         """ Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask. """
-        img_region = self.capture_region_filtered(self.screen, region_name, inv_col)    # which would call, reg.capture_region('compass') and apply defined filter
+        img_region = self.capture_region_filtered(self.screen, region_name, inv_col)   # which would call, reg.capture_region('compass') and apply defined filter
         img_templ = self.templates.template[templ_name]['image']
 
         # now = datetime.now()
@@ -136,7 +322,7 @@ class Screen_Regions:
         Returns the original image, detail of match and the match mask. """
         match = cv2.matchTemplate(image, self.templates.template[template]['image'], cv2.TM_CCOEFF_NORMED)
         (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(match)
-        return image, (minVal, maxVal, minLoc, maxLoc), match     
+        return image, (minVal, maxVal, minLoc, maxLoc), match
 
     def match_template_in_image_x3(self, image, templ_name):
         """ Attempt to match the given template in the (unfiltered) image.
@@ -174,11 +360,11 @@ class Screen_Regions:
         # Load the image in greyscale
         img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # create a CLAHE object (Arguments are optional).  Histogram equalization, improves constrast
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         img_out = clahe.apply(img_gray)
 
         return img_out
-        
+
     def filter_by_color(self, image, color_range):
         """Filters an image based on a given color range.
         Returns the filtered image. Pixels within the color range are returned
@@ -189,23 +375,23 @@ class Screen_Regions:
         filtered = cv2.inRange(hsv, color_range[0], color_range[1])
 
         return filtered
- 
+
     # not used
     def filter_bright(self, image=None, noOp=None):
         equalized = self.equalize(image)
-        equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)    #hhhmm, equalize() already converts to gray
+        equalized = cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)  #hhhmm, equalize() already converts to gray
         equalized = cv2.cvtColor(equalized, cv2.COLOR_BGR2HSV)
-        filtered  = cv2.inRange(equalized, array([0, 0, 215]), array([0, 0, 255]))  #only high value
+        filtered = cv2.inRange(equalized, array([0, 0, 215]), array([0, 0, 255]))  #only high value
 
         return filtered
-    
+
     def set_sun_threshold(self, thresh):
         self.sun_threshold = thresh
 
     # need to compare filter_sun with filter_bright
     def filter_sun(self, image=None, noOp=None):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        
+
         # set low end of filter to 25 to pick up the dull red Class L stars
         (thresh, blackAndWhiteImage) = cv2.threshold(hsv, self.sun_threshold, 255, cv2.THRESH_BINARY)
 
@@ -214,17 +400,18 @@ class Screen_Regions:
     # percent the image is white
     def sun_percent(self, screen):
         blackAndWhiteImage = self.capture_region_filtered(screen, 'sun')
- 
-        wht = sum(blackAndWhiteImage == 255)     
+
+        wht = sum(blackAndWhiteImage == 255)
         blk = sum(blackAndWhiteImage != 255)
 
-        result = int((wht / (wht+blk))*100)
+        result = int((wht / (wht + blk)) * 100)
 
         return result
 
 
 class Point:
     """Creates a point on a coordinate plane with values x and y."""
+
     def __init__(self, x, y):
         """Defines x and y variables"""
         self.x: float = x
@@ -257,6 +444,7 @@ class Quad:
     """ Represents a quadrilateral (a four-sided polygon that has four edges and four vertices).
     It can be classified into various types, such as squares, rectangles, trapezoids, and rhombuses.
     """
+
     def __init__(self, p1: Point = None, p2: Point = None, p3: Point = None, p4: Point = None):
         self.pt1: Point = p1
         self.pt2: Point = p2
@@ -393,7 +581,3 @@ class Quad:
                 f" pt2: ({self.pt2.x}, {self.pt2.y})\n"
                 f" pt3: ({self.pt3.x}, {self.pt3.y})\n"
                 f" pt4: ({self.pt4.x}, {self.pt4.y})")
-
-
-
-

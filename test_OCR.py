@@ -64,7 +64,8 @@ class OCRTestCase(unittest.TestCase):
         image_path = 'test/ocr/nav_panel_location_panel.png'
         orig_image = cv2.imread(image_path)
         # im, _, _ = ocr.get_highlighted_item_in_image(orig_image, 0.23, 0.7)
-        im, _ = ocr.get_highlighted_item_in_image(orig_image, 1.0, 0.08)
+        item = Quad.from_rect([0.0, 0.0, 1.0, 0.08])
+        im, _ = ocr.get_highlighted_item_in_image(orig_image, item)
         cv2.imwrite('test/ocr/tab_bar_out.png', im)
 
         self.assertEqual(True, True)  # add assertion here

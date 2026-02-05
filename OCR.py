@@ -160,17 +160,16 @@ class OCR:
             logger.error(f"OCR failed: {e}")
             return None
 
-    def get_highlighted_item_data(self, image, min_w, min_h, name=''):
+    def get_highlighted_item_data(self, image, item: Quad, name=''):
         """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
             rectangle with dark text, instead of orange/blue text on a dark background.
             The OCR daya of the first item matching the criteria is returned, otherwise None.
+            @param item: A Quad representing the item, in percentage.
             @param name:
             @param image: The image to check.
-            @param min_h: Minimum height in percent of the input image.
-            @param min_w: Minimum width in percent of the input image.
      """
         # Find the selected item/menu (solid orange)
-        img_selected, quad = self.get_highlighted_item_in_image(image, min_w, min_h)
+        img_selected, quad = self.get_highlighted_item_in_image(image, item)
         if img_selected is not None:
             # cv2.imshow("img", img_selected)
 
@@ -185,16 +184,18 @@ class OCR:
             return None, None, None, None
 
     @staticmethod
-    def get_highlighted_item_in_image(image, min_w, min_h) -> (MatLike, Quad):
+    def get_highlighted_item_in_image(image, item: Quad) -> (MatLike, Quad):
         """ Attempts to find a selected item in an image. The selected item is identified by being solid orange or blue
         rectangle with dark text, instead of orange/blue text on a dark background.
         The image of the first item matching the criteria and minimum width and height is returned
         with x and y co-ordinates, otherwise None.
+        @param item: A Quad representing the item in percent.
         @param image: The image to check.
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
         @return: The highlighted image and the matching Quad position in percentage of the image size, or (None, None)
         """
+        min_w = item.get_width()
+        min_h = item.get_height()
+
         # Existing size
         img_h, img_w, _ = image.shape
 
@@ -263,17 +264,16 @@ class OCR:
         image = self.screen.get_screen_rect_pct(rect)
         return image
 
-    def is_text_in_selected_item_in_image(self, img, text, min_w, min_h, name=''):
+    def is_text_in_selected_item_in_image(self, img, text, item: Quad, name=''):
         """ Does the selected item in the region include the text being checked for.
         Checks if text exists in a region using OCR.
         Return True if found, False if not and None if no item was selected.
+        @param item: A quad representing the item in pct. 
         @param name:
         @param img: The image to check.
         @param text: The text to find.
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
         """
-        img_selected, _ = self.get_highlighted_item_in_image(img, min_w, min_h)
+        img_selected, _ = self.get_highlighted_item_in_image(img, item)
         if img_selected is None:
             logger.debug(f"Did not find a selected item in the region.")
             return None
@@ -322,14 +322,13 @@ class OCR:
             logger.debug(f"Did not find '{text}' text in item text '{str(ocr_textlist)}'.")
             return False, str(ocr_textlist)
 
-    def select_item_in_list(self, text, region, keys, min_w, min_h, name='') -> bool:
+    def select_item_in_list(self, text, region, keys, quad: Quad, name='') -> bool:
         """ Attempt to find the item by text in a list defined by the region.
         If found, leaves it selected for further actions.
+        @param quad: A quad representing the item in percentage.
         @param keys:
         @param text: Text to find.
         @param region: The region to check in % (0.0 - 1.0).
-        @param min_h: Minimum height in percent of the input image.
-        @param min_w: Minimum width in percent of the input image.
         """
 
         in_list = False  # Have we seen one item yet? Prevents quiting if we have not selected the first item.
@@ -338,7 +337,7 @@ class OCR:
             if img is None:
                 return False
 
-            found = self.is_text_in_selected_item_in_image(img, text, min_w, min_h, name)
+            found = self.is_text_in_selected_item_in_image(img, text, quad, name)
 
             # Check if end of list.
             if found is None and in_list:

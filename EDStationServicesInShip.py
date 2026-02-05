@@ -10,7 +10,7 @@ from MarketParser import MarketParser
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
-from Screen_Regions import Quad, scale_region
+from Screen_Regions import Quad, scale_region, load_calibrated_regions
 
 """
 File:StationServicesInShip.py    
@@ -41,35 +41,13 @@ class EDStationServicesInShip:
                     'connected_to': {'rect': [0.0, 0.0, 0.25, 0.1]},
                     'title': {'rect': [0.0, 0.0, 1.0, 1.0]},
                     'commodity_column': {'rect': [0.0, 0.0, 1.0, 1.0]},
-                    'buy_sell_qty_box': {'rect': [0.0, 0.0, 1.0, 1.0]}, }
-        self.sub_reg = {'connected_to': {'rect': [0.0, 0.0, 0.25, 0.1]},
-                        'title': {'rect': [0.0, 0.0, 0.25, 0.1]},
-                        'commodity_column': {'rect': [0.1575, 0.205, 0.4075, 1.0]},
-                        'buy_sell_qty_box': {'rect': [0.275, 0.335, 0.49, 0.405]}, }
-        self.sub_reg_size = {'commodity_name': {"width": 1.0, "height": 0.051}, }  # Commodity name size in percent of the commodity column
+                    'buy_qty_box': {'rect': [0.0, 0.0, 1.0, 1.0]},
+                    'sell_qty_box': {'rect': [0.0, 0.0, 1.0, 1.0]},
+                    'commodity_name': {'rect': [0.0, 0.0, 1.0, 1.0]},
+                    }
 
-        self.load_calibrated_regions()
-
-    def load_calibrated_regions(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        if os.path.exists(calibration_file):
-            with open(calibration_file, 'r') as f:
-                calibrated_regions = json.load(f)
-
-            for key, value in self.reg.items():
-                calibrated_key = f"EDStationServicesInShip.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
-
-            # Scale the regions based on the sub-region.
-            self.reg['connected_to']['rect'] = scale_region(self.reg['station_services']['rect'],
-                                                            self.sub_reg['connected_to']['rect'])
-            self.reg['title']['rect'] = scale_region(self.reg['commodities_market']['rect'],
-                                                     self.sub_reg['title']['rect'])
-            self.reg['commodity_column']['rect'] = scale_region(self.reg['commodities_market']['rect'],
-                                                                self.sub_reg['commodity_column']['rect'])
-            self.reg['buy_sell_qty_box']['rect'] = scale_region(self.reg['commodities_market']['rect'],
-                                                                self.sub_reg['buy_sell_qty_box']['rect'])
+        # Load custom regions from file
+        load_calibrated_regions('EDStationServicesInShip', self.reg)
 
     def goto_station_services(self) -> bool:
         """ Goto Station Services. """
@@ -351,8 +329,8 @@ class CommoditiesMarket:
             keys.send('UI_Select')  # Select that commodity
 
             if self.ap.debug_overlay:
-                q = Quad.from_rect(self.parent.reg['buy_sell_qty_box']['rect'])
-                self.ap.overlay.overlay_quad_pct('buy_sell_qty_box', q, (0, 255, 0), 2, 5)
+                q = Quad.from_rect(self.parent.reg['buy_qty_box']['rect'])
+                self.ap.overlay.overlay_quad_pct('buy_qty_box', q, (0, 255, 0), 2, 5)
                 self.ap.overlay.overlay_paint()
 
             sleep(0.5)  # give time to popup
@@ -426,8 +404,8 @@ class CommoditiesMarket:
             keys.send('UI_Select')  # Select that commodity
 
             if self.ap.debug_overlay:
-                q = Quad.from_rect(self.parent.reg['buy_sell_qty_box']['rect'])
-                self.ap.overlay.overlay_quad_pct('buy_sell_qty_box', q, (0, 255, 0), 2, 5)
+                q = Quad.from_rect(self.parent.reg['sell_qty_box']['rect'])
+                self.ap.overlay.overlay_quad_pct('sell_qty_box', q, (0, 255, 0), 2, 5)
                 self.ap.overlay.overlay_paint()
 
             sleep(0.5)  # give time for popup
@@ -484,17 +462,20 @@ if __name__ == "__main__":
     #svcs.goto_commodities_market()
 
     while 1:
-        svcs.sub_reg = svcs.sub_reg
-        svcs.load_calibrated_regions()
+        load_calibrated_regions('EDStationServicesInShip', svcs.reg)
 
-        commodities_market = Quad.from_rect(svcs.reg['commodities_market']['rect'])
-        test_ed_ap.overlay.overlay_quad_pct('commodities_market', commodities_market, (0, 255, 0), 2, 7)
+        for key, value in svcs.reg.items():
+            commodities_market = Quad.from_rect(svcs.reg[key]['rect'])
+            test_ed_ap.overlay.overlay_quad_pct(key, commodities_market, (0, 255, 0), 2, 7)
 
-        commodity_column = Quad.from_rect(svcs.reg['commodity_column']['rect'])
-        test_ed_ap.overlay.overlay_quad_pct('commodity_column', commodity_column, (0, 255, 0), 2, 7)
-
-        buy_sell_qty_box = Quad.from_rect(svcs.reg['buy_sell_qty_box']['rect'])
-        test_ed_ap.overlay.overlay_quad_pct('buy_sell_qty_box', buy_sell_qty_box, (0, 255, 0), 2, 7)
+        # commodities_market = Quad.from_rect(svcs.reg['commodities_market']['rect'])
+        # test_ed_ap.overlay.overlay_quad_pct('commodities_market', commodities_market, (0, 255, 0), 2, 7)
+        #
+        # commodity_column = Quad.from_rect(svcs.reg['commodity_column']['rect'])
+        # test_ed_ap.overlay.overlay_quad_pct('commodity_column', commodity_column, (0, 255, 0), 2, 7)
+        #
+        # buy_qty_box = Quad.from_rect(svcs.reg['buy_qty_box']['rect'])
+        # test_ed_ap.overlay.overlay_quad_pct('buy_qty_box', buy_qty_box, (0, 255, 0), 2, 7)
 
         test_ed_ap.overlay.overlay_paint()
 

@@ -1,3 +1,14 @@
+# 2/4/2026 v1.9.0 b3
+- Improved calibration by adding sub-regions to the calibration tab to allow easier identification of the sub-regions.
+- Enable/disable hotkeys now no longer needs a restart.
+- Added current station to log when docking.
+- Changed detection of colonisation ship.
+- Additional OCR replacements.
+- Added Squad Carrier to leaving SC code.
+- Added cargo test when selling commodities to sell all when cargo is less than sell qty.
+- Added button for REPEAT waypoint.
+- Added FleetCarrier monitor class.
+
 # 1/4/2026 v1.9.0 b2
 - Added load last wp function.
 - Added Load Settings button to main form.
