@@ -301,7 +301,7 @@ class EDKeys:
             # Focus Elite window if configured.
             if self.activate_window:
                 set_focus_elite_window()
-                sleep(0.05)
+                sleep(0.15)
 
             if state is None or state == 1:
                 for mod in key['mods']:
@@ -332,6 +332,26 @@ class EDKeys:
                 sleep(repeat_delay)
             else:
                 sleep(self.key_repeat_delay)
+
+    def release_all_keys(self):
+        """Release all modifier keys and any currently tracked key presses to prevent stuck keys.
+        Called on stop/interrupt to ensure no keys remain held down."""
+        modifier_scancodes = [
+            SCANCODE.get("Key_LeftShift"),
+            SCANCODE.get("Key_RightShift"),
+            SCANCODE.get("Key_LeftControl"),
+            SCANCODE.get("Key_RightControl"),
+            SCANCODE.get("Key_LeftAlt"),
+            SCANCODE.get("Key_RightAlt"),
+        ]
+        for sc in modifier_scancodes:
+            if sc is not None:
+                ReleaseKey(sc)
+
+        for binding in self.keys.values():
+            ReleaseKey(binding['key'])
+            for mod in binding['mods']:
+                ReleaseKey(mod)
 
     def get_collisions(self, key_name: str) -> list[str]:
         """ Get key name collisions (keys used for more than one binding).

@@ -2847,7 +2847,8 @@ class EDAutopilot:
                 break
 
         if not found:
-            raise ValueError("Invalid thread object")
+            # Thread already exited, nothing to interrupt
+            return
 
         ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid),
                                                          ctypes.py_object(exception))
@@ -2956,6 +2957,7 @@ class EDAutopilot:
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
+        self.keys.release_all_keys()
         if self.vce != None:
             self.vce.quit()
         if self.overlay != None:
@@ -3002,6 +3004,7 @@ class EDAutopilot:
                     fin = self.fsd_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     logger.debug("FSD Assist trapped generic:"+str(e))
                     print("Trapped generic:"+str(e))
@@ -3032,6 +3035,7 @@ class EDAutopilot:
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("SC Assist trapped generic:"+str(e))
@@ -3056,6 +3060,7 @@ class EDAutopilot:
                     self.waypoint_assist(self.keys, self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Waypoint Assist trapped generic:"+str(e))
@@ -3074,6 +3079,7 @@ class EDAutopilot:
                     self.robigo_assist()
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Robigo Assist trapped generic:"+str(e))
@@ -3090,6 +3096,7 @@ class EDAutopilot:
                     self.afk_combat_loop()
                 except EDAP_Interrupt:
                     logger.debug("Stopping afk_combat")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("AFK Combat Assist trapped generic:" + str(e))
@@ -3108,6 +3115,7 @@ class EDAutopilot:
                     self.dss_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping DSS Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("DSS Assist trapped generic:" + str(e))
@@ -3123,6 +3131,7 @@ class EDAutopilot:
                     self.single_waypoint_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping Single Waypoint Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("Single Waypoint Assist trapped generic:" + str(e))
@@ -3174,7 +3183,11 @@ class EDAutopilot:
 
             self.update_overlay()
             cv2.waitKey(10)
-            sleep(1)
+            # Catch EDAP_Interrupt raised while idle to prevent killing the engine loop
+            try:
+                sleep(1)
+            except EDAP_Interrupt:
+                logger.debug("EDAP_Interrupt caught in engine_loop idle")
 
     def ship_tst_pitch(self, angle: float):
         """ Performs a ship pitch test by pitching 360 degrees.

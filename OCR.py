@@ -38,6 +38,20 @@ class OCR:
         self.sorensendice = SorensenDice()
         self.normalized_levenshtein = NormalizedLevenshtein()
 
+    def _reinit_paddleocr(self):
+        """ Reinitialize PaddleOCR after a failure. PaddleOCR's C++ layer can throw
+        an 'Unknown exception' which corrupts internal state. If the same instance is
+        reused, the next call will cause a hard process crash with no Python traceback.
+        Creating a fresh instance prevents this. """
+        try:
+            logger.warning("Reinitializing PaddleOCR after failure.")
+            self.paddleocr = PaddleOCR(
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False)
+        except Exception as e:
+            logger.error(f"Failed to reinitialize PaddleOCR: {e}")
+
     def string_similarity(self, s1: str, s2: str) -> float:
         """ Performs a string similarity check and returns the result.
         @param s1: The first string to compare.
@@ -109,6 +123,8 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            # Reinit to avoid hard crash on next call due to corrupted C++ state
+            self._reinit_paddleocr()
             return None, None
 
     def image_simple_ocr(self, image, name='') -> list[str] | None:
@@ -158,6 +174,8 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            # Reinit to avoid hard crash on next call due to corrupted C++ state
+            self._reinit_paddleocr()
             return None
 
     def get_highlighted_item_data(self, image, item: Quad, name=''):

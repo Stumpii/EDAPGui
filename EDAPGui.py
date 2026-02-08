@@ -658,7 +658,7 @@ class APGui:
         self.entry_update(None)
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
-        self.save_ocr_calibration_data()
+        self.calibration_tab.save_ocr_calibration_data()  # Delegate to Calibration instance which owns the OCR data
         self.log_msg("Saved all settings.")
 
     def load_settings(self):
