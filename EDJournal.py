@@ -232,6 +232,7 @@ class EDJournal:
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
+            'sc_exit_body_type': '',
             'SupercruiseDestinationDrop_type': None,
             'has_adv_dock_comp': None,
             'has_std_dock_comp': None,
@@ -310,6 +311,7 @@ class EDJournal:
 
             elif log_event == 'SupercruiseEntry' or log_event == 'FSDJump':
                 self.ship['status'] = 'in_supercruise'
+                self.ship['sc_exit_body_type'] = ''
 
             elif log_event == "DockingGranted":
                 self.ship['status'] = 'dockinggranted'
@@ -321,6 +323,7 @@ class EDJournal:
             elif log_event == 'SupercruiseExit':
                 self.ship['status'] = 'in_space'
                 self.ship['body'] = log['Body']
+                self.ship['sc_exit_body_type'] = log.get('BodyType', '')
 
             elif log_event == 'SupercruiseDestinationDrop':
                 self.ship['SupercruiseDestinationDrop_type'] = log['Type']
