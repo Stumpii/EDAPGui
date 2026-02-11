@@ -9,8 +9,10 @@ from string import Formatter
 from tkinter import messagebox
 
 import cv2
+from ultralytics import YOLO
 
 from EDAPColonizeEditor import read_json_file, write_json_file
+from MachineLearning import MachLearn
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
@@ -89,6 +91,7 @@ class EDAutopilot:
         self.speed_demand = None
         self._tce_integration = None
         self._ocr = None
+        self._mach_learn = None
         self._sc_disengage_active = False  # Is SC Disengage active
         self.ship_tst_roll_enabled = False
         self.ship_tst_pitch_enabled = False
@@ -235,6 +238,13 @@ class EDAutopilot:
         if not self._tce_integration:
             self._tce_integration = TceIntegration(self, self.ap_ckb)
         return self._tce_integration
+
+    @property
+    def mach_learn(self) -> MachLearn:
+        """ Load Machine Learning class when needed. """
+        if not self._mach_learn:
+            self._mach_learn = MachLearn(self, self.ap_ckb)
+        return self._mach_learn
 
     @property
     def ocr(self) -> OCR:
@@ -955,15 +965,20 @@ class EDAutopilot:
 
     def have_destination(self, scr_reg) -> bool:
         """ Check to see if the compass is on the screen. """
-        icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
-
-        logger.debug("has_destination:"+str(maxVal))
-
-        # need > x in the match to say we do have a destination
-        if maxVal < scr_reg.compass_match_thresh:
-            return False
-        else:
+        # icompass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
+        #
+        # logger.debug("has_destination:"+str(maxVal))
+        #
+        # # need > x in the match to say we do have a destination
+        # if maxVal < scr_reg.compass_match_thresh:
+        #     return False
+        # else:
+        #     return True
+        res = self.get_nav_offset(scr_reg)
+        if res:
             return True
+        else:
+            return False
 
     def interdiction_check(self) -> bool:
         """ Checks if we are being interdicted. This can occur in SC and maybe in system jump by Thargoids
@@ -1010,43 +1025,41 @@ class EDAutopilot:
             180deg (6 o'clock clockwise)
         """
         full_compass_image = None
-        maxLoc = 0
+        # full_compass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
+        full_compass_image = scr_reg.capture_region(self.scr, 'compass', inv_col=False)
+
+        # ML test
         maxVal = 0
-        # for i in range(2):
-        full_compass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
-
-            # # need > x in the match to say we do have a destination
-            # if maxVal < (scr_reg.compass_match_thresh / 2):
-            #     # If we are so far below threshold, then compass must not be up
-            #     return None
-            # if maxVal < scr_reg.compass_match_thresh:
-            #     # We are below match, but only just, recalibrate
-            #     if not disable_auto_cal:
-            #         self.ap_ckb('log', f'Compass Offset below threshold: {maxVal:5.4f} with scale: {self.compass_scale:5.4f}')
-            #         self.quick_calibrate_compass()
-
-        # need > x in the match to say we do have a destination
-        if maxVal < scr_reg.compass_match_thresh:
+        compass_quad = Quad()
+        full_compass_image2 = cv2.cvtColor(full_compass_image, cv2.COLOR_BGRA2BGR)
+        ml_res = self.mach_learn.predict(full_compass_image2)
+        if ml_res and len(ml_res) == 1:
+            maxVal = ml_res[0].match_pct
+            compass_quad = ml_res[0].bounding_quad
+        else:
+            # Log screenshot for diagnostics/training
             if self.debug_images:
-                f = get_timestamped_filename('[get_nav_offset] no_compass_match', '', '.png')
-                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image)
+                f = get_timestamped_filename('[get_nav_offset] no_compass_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image2)
             return None
 
-        pt = maxLoc
+        pt = [compass_quad.get_left(), compass_quad.get_top()]
 
         # get wid/hgt of templates
         c_left = scr_reg.reg['compass']['rect'][0]
         c_top = scr_reg.reg['compass']['rect'][1]
-        c_wid = scr_reg.templates.template['compass']['width']
-        c_hgt = scr_reg.templates.template['compass']['height']
+        compass_region = Quad.from_rect(scr_reg.reg['compass']['rect'])
+        # c_wid = scr_reg.templates.template['compass']['width']
+        # c_hgt = scr_reg.templates.template['compass']['height']
         wid = scr_reg.templates.template['navpoint']['width']
         hgt = scr_reg.templates.template['navpoint']['height']
 
         # cut out the compass from the region
         pad = 5
-        compass_image = full_compass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
+        # compass_image = full_compass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
+        compass_image = Screen.crop_image_pix(full_compass_image, compass_quad)
         #compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
-        compass_image_gray = self.scrReg.equalize(compass_image)
+        # compass_image_gray = self.scrReg.equalize(compass_image)
 
         # find the nav point within the compass box
         navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
@@ -1055,10 +1068,10 @@ class EDAutopilot:
         n_pt = n_maxLoc
         n_pt_beh = n_maxLoc_beh
 
-        compass_x_min = pad
-        compass_x_max = c_wid + pad - wid
-        compass_y_min = pad
-        compass_y_max = c_hgt + pad - hgt
+        compass_x_min = 0
+        compass_x_max = compass_quad.get_width() - wid
+        compass_y_min = 0
+        compass_y_max = compass_quad.get_height() - hgt
 
         # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
         if n_maxVal > scr_reg.navpoint_match_thresh:
@@ -1119,19 +1132,27 @@ class EDAutopilot:
         # Draw box around region
         if self.debug_overlay:
             border = 10  # border to prevent the box from interfering with future matches
-            left = c_left + maxLoc[0]
-            top = c_top + maxLoc[1]
-            self.overlay.overlay_rect('compass', (left - border, top - border), (left + c_wid + border, top + c_hgt + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('compass', f'Com: {maxVal:5.2f} > {scr_reg.compass_match_thresh}', left - border, top - border - 65, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav', f'Nav: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh}', left - border, top - border - 45, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav_beh', f'NavB: {n_maxVal_beh:5.2f}', left - border, top - border - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + c_hgt + border, (0, 255, 0))
+            left = c_left + compass_quad.get_left()
+            top = c_top + compass_quad.get_top()
+            # Copy compass quad and offset to screen co-ords
+            compass_to_screen = copy(compass_quad)
+            compass_to_screen.offset(compass_region.get_left(), compass_region.get_top())
+            compass_with_border = copy(compass_to_screen)
+            compass_with_border.inflate(10, 10)
+
+            # self.overlay.overlay_rect('compass', (left - border, top - border), (left + c_wid + border, top + c_hgt + border), (0, 255, 0), 2)
+            self.overlay.overlay_rect('compass', (compass_with_border.get_left(), compass_with_border.get_top()), (compass_with_border.get_right(), compass_with_border.get_bottom()), (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('compass', f'Com: {maxVal:5.2f} > {scr_reg.compass_match_thresh}', left - border, top - border - 85, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav', f'Nav: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh}', left - border, top - border - 65, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav_beh', f'NavB: {n_maxVal_beh:5.2f}', left - border, top - border - 45, (0, 255, 0))
+            # self.overlay.overlay_floating_text('ML', f'ML: {conf:5.2f}', left - border, top - border - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + compass_quad.get_height() + border, (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
             #icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
             icompass_image_d = full_compass_image
-            self.draw_match_rect(icompass_image_d, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
+            self.draw_match_rect(icompass_image_d, pt, (pt[0]+compass_quad.get_width(), pt[1]+compass_quad.get_height()), (0, 0, 255), 2)
             #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
             self.draw_match_rect(icompass_image_d, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0]+wid-pad, pt[1]+n_pt[1]+hgt-pad), (0, 255, 0), 1)
@@ -1262,7 +1283,7 @@ class EDAutopilot:
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
         if maxVal < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
             if self.debug_images:
-                f = get_timestamped_filename('[get_target_offset] no_target_match', '', '.png')
+                f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
                 cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image)
             result = None
         else:
@@ -1752,8 +1773,8 @@ class EDAutopilot:
         self.set_speed_50()
         res = self.compass_align(scr_reg)
         # Quick calibrate the compass
-        if res:
-            self.quick_calibrate_compass()
+        # if res:
+        #     self.quick_calibrate_compass()
 
         self.ap_ckb('log+vce', 'Target Align')
         for i in range(5):
@@ -1811,7 +1832,7 @@ class EDAutopilot:
             elif nav_off1:
                 # Try to use the compass data if the target is not visible.
                 off = nav_off1
-                self.ap_ckb('log+vce', 'Using Compass for Target Align')
+                self.ap_ckb('log', 'Using Compass for Target Align')
 
                 # We are using compass align, increase the values as compass is much less accurate
                 target_align_outer_lim = target_align_outer_lim * target_align_compass_mult
@@ -1899,7 +1920,7 @@ class EDAutopilot:
             elif nav_off2:
                 # Try to use the compass data if the target is not visible.
                 off = nav_off2
-                self.ap_ckb('log+vce', 'Using Compass for Target Align')
+                self.ap_ckb('log', 'Using Compass for Target Align')
                 # Check if Target is now behind us
                 if nav_off2['z'] < 0:
                     self.ap_ckb('log', 'Target is behind us')
@@ -2661,9 +2682,9 @@ class EDAutopilot:
             self.ap_ckb('log', "Quiting SC Assist - Compass not found. Rotate ship and try again.")
             logger.debug("Quiting sc_assist - compass not found")
             return
-        else:
-            # Quick calibrate the compass
-            self.quick_calibrate_compass()
+        # else:
+        #     # Quick calibrate the compass
+        #     self.quick_calibrate_compass()
 
         # if we are starting the waypoint docked at a station or landed, we need to undock/takeoff first
         if self.status.get_flag(FlagsDocked) or self.status.get_flag(FlagsLanded):
