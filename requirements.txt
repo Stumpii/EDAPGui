@@ -24,4 +24,8 @@ xmltodict~=0.14.2
 pywinstyles~=1.8
 sv_ttk
 tkinter-tooltip
-ultralytics~=8.4.9 # For Yolo ML
+
+# For Yolo ML
+opencv-python~=4.13.0.90
+future~=1.0.0
+ultralytics~=8.4.9
