@@ -5,7 +5,6 @@ kthread==0.2.2
 logger==1.4
 mss==8.0.3
 numpy==2.0.2
-opencv_python==4.5.5.64
 paddleocr==3.3.2
 paddlepaddle==3.2.2
 paddlex==3.3.10
