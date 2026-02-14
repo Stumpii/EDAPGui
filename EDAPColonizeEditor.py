@@ -443,9 +443,7 @@ class ColonizeEditorTab:
 
 def write_json_file(data, filepath: str):
     #  TODO - move to separate class/file
-    if not os.path.exists(filepath):
-        return False
-
+    # Note: No file existence check - allow creating new config files on first run
     if data is None:
         return False
     try:

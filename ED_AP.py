@@ -1662,7 +1662,7 @@ class EDAutopilot:
         @return: True if aligned, else False.
         """
         close = 5.0  # in degrees
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+        if not self._is_in_supercruise_or_space():
             logger.error('align=err1, nav_align not in super or space')
             raise Exception('nav_align not in super or space')
 
@@ -1760,13 +1760,31 @@ class EDAutopilot:
         self.ap_ckb('log+vce', 'Compass Align failed - exhausted all retries')
         return False
 
+    def _is_in_supercruise_or_space(self) -> bool:
+        """Check if the ship is in supercruise or normal space using both journal state and status.json flags.
+        The status.json flags update faster than the journal reader, so we check both to avoid race conditions.
+        """
+        jn_status = self.jn.ship_state()['status']
+        if jn_status == 'in_supercruise' or jn_status == 'in_space':
+            return True
+        if self.status.get_flag(FlagsSupercruise):
+            return True
+        if not self.status.get_flag(FlagsDocked) and not self.status.get_flag(FlagsLanded) and not self.status.get_flag(FlagsFsdJump) and not self.status.get_flag(FlagsFsdCharging):
+            return True
+        return False
+
     def mnvr_to_target(self, scr_reg):
         """ Maneuver to Target using compass then target before performing a jump."""
         logger.debug('mnvr_to_target entered')
 
-        if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
-            logger.error('align() not in sc or space')
-            raise Exception('align() not in sc or space')
+        if not self._is_in_supercruise_or_space():
+            for _ in range(10):
+                sleep(0.5)
+                if self._is_in_supercruise_or_space():
+                    break
+            else:
+                logger.error('align() not in sc or space')
+                raise Exception('align() not in sc or space')
 
         self.sun_avoid(scr_reg)
 
@@ -2090,7 +2108,7 @@ class EDAutopilot:
         for i in range(jump_tries):
 
             logger.debug('jump= try:'+str(i))
-            if not (self.jn.ship_state()['status'] == 'in_supercruise' or self.jn.ship_state()['status'] == 'in_space'):
+            if not self._is_in_supercruise_or_space():
                 logger.error('Not ready to FSD jump. jump=err1')
                 raise Exception('not ready to jump')
             sleep(0.5)
@@ -2475,6 +2493,67 @@ class EDAutopilot:
             # Disable SCO. If SCO not fitted, this will do nothing.
             self.keys.send('UseBoostJuice')
 
+    def recover_from_sc_drop(self, scr_reg) -> bool:
+        """ Recover from an unexpected supercruise drop near a star.
+        Pitches away from the star, boosts to get clear, then re-enters supercruise.
+        Returns True if recovery succeeded, False otherwise.
+        """
+        logger.warning('Recovering from supercruise drop near star')
+        self.update_ap_status("SC Drop Recovery")
+        self.ap_ckb('log', 'Recovering from SC drop near star')
+        self.vce.say("Supercruise drop recovery")
+
+        self.set_speed_0()
+
+        saved_sunpitchuptime = self.sunpitchuptime
+        self.sunpitchuptime = 2.0
+        self.sun_avoid(scr_reg)
+        self.sunpitchuptime = saved_sunpitchuptime
+
+        extra_pitch_time = 90.0 / self.pitchrate
+        self.keys.send('PitchUpButton', state=1)
+        sleep(extra_pitch_time)
+        self.keys.send('PitchUpButton', state=0)
+
+        self.set_speed_100()
+
+        while self.status.get_flag(FlagsFsdCooldown):
+            self.keys.send('UseBoostJuice')
+            sleep(3)
+
+        self.keys.send('Supercruise')
+
+        for _ in range(30):
+            if self.status.get_flag(FlagsSupercruise):
+                break
+            off = self.get_nav_offset(scr_reg)
+            if off is not None:
+                if abs(off['pit']) > 5:
+                    self.pitch_up_down(off['pit'])
+                if abs(off['yaw']) > 5:
+                    self.yaw_right_left(off['yaw'])
+                if abs(off['pit']) <= 5 and abs(off['yaw']) <= 5:
+                    break
+            sleep(0.5)
+
+        self.status.wait_for_flag_on(FlagsSupercruise, timeout=60)
+
+        if not self.status.get_flag(FlagsSupercruise):
+            logger.error('SC drop recovery failed - could not re-enter supercruise')
+            return False
+
+        self.start_sco_monitoring()
+        logger.info('SC drop recovery - in supercruise, escaping star')
+
+        self.set_speed_100()
+        sleep(15)
+        logger.info('SC drop recovery - escape complete')
+
+        logger.info('SC drop recovery successful')
+        self.ap_ckb('log', 'SC drop recovery successful')
+        self.jn.ship_state()['sc_exit_body_type'] = ''
+        return True
+
     def sc_engage(self, boost: bool) -> bool:
         """ Engages supercruise, then returns us to 50% speed, unless we are in SC already.
         """
@@ -2599,6 +2678,14 @@ class EDAutopilot:
                 self.update_overlay()
                 self.waypoint_undock_seq()
 
+        # If we are already in supercruise (e.g. manual restart), check if the sun is ahead
+        # and perform the same post-jump sequence: refuel (which includes sun_avoid with
+        # correct brightness threshold), then position to fly past the star
+        if self._is_in_supercruise_or_space() and self.is_sun_dead_ahead(scr_reg):
+            refueled = self.refuel(scr_reg)
+            self.update_ap_status("Maneuvering")
+            self.position(scr_reg, refueled)
+
         # Keep jumping as long as there is a system to jump to.
         # TODO - can we enable this? Seems like a better way
         # while nav_route_parser.get_last_system() is not None:
@@ -2606,7 +2693,19 @@ class EDAutopilot:
             self.update_overlay()
 
             if self.jn.ship_state()['status'] == 'in_space' or self.jn.ship_state()['status'] == 'in_supercruise':
+                if self.jn.ship_state()['status'] == 'in_space' and self.jn.ship_state().get('sc_exit_body_type', '') == 'Star':
+                    if not self.recover_from_sc_drop(scr_reg):
+                        logger.error('SC drop recovery failed, aborting')
+                        return FSDAssistReturn.Failed
+                    refueled = self.refuel(scr_reg)
+                    self.update_ap_status("Maneuvering")
+                    self.position(scr_reg, refueled)
+                    continue
+
                 self.update_ap_status("Align")
+
+                self._nav_cor_x = 0.0
+                self._nav_cor_y = 0.0
 
                 self.mnvr_to_target(scr_reg)
 
@@ -2642,9 +2741,21 @@ class EDAutopilot:
                 # Refuel
                 refueled = self.refuel(scr_reg)
 
+                if self.jn.ship_state()['status'] == 'in_space' and self.jn.ship_state().get('sc_exit_body_type', '') == 'Star':
+                    if not self.recover_from_sc_drop(scr_reg):
+                        logger.error('SC drop recovery failed during refuel, aborting')
+                        return FSDAssistReturn.Failed
+                    continue
+
                 self.update_ap_status("Maneuvering")
 
                 self.position(scr_reg, refueled)
+
+                if self.jn.ship_state()['status'] == 'in_space' and self.jn.ship_state().get('sc_exit_body_type', '') == 'Star':
+                    if not self.recover_from_sc_drop(scr_reg):
+                        logger.error('SC drop recovery failed during position, aborting')
+                        return FSDAssistReturn.Failed
+                    continue
 
                 if self.jn.ship_state()['fuel_percent'] < self.config['FuelThreasholdAbortAP']:
                     self.ap_ckb('log', "AP Aborting, low fuel")
@@ -2868,7 +2979,8 @@ class EDAutopilot:
                 break
 
         if not found:
-            raise ValueError("Invalid thread object")
+            # Thread already exited, nothing to interrupt
+            return
 
         ret = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(target_tid),
                                                          ctypes.py_object(exception))
@@ -2977,6 +3089,7 @@ class EDAutopilot:
     # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
     # have then then kill python exec
     def quit(self):
+        self.keys.release_all_keys()
         if self.vce != None:
             self.vce.quit()
         if self.overlay != None:
@@ -3023,6 +3136,7 @@ class EDAutopilot:
                     fin = self.fsd_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     logger.debug("FSD Assist trapped generic:"+str(e))
                     print("Trapped generic:"+str(e))
@@ -3053,6 +3167,7 @@ class EDAutopilot:
                     self.sc_assist(self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("SC Assist trapped generic:"+str(e))
@@ -3077,6 +3192,7 @@ class EDAutopilot:
                     self.waypoint_assist(self.keys, self.scrReg)
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Waypoint Assist trapped generic:"+str(e))
@@ -3095,6 +3211,7 @@ class EDAutopilot:
                     self.robigo_assist()
                 except EDAP_Interrupt:
                     logger.debug("Caught stop exception")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:"+str(e))
                     logger.debug("Robigo Assist trapped generic:"+str(e))
@@ -3111,6 +3228,7 @@ class EDAutopilot:
                     self.afk_combat_loop()
                 except EDAP_Interrupt:
                     logger.debug("Stopping afk_combat")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("AFK Combat Assist trapped generic:" + str(e))
@@ -3129,6 +3247,7 @@ class EDAutopilot:
                     self.dss_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping DSS Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("DSS Assist trapped generic:" + str(e))
@@ -3144,6 +3263,7 @@ class EDAutopilot:
                     self.single_waypoint_assist()
                 except EDAP_Interrupt:
                     logger.debug("Stopping Single Waypoint Assist")
+                    self.keys.release_all_keys()
                 except Exception as e:
                     print("Trapped generic:" + str(e))
                     logger.debug("Single Waypoint Assist trapped generic:" + str(e))
@@ -3195,7 +3315,11 @@ class EDAutopilot:
 
             self.update_overlay()
             cv2.waitKey(10)
-            sleep(1)
+            # Catch EDAP_Interrupt raised while idle to prevent killing the engine loop
+            try:
+                sleep(1)
+            except EDAP_Interrupt:
+                logger.debug("EDAP_Interrupt caught in engine_loop idle")
 
     def ship_tst_pitch(self, angle: float):
         """ Performs a ship pitch test by pitching 360 degrees.

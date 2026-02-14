@@ -518,12 +518,17 @@ class WaypointEditorTab:
         # Add global shopping list and waypoints
         waypoints_to_save = self.convert_to_raw_waypoints()
 
-        # self.ed_waypoint.write_waypoints(waypoints_to_save, filepath)
         filename = './waypoints/' + Path(filepath).name
         self.ed_waypoint.write_waypoints(data=waypoints_to_save, filename=filename)
         self.ed_waypoint.filename = filename
-        self.ed_waypoint.load_waypoint_file(filepath)
-        # self.mesg_client.publish(LoadWaypointFileAction(filepath=filename))
+
+        # Update the file watcher's last modified time so that the save
+        # does not get detected as an external change and trigger a reload.
+        if self.watching_filepath:
+            try:
+                self.last_modified_time = os.path.getmtime(filename)
+            except FileNotFoundError:
+                pass
 
     def start_file_watcher(self, filepath):
         if self.file_watcher_thread and self.file_watcher_thread.is_alive():
