@@ -84,7 +84,7 @@ class OCR:
         return self.normalized_levenshtein.similarity(s1_new, s2_new)
         # return self.sorensendice.similarity(s1_new, s2_new)
 
-    def image_ocr(self, image, name = ''):
+    def image_ocr(self, image, name=''):
         """ Perform OCR with no filtering. Returns the full OCR data and a simplified list of strings.
         This routine is slower than the simplified OCR.
         @param name:
