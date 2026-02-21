@@ -322,7 +322,7 @@ class CommoditiesMarket:
             #         if self.ap.debug_overlay:
             #             # Overlay OCR result
             #             self.ap.overlay.overlay_floating_text('nav_panel_item_text', f'{str(ocr_textlist)}',
-            #                                                   q_out.get_left(), q_out.get_top() - 25, (0, 255, 0))
+            #                                                   q_out.left, q_out.top - 25, (0, 255, 0))
             #             self.ap.overlay.overlay_paint()
 
             sleep(0.75)
