@@ -27,4 +27,4 @@ tkinter-tooltip
 # For Yolo ML
 opencv-python~=4.13.0.90
 future~=1.0.0
-ultralytics~=8.4.9
+ultralytics~=8.4.14

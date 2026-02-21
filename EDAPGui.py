@@ -161,6 +161,7 @@ class APGui:
         self.ed_ap = EDAutopilot(cb=self.callback)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
         # self.calibrator = RegionCalibration(root, self.ed_ap, cb=self.callback)
+        self.calibration = None
 
         self.ocr_calibration_data = {}
 
@@ -658,14 +659,18 @@ class APGui:
         self.entry_update(None)
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
-        self.save_ocr_calibration_data()
+        self.calibration.save_ocr_calibration_data()
         self.log_msg("Saved all settings.")
 
     def load_settings(self):
         self.ed_ap.load_ship_configs()
 
-    # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
+        """
+        # new data was added to a field, re-read them all for simple logic
+        @param event: A dummy argument required the calling function.
+        @return: Nothing
+        """
         try:
             self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
             self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
@@ -705,10 +710,11 @@ class APGui:
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
-    # ckbox.state:(ACTIVE | DISABLED)
-
-    # ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
     def check_cb(self, field):
+        """ Check checkbox
+            ckbox.state:(ACTIVE | DISABLED)
+            ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
+        """
         # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
         if field == 'FSD Route Assist':
             if self.checkboxvar['FSD Route Assist'].get() == 1 and self.FSD_A_running == False:
@@ -958,8 +964,8 @@ class APGui:
         page_calibration.grid_columnconfigure(0, weight=1)
         nb.add(page_calibration, text="Calibration")
         # self.create_calibration_tab(page_calibration)
-        self.calibration_tab = Calibration(self.ed_ap, self.callback)
-        self.calibration_tab.create_calibration_tab(page_calibration)
+        self.calibration = Calibration(self.ed_ap, self.callback)
+        self.calibration.create_calibration_tab(page_calibration)
         # self.calibration_tab.frame.pack(fill="both", expand=True)
 
         # === Waypoint Editor Tab ===
