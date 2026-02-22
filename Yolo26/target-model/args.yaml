@@ -1,7 +1,7 @@
 task: detect
 mode: train
 model: yolo26n.pt
-data: target-detection.v9i.yolo26/data.yaml
+data: target-detection.v10i.yolo26/data.yaml
 epochs: 100
 time: null
 patience: 100
@@ -13,7 +13,7 @@ cache: false
 device: cpu
 workers: 8
 project: null
-name: training-runs-target-9
+name: target-model-new
 exist_ok: false
 pretrained: true
 optimizer: auto
@@ -106,4 +106,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\shuttle\OneDrive\Programming\Python\EDAPGui - Stumpii-Main\Yolo26\training-runs-target-9
+save_dir: C:\Users\shuttle\OneDrive\Programming\Python\EDAPGui - Stumpii-Main\Yolo26\target-model-new
