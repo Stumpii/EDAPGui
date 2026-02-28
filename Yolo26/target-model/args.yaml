@@ -1,7 +1,7 @@
 task: detect
 mode: train
 model: yolo26n.pt
-data: target-detection.v10i.yolo26/data.yaml
+data: target-detection.v11i.yolo26/data.yaml
 epochs: 100
 time: null
 patience: 100
