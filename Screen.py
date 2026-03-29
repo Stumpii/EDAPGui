@@ -227,8 +227,8 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg, rgb=True):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
+    def get_screen_region(self, rect, rgb=True):
+        image = self.get_screen(int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3]), rgb)
         return image
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??

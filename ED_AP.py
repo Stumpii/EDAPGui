@@ -12,7 +12,8 @@ import cv2
 from ultralytics import YOLO
 
 from EDAPColonizeEditor import read_json_file, write_json_file
-from MachineLearning import MachLearn
+from EDFSS import EDFSS
+from MachineLearning import MachLearn, ModelType
 from simple_localization import LocalizationManager
 
 from EDAP_EDMesg_Server import EDMesgServer
@@ -91,6 +92,7 @@ class EDAutopilot:
         self.speed_demand = None
         self._tce_integration = None
         self._ocr = None
+        self._fss_screen = None
         self._mach_learn = None
         self._sc_disengage_active = False  # Is SC Disengage active
         self.ship_tst_roll_enabled = False
@@ -253,6 +255,13 @@ class EDAutopilot:
             self._ocr = OCR(self, self.scr)
         return self._ocr
 
+    @property
+    def fss_screen(self) -> EDFSS:
+        """ Load FSS class when needed. """
+        if not self._fss_screen:
+            self._fss_screen = EDFSS(self, self.ap_ckb)
+        return self._fss_screen
+
     def update_config(self):
         # Get values from classes
         if self.keys:
@@ -303,7 +312,7 @@ class EDAutopilot:
             "VoiceEnable": False,
             "VoiceID": 1,  # my Windows only have 3 defined (0-2)
             "ElwScannerEnable": False,
-            "LogDEBUG": False,  # enable for debug messages
+            "LogDEBUG": True,  # enable for debug messages
             "LogINFO": True,
             "Enable_CV_View": 0,  # Should CV View be enabled by default
             "ShipConfigFile": None,  # Ship config to load on start - deprecated
@@ -913,6 +922,14 @@ class EDAutopilot:
         elw_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('fss', 'elw')
         elw_sig_image, (minVal1, maxVal1, minLoc1, maxLoc1), match = scr_reg.match_template_in_image(elw_image, 'elw_sig')
 
+        # Scale the regions based on the target resolution.
+        region = self.fss_screen.reg['analysis']
+        img = self.ocr.capture_region_pct(region)
+
+        # Log screenshot for diagnostics/training
+        f = get_timestamped_filename(f'[fss_detect_elw] {self.jn.ship_state()["cur_star_system"]}', '', 'png')
+        cv2.imwrite(f'{self.debug_image_folder}/{f}', img)
+
         # dvide the region in thirds.  Earth, then Water, then Ammonio
         wid_div3 = scr_reg.reg['fss']['width']/3
 
@@ -1025,8 +1042,8 @@ class EDAutopilot:
             180deg (6 o'clock clockwise)
         """
         full_compass_image = None
-        # full_compass_image, (minVal, max_val, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
-        full_compass_image = scr_reg.capture_region(self.scr, 'compass', inv_col=False)
+        # full_compass_image = scr_reg.capture_region(self.scr, 'compass', inv_col=False)
+        full_compass_image = scr_reg.capture_region_percent(self.scr, 'compass')
 
         # ML test
         max_val = 0.0
@@ -1039,9 +1056,9 @@ class EDAutopilot:
         b_compass_quad = Quad()
         # b_pt = [0.0, 0.0]
         full_compass_image2 = cv2.cvtColor(full_compass_image, cv2.COLOR_BGRA2BGR)
-        ml_compass = self.mach_learn.compass_model_predict(full_compass_image2, '')
-        if ml_compass and len(ml_compass) > 0:
-            for ml in ml_compass:
+        ml_res = self.mach_learn.model_predict(ModelType.Compass, full_compass_image2, '')
+        if ml_res and len(ml_res) > 0:
+            for ml in ml_res:
                 if ml.class_name == 'compass':
                     max_val = ml.match_pct
                     compass_quad = ml.bounding_quad
@@ -1219,25 +1236,35 @@ class EDAutopilot:
         #     self.overlay.overlay_remove_floating_text('target_rpy')
         #     self.overlay.overlay_paint()
 
-        dst_image_unfiltered = scr_reg.capture_region(self.scr, 'target', inv_col=False)
+        # dst_image_unfiltered = scr_reg.capture_region(self.scr, 'target', inv_col=False)
+        dst_image_unfiltered = scr_reg.capture_region_percent(self.scr, 'target')
 
         # ML test
         max_val = 0.0
+        maxVal_occ = 0.0
         target_quad = Quad()
         pt = [0.0, 0.0]
+        pt_occ = [0.0, 0.0]
+        target_occ_quad = Quad()
         target_image2 = cv2.cvtColor(dst_image_unfiltered, cv2.COLOR_BGRA2BGR)
-        ml_res = self.mach_learn.target_model_predict(target_image2, 'target')
-        if ml_res and len(ml_res) == 1:
-            max_val = ml_res[0].match_pct
-            target_quad = ml_res[0].bounding_quad
-            pt = [target_quad.left, target_quad.top]
+        ml_res = self.mach_learn.model_predict(ModelType.Target, target_image2, '')
+        if ml_res and len(ml_res) > 0:
+            for ml in ml_res:
+                if ml.class_name == 'target':
+                    max_val = ml.match_pct
+                    target_quad = ml.bounding_quad
+                    pt = [target_quad.left, target_quad.top]
+                if ml.class_name == 'target-occluded':
+                    maxVal_occ = ml.match_pct
+                    target_occ_quad = ml.bounding_quad
+                    pt_occ = [target_occ_quad.left, target_occ_quad.top]
 
-        dst_image = None
+        dst_image = target_image2
         # maxLoc = 0
         # max_val = 0
         # for i in range(2):
         #dst_image, (minVal, max_val, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target', inv_col=False)
-        dst_image_occ, (minVal, maxVal_occ, minLoc, maxLoc_occ), match_occ = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
+        # dst_image_occ, (minVal, maxVal_occ, minLoc, maxLoc_occ), match_occ = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
         #
         #     # need > x in the match to say we do have a destination
         #     if max_val < (scr_reg.target_thresh / 2):
@@ -1250,35 +1277,39 @@ class EDAutopilot:
         #             self.quick_calibrate_target()
 
         #pt = maxLoc
-        pt_occ = maxLoc_occ
+        # pt_occ = maxLoc_occ
 
         # Check if target is occluded
-        if max_val > maxVal_occ:
+        tar_quad = Quad()
+        if max_val > 0.0 and max_val > maxVal_occ:
             sel_pt = pt
             sel_loc = pt
+            tar_quad = target_quad
             occluded = False
-        else:
+        elif maxVal_occ > 0.0 and maxVal_occ > max_val:
             sel_pt = pt_occ
-            sel_loc = maxLoc_occ
+            sel_loc = pt_occ
+            tar_quad = target_occ_quad
             occluded = True
 
-        destination_left = scr_reg.reg['target']['rect'][0]
-        destination_top = scr_reg.reg['target']['rect'][1]
-        destination_width = scr_reg.reg['target']['width']
-        destination_height = scr_reg.reg['target']['height']
+        target_region = Quad.from_rect(scr_reg.reg['target']['rect'])
+        # destination_left = scr_reg.reg['target']['rect'][0]
+        # destination_top = scr_reg.reg['target']['rect'][1]
+        # destination_width = scr_reg.reg['target']['width']
+        # destination_height = scr_reg.reg['target']['height']
 
-        width = scr_reg.templates.template['target']['width']
-        height = scr_reg.templates.template['target']['height']
+        # width = scr_reg.templates.template['target']['width']
+        # height = scr_reg.templates.template['target']['height']
 
-        target_x_max = self.scr.screen_width - width
-        target_y_max = self.scr.screen_height - height
+        target_x_max = self.scr.screen_width - tar_quad.width
+        target_y_max = self.scr.screen_height - tar_quad.height
 
         # X as percent (-1.0 to 1.0, 0.0 in the center)
-        final_x_pct = 2.0*(((sel_pt[0]+destination_left) / target_x_max) - 0.5)
+        final_x_pct = 2.0*(((tar_quad.left+target_region.left) / target_x_max) - 0.5)
         final_x_pct = 100 * max(min(final_x_pct, 1.0), -1.0)
 
         # Y as percent (-1.0 to 1.0, 0.0 in the center)
-        final_y_pct = -2.0*(((sel_pt[1]+destination_top) / target_y_max) - 0.5)
+        final_y_pct = -2.0*(((tar_quad.top+target_region.top) / target_y_max) - 0.5)
         final_y_pct = 100 * max(min(final_y_pct, 1.0), -1.0)
 
         final_yaw_deg = final_x_pct / 100 * (self.hor_fov / 2)  # X in deg (-90.0 to 90.0, 0.0 in the center)
@@ -1297,19 +1328,23 @@ class EDAutopilot:
         # Draw box around region
         if self.debug_overlay:
             border = 10  # border to prevent the box from interfering with future matches
-            left = destination_left + sel_loc[0]
-            top = destination_top + sel_loc[1]
-            self.overlay.overlay_rect('target', (left - border, top - border), (left + width + border, top + height + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('target', f'Tar: {max_val:5.2f} > {scr_reg.target_thresh}', left - border, top - border - 45, (0, 255, 0))
-            self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', left - border, top - border - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + height + border, (0, 255, 0))
+            # Copy compass quad and offset to screen co-ords
+            target_to_screen = copy(tar_quad)
+            target_to_screen.offset(target_region.left, target_region.top)
+            target_with_border = copy(target_to_screen)
+            target_with_border.inflate(border, border)
+
+            self.overlay.overlay_rect('target', (target_with_border.left, target_with_border.top), (target_with_border.right, target_with_border.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('target', f'Tar: {max_val:5.2f} > {scr_reg.target_thresh}', target_with_border.left, target_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', target_with_border.left, target_with_border.top - 25, (0, 255, 0))
+            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', target_with_border.left, target_with_border.top , (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
             dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
             try:
-                self.draw_match_rect(dst_image_d, sel_pt, (sel_pt[0]+width, sel_pt[1]+height), (0, 0, 255), 2)
-                dim = (int(destination_width/2), int(destination_height/2))
+                self.draw_match_rect(dst_image_d, sel_pt, (sel_pt[0]+tar_quad.width, sel_pt[1]+tar_quad.height), (0, 0, 255), 2)
+                dim = (int(target_region.width/2), int(target_region.height/2))
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
                 img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
@@ -1324,13 +1359,14 @@ class EDAutopilot:
 
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
         # Added max_val ==0 as ML gives any match > 0
-        if max_val == 0 and max_val < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
+        # if max_val == 0 and max_val < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
+        if max_val > 0.0 or maxVal_occ > 0.0:
+            result = {'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2), 'occ': occluded}
+        else:
             if self.debug_images:
                 f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
                 cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image_unfiltered)
             result = None
-        else:
-            result = {'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2), 'occ': occluded}
 
         return result
 

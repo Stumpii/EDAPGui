@@ -259,6 +259,7 @@ class OCR:
         """ Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         rect = region['rect']
         image = self.screen.get_screen_rect_pct(rect)
@@ -288,6 +289,7 @@ class OCR:
         Return True if found, False if not and None if no item was selected.
         @param text: The text to check for.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         img = self.capture_region_pct(region)
@@ -329,6 +331,7 @@ class OCR:
         @param keys:
         @param text: Text to find.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         in_list = False  # Have we seen one item yet? Prevents quiting if we have not selected the first item.
@@ -359,6 +362,7 @@ class OCR:
         @param region: The screen region to check in % (0.0 - 1.0) of the full screen.
         @param timeout: Time to wait for screen in seconds
         @return: True if text found, else False
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         # Draw box around region
         abs_rect = self.screen.screen_rect_to_abs(region['rect'])
