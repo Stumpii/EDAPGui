@@ -1,3 +1,7 @@
+# WIP v1.9.0 b8 WIP
+- Added some extra logging when checking station names.
+- Added extra debug (save input image) for OCR errors. Image saved to ocr_output folder.
+
 # 3/30/2026 v1.9.0 b7
 - Fixed some crashes thanks to clippy.
 - Fixed issue with loss of target and target occluded at the same time. 

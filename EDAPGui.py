@@ -125,9 +125,6 @@ class APGui:
             'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
-            'RollFactor': "TBD",
-            'PitchFactor': "TBD",
-            'YawFactor': "TBD",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -206,9 +203,6 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-        self.entries['ship']['PitchFactor'].delete(0, tk.END)
-        self.entries['ship']['RollFactor'].delete(0, tk.END)
-        self.entries['ship']['YawFactor'].delete(0, tk.END)
 
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
         self.entries['autopilot']['Nav Align Tries'].delete(0, tk.END)
@@ -237,9 +231,6 @@ class APGui:
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
         self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
         self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
-        self.entries['ship']['PitchFactor'].insert(0, float(self.ed_ap.pitchfactor))
-        self.entries['ship']['RollFactor'].insert(0, float(self.ed_ap.rollfactor))
-        self.entries['ship']['YawFactor'].insert(0, float(self.ed_ap.yawfactor))
 
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
@@ -387,17 +378,11 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-        self.entries['ship']['PitchFactor'].delete(0, tk.END)
-        self.entries['ship']['RollFactor'].delete(0, tk.END)
-        self.entries['ship']['YawFactor'].delete(0, tk.END)
 
         self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
-        self.entries['ship']['PitchFactor'].insert(0, self.ed_ap.pitchfactor)
-        self.entries['ship']['RollFactor'].insert(0, self.ed_ap.rollfactor)
-        self.entries['ship']['YawFactor'].insert(0, self.ed_ap.yawfactor)
 
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
@@ -677,9 +662,6 @@ class APGui:
             self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
             self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
             self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
-            self.ed_ap.pitchfactor = float(self.entries['ship']['PitchFactor'].get())
-            self.ed_ap.rollfactor = float(self.entries['ship']['RollFactor'].get())
-            self.ed_ap.yawfactor = float(self.entries['ship']['YawFactor'].get())
 
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
             self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
@@ -925,7 +907,7 @@ class APGui:
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
-        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'RollFactor', 'PitchFactor', 'YawFactor')
+        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
