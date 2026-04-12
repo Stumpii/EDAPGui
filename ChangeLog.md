@@ -1,4 +1,7 @@
-# WIP v1.9.0 b8 WIP
+# 4/12/2026 v1.9.0 b8
+- Added a RPY curve editor accessible via 3 new edit buttons under the RPY rates.
+- Removed the unused RPY Factor constants and code.
+- Updated compass ML model.
 - Added some extra logging when checking station names.
 - Added extra debug (save input image) for OCR errors. Image saved to ocr_output folder.
 

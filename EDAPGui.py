@@ -41,6 +41,7 @@ from ED_AP import *
 from EDAPWaypointEditor import WaypointEditorTab
 
 from EDlogger import logger
+from RPYLineEditor import line_editor
 
 """
 File:EDAPGui.py
@@ -63,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b7"
+EDAP_VERSION = "V1.9.0 b8"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -641,6 +642,63 @@ class APGui:
     def ship_tst_yaw_90(self):
         self.ed_ap.ship_tst_yaw(90)
 
+    def edit_roll_curve(self):
+        # Get current ship roll curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'RollRate' in speed_demand:
+                curve = speed_demand['RollRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['RollRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
+
+    def edit_pit_curve(self):
+        # Get current ship pitch curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'PitchRate' in speed_demand:
+                curve = speed_demand['PitchRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['PitchRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
+
+    def edit_yaw_curve(self):
+        # Get current ship yaw curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'YawRate' in speed_demand:
+                curve = speed_demand['YawRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['YawRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
+
     def save_settings(self):
         self.entry_update(None)
         self.ed_ap.update_config()
@@ -989,28 +1047,35 @@ class APGui:
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky="NSEW")
         self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 1, 0.5)
 
+        btn_roll_edit = ttk.Button(blk_ship, text='Edit Roll Curve', command=self.edit_roll_curve)
+        btn_roll_edit.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_pit_edit = ttk.Button(blk_ship, text='Edit Pitch Curve', command=self.edit_pit_curve)
+        btn_pit_edit.grid(row=7, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_yaw_edit = ttk.Button(blk_ship, text='Edit Yaw Curve', command=self.edit_yaw_curve)
+        btn_yaw_edit.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+
         lbl_sun_pitch_up = ttk.Label(blk_ship, text='SunPitchUp +/- Time:')
-        lbl_sun_pitch_up.grid(row=6, column=0, pady=3, sticky=tk.W)
+        lbl_sun_pitch_up.grid(row=9, column=0, pady=3, sticky=tk.W)
         spn_sun_pitch_up = ttk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5, justify=tk.RIGHT)
-        spn_sun_pitch_up.grid(row=6, column=1, padx=2, pady=2, sticky=tk.E)
+        spn_sun_pitch_up.grid(row=9, column=1, padx=2, pady=2, sticky=tk.E)
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
         lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%\n"
                                                       "2. Target remote System\n"
                                                       "3. Maneuver target to 12 o'clock on compass.")
-        lbl_calibrate_note.grid(row=7, columnspan=2, pady=5, sticky=tk.W)
+        lbl_calibrate_note.grid(row=10, columnspan=2, pady=5, sticky=tk.W)
         btn_tst_roll = ttk.Button(blk_ship, text='Calibrate Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_roll.grid(row=11, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%\n"
                                                        "2. Target remote System\n"
                                                        "3. Maneuver target to center of screen (and compass).")
-        lbl_calibrate_note2.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
+        lbl_calibrate_note2.grid(row=12, columnspan=2, pady=5, sticky=tk.W)
         btn_tst_pitch = ttk.Button(blk_ship, text='Calibrate Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=10, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_pitch.grid(row=13, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
         btn_tst_yaw = ttk.Button(blk_ship, text='Calibrate Yaw Rate', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=11, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_yaw.grid(row=14, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))
