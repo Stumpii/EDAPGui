@@ -200,7 +200,7 @@ class Calibration:
         with open(calibration_file, 'w') as f:
             json.dump(self.ocr_calibration_data, f, indent=4)
         # self.log_msg("OCR calibration data saved.")
-        self.ap.ap_ckb('log', f"OCR calibration data saved.")
+        self.ap_ckb('log', f"OCR calibration data saved.")
         # messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
 
     def reset_all_calibrations(self):
@@ -210,7 +210,7 @@ class Calibration:
             if os.path.exists(calibration_file):
                 os.remove(calibration_file)
                 # self.log_msg("Removed existing ocr_calibration.json.")
-                self.ap.ap_ckb('log', f"Removed existing ocr_calibration.json.")
+                self.ap_ckb('log', f"Removed existing ocr_calibration.json.")
 
             # This will recreate the file with defaults
             self.ocr_calibration_data = load_default_calib_data()
@@ -233,7 +233,7 @@ class Calibration:
             # self.calibration_size_combo['values'] = size_keys
 
             # self.log_msg("All OCR calibrations have been reset to default.")
-            self.ap.ap_ckb('log', f"All OCR calibrations have been reset to default.")
+            self.ap_ckb('log', f"All OCR calibrations have been reset to default.")
             messagebox.showinfo("Reset Complete",
                                 "All calibrations have been reset to default. Please restart the application for all changes to take effect.")
 
