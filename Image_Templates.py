@@ -43,22 +43,18 @@ class Image_Templates:
         self.template['elw_sig'] = self.load_template("templates/elw-sig-template.png", scale_x, scale_y)
         self.template['target'] = self.load_template("templates/destination.png", scale_x, scale_y)
         self.template['disengage'] = self.load_template("templates/sc-disengage.png", scale_x, scale_y)
-        self.template['missions']  = self.load_template("templates/completed-missions.png", scale_x, scale_y)
+        self.template['missions'] = self.load_template("templates/completed-missions.png", scale_x, scale_y)
         self.template['dest_sirius'] = self.load_template("templates/dest-sirius-atmos-HL.png", scale_x, scale_y)
-        self.template['robigo_mines']  = self.load_template("templates/robigo-mines-selected.png", scale_x, scale_y)
-        self.template['sirius_atmos']  = self.load_template("templates/sirius-atmos-selected.png", scale_x, scale_y)
-        
+        self.template['robigo_mines'] = self.load_template("templates/robigo-mines-selected.png", scale_x, scale_y)
+        self.template['sirius_atmos'] = self.load_template("templates/sirius-atmos-selected.png", scale_x, scale_y)
 
-    def resource_path(self,relative_path):
+    def resource_path(self, relative_path):
         """ Get absolute path to resource, works for dev and for PyInstaller """
         #try:
-            # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
         #    base_path = sys._MEIPASS
         #except Exception:
-            #base_path = abspath(".")
+        #base_path = abspath(".")
 
         base_path = abspath(".")
         return join(base_path, relative_path)
-
- 
- 
