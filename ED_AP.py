@@ -185,6 +185,7 @@ class EDAutopilot:
         self.total_jumps = 0
         self.refuel_cnt = 0
         self.current_ship_type = None
+        self.current_ship_cfg = None
         self.gui_loaded = False
         self._nav_cor_x = 0.0  # Nav Point correction to pitch
         self._nav_cor_y = 0.0  # Nav Point correction to yaw
@@ -1994,31 +1995,31 @@ class EDAutopilot:
             self.set_speed_50()
 
         # Calculate rate for less than 45 degrees, else use default
-        if abs_deg < 45:
-            # Roll rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'RollRate' not in speed_demand:
-                speed_demand['RollRate'] = dict()
+        if self.current_ship_cfg:
+            if abs_deg < 45:
+                # Roll rate from ship config
+                if self.speed_demand not in self.current_ship_cfg:
+                    self.current_ship_cfg[self.speed_demand] = dict()
+                speed_demand = self.current_ship_cfg[self.speed_demand]
+                if 'RollRate' not in speed_demand:
+                    speed_demand['RollRate'] = dict()
 
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['RollRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
+                last_deg = 0.0
+                last_val = 0.0
+                for key, value in speed_demand['RollRate'].items():
+                    key_deg = float(int(key)) / 10
+                    if abs_deg <= key_deg:
+                        print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                        # Ratio based on the last value and this value
+                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                        print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
+                        htime = abs_deg / ratio_val
+                        break
+                    else:
+                        last_deg = key_deg
+                        last_val = value
 
         # Check if we are rolling right or left
         if deg > 0.0:
@@ -2034,31 +2035,31 @@ class EDAutopilot:
             self.set_speed_50()
 
         # Calculate rate for less than 30 degrees, else use default
-        if abs_deg < 30:
-            # Pitch rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'PitchRate' not in speed_demand:
-                speed_demand['PitchRate'] = dict()
+        if self.current_ship_cfg:
+            if abs_deg < 30:
+                # Pitch rate from ship config
+                if self.speed_demand not in self.current_ship_cfg:
+                    self.current_ship_cfg[self.speed_demand] = dict()
+                speed_demand = self.current_ship_cfg[self.speed_demand]
+                if 'PitchRate' not in speed_demand:
+                    speed_demand['PitchRate'] = dict()
 
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['PitchRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
+                last_deg = 0.0
+                last_val = 0.0
+                for key, value in speed_demand['PitchRate'].items():
+                    key_deg = float(int(key)) / 10
+                    if abs_deg <= key_deg:
+                        print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                        # Ratio based on the last value and this value
+                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                        print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
+                        htime = abs_deg / ratio_val
+                        break
+                    else:
+                        last_deg = key_deg
+                        last_val = value
 
         # Check if we are pitching up or down
         if deg > 0.0:
@@ -2076,39 +2077,32 @@ class EDAutopilot:
         if self.speed_demand is None:
             self.set_speed_50()
 
-        # # Using Power calc for yaw rate
-        # if 0 < abs_deg < 30:
-        #     value = self.yawrate * math.pow((abs_deg / 30), (1 / self.yaw_factor))
-        #     value = min(value, self.yawrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
-
         # Calculate rate for less than 30 degrees, else use default
-        if abs_deg < 30:
-            # Yaw rate from ship config
-            ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-            if self.speed_demand not in ship_type:
-                ship_type[self.speed_demand] = dict()
-            speed_demand = ship_type[self.speed_demand]
-            if 'YawRate' not in speed_demand:
-                speed_demand['YawRate'] = dict()
+        if self.current_ship_cfg:
+            if abs_deg < 30:
+                # Yaw rate from ship config
+                if self.speed_demand not in self.current_ship_cfg:
+                    self.current_ship_cfg[self.speed_demand] = dict()
+                speed_demand = self.current_ship_cfg[self.speed_demand]
+                if 'YawRate' not in speed_demand:
+                    speed_demand['YawRate'] = dict()
 
-            last_deg = 0.0
-            last_val = 0.0
-            for key, value in speed_demand['YawRate'].items():
-                key_deg = float(int(key)) / 10
-                if abs_deg <= key_deg:
-                    print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
+                last_deg = 0.0
+                last_val = 0.0
+                for key, value in speed_demand['YawRate'].items():
+                    key_deg = float(int(key)) / 10
+                    if abs_deg <= key_deg:
+                        print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                    # Ratio based on the last value and this value
-                    ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                    print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                        # Ratio based on the last value and this value
+                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                        print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                    htime = abs_deg / ratio_val
-                    break
-                else:
-                    last_deg = key_deg
-                    last_val = value
+                        htime = abs_deg / ratio_val
+                        break
+                    else:
+                        last_deg = key_deg
+                        last_val = value
 
         # Check if we are yawing right or left
         if deg > 0.0:
@@ -2538,13 +2532,9 @@ class EDAutopilot:
         self.set_speed_50()
         res = self.compass_align(scr_reg)  # Compass Align
 
-        # self.quick_calibrate_target()
         self.ap_ckb('log+vce', 'Target Align')
         self.set_speed_50()
         align_res = self.sc_target_align(scr_reg)
-        # Quick calibrate with the target in front
-        # if align_res == ScTargetAlignReturn.Found:
-        #     self.quick_calibrate_target()
 
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
@@ -3006,7 +2996,8 @@ class EDAutopilot:
                 # Check if a ship and not a suit (on foot)
                 if ship not in ship_size_map:
                     # Clear current ship
-                    self.current_ship_type = ''
+                    self.current_ship_type = None
+                    self.current_ship_cfg = None
                 else:
                     ship_fullname = get_ship_fullname(ship)
 
@@ -3032,11 +3023,14 @@ class EDAutopilot:
                         # Load ship configuration with proper hierarchy
                         self.load_ship_configuration(ship)
 
+                        # Update current ship config
+                        self.current_ship_cfg = self.ship_configs['Ship_Configs'][self.current_ship_type]
+
                         # Update GUI with ship config
                         self.ap_ckb('update_ship_cfg')
 
                         # Reload templates
-                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
+                        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
             self.update_overlay()
             cv2.waitKey(10)
@@ -3070,12 +3064,14 @@ class EDAutopilot:
             self.set_speed_50()
             # sleep(10)
 
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
+        if not self.current_ship_cfg:
+            return
+
+        if self.speed_demand not in self.current_ship_cfg:
+            self.current_ship_cfg[self.speed_demand] = dict()
 
         # Clear existing data
-        ship_type[self.speed_demand]['PitchRate'] = dict()
+        self.current_ship_cfg[self.speed_demand]['PitchRate'] = dict()
 
         test_time = 0.05
         delta_int = 0.0
@@ -3115,7 +3111,7 @@ class EDAutopilot:
                 rate = round(delta / test_time, 2)
                 rate = min(rate, self.pitchrate)  # Limit rate to no higher than the default
                 if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['PitchRate'][delta_int] = rate
+                    self.current_ship_cfg[self.speed_demand]['PitchRate'][delta_int] = rate
 
                     print(f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
                     self.ap_ckb('log', f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
@@ -3124,8 +3120,8 @@ class EDAutopilot:
                     print(f"Ignored Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
 
         # If we have logged values, add the ship default rate at 30 deg
-        if len(ship_type[self.speed_demand]['PitchRate']) > 0:
-            ship_type[self.speed_demand]['PitchRate'][300] = self.pitchrate
+        if len(self.current_ship_cfg[self.speed_demand]['PitchRate']) > 0:
+            self.current_ship_cfg[self.speed_demand]['PitchRate'][300] = self.pitchrate
             self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.pitchrate}")
 
         self.ap_ckb('log', "Completed Pitch Calibration.")
@@ -3159,12 +3155,14 @@ class EDAutopilot:
             self.set_speed_50()
             #sleep(10)
 
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
+        if not self.current_ship_cfg:
+            return
+
+        if self.speed_demand not in self.current_ship_cfg:
+            self.current_ship_cfg[self.speed_demand] = dict()
 
         # Clear existing data
-        ship_type[self.speed_demand]['RollRate'] = dict()
+        self.current_ship_cfg[self.speed_demand]['RollRate'] = dict()
 
         test_time = 0.05
         delta_int = 0.0
@@ -3203,7 +3201,7 @@ class EDAutopilot:
                 rate = round(delta / test_time, 2)
                 rate = min(rate, self.rollrate)  # Limit rate to no higher than the default
                 if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['RollRate'][delta_int] = rate
+                    self.current_ship_cfg[self.speed_demand]['RollRate'][delta_int] = rate
 
                     print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
                     self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
@@ -3212,8 +3210,8 @@ class EDAutopilot:
                     print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
 
         # If we have logged values, add the ship default rate at 45 deg
-        if len(ship_type[self.speed_demand]['RollRate']) > 0:
-            ship_type[self.speed_demand]['RollRate'][450] = self.rollrate
+        if len(self.current_ship_cfg[self.speed_demand]['RollRate']) > 0:
+            self.current_ship_cfg[self.speed_demand]['RollRate'][450] = self.rollrate
             self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.rollrate}")
 
         self.ap_ckb('log', "Completed Roll Calibration.")
@@ -3250,12 +3248,14 @@ class EDAutopilot:
             self.set_speed_50()
             # sleep(10)
 
-        ship_type = self.ship_configs['Ship_Configs'][self.current_ship_type]
-        if self.speed_demand not in ship_type:
-            ship_type[self.speed_demand] = dict()
+        if not self.current_ship_cfg:
+            return
+
+        if self.speed_demand not in self.current_ship_cfg:
+            self.current_ship_cfg[self.speed_demand] = dict()
 
         # Clear existing data
-        ship_type[self.speed_demand]['YawRate'] = dict()
+        self.current_ship_cfg[self.speed_demand]['YawRate'] = dict()
 
         test_time = 0.07
         delta_int = 0.0
@@ -3293,7 +3293,7 @@ class EDAutopilot:
                 rate = round(delta / test_time, 2)
                 rate = min(rate, self.yawrate)  # Limit rate to no higher than the default
                 if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    ship_type[self.speed_demand]['YawRate'][delta_int] = rate
+                    self.current_ship_cfg[self.speed_demand]['YawRate'][delta_int] = rate
 
                     print(f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
                     self.ap_ckb('log', f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
@@ -3302,8 +3302,8 @@ class EDAutopilot:
                     print(f"Ignored Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
 
         # If we have logged values, add the ship default rate at 30 deg
-        if len(ship_type[self.speed_demand]['YawRate']) > 0:
-            ship_type[self.speed_demand]['YawRate'][300] = self.yawrate
+        if len(self.current_ship_cfg[self.speed_demand]['YawRate']) > 0:
+            self.current_ship_cfg[self.speed_demand]['YawRate'][300] = self.yawrate
             self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.yawrate}")
 
         self.ap_ckb('log', "Completed Yaw Calibration.")
