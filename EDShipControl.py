@@ -8,11 +8,12 @@ from time import sleep
 
 def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
     """ Does scaling of the input based on input and output min/max."""
-    return (inp - in_min)/(in_max - in_min) * (out_max - out_min) + out_min
+    return (inp - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
 class EDShipControl:
     """ Handles ship control, FSD, SC, etc. """
+
     def __init__(self, ed_ap, screen, keys, cb):
         self.ap = ed_ap
         self.ocr = ed_ap.ocr
@@ -20,7 +21,6 @@ class EDShipControl:
         self.keys = keys
         self.ap_ckb = cb
         self.status_parser = StatusParser()
-
 
     def goto_cockpit_view(self) -> bool:
         """ Goto cockpit view.
@@ -35,10 +35,9 @@ class EDShipControl:
 
         return True
 
-
     def roll_clockwise_anticlockwise(self, deg):
         abs_deg = abs(deg)
-        htime = abs_deg/self.ap.rollrate
+        htime = abs_deg / self.ap.rollrate
 
         if self.ap.speed_demand is None:
             self.ap.set_speed_50()
@@ -78,7 +77,7 @@ class EDShipControl:
 
     def pitch_up_down(self, deg):
         abs_deg = abs(deg)
-        htime = abs_deg/self.ap.pitchrate
+        htime = abs_deg / self.ap.pitchrate
 
         if self.ap.speed_demand is None:
             self.ap.set_speed_50()
@@ -121,7 +120,7 @@ class EDShipControl:
         @return: The key hold duration.
         """
         abs_deg = abs(deg)
-        htime = abs_deg/self.ap.yawrate
+        htime = abs_deg / self.ap.yawrate
 
         if self.ap.speed_demand is None:
             self.ap.set_speed_50()
