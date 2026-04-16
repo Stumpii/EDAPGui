@@ -158,25 +158,16 @@ class Calibration:
         r += 1
 
         # Compass and Target Calibrations
-        blk_other_cal = ttk.LabelFrame(tab, text="Compass and Target Calibrations")
+        blk_other_cal = ttk.LabelFrame(tab, text="Target Calibration")
         blk_other_cal.grid(row=r, column=0, padx=10, pady=5, sticky="NSEW")
 
-        btn_calibrate_compass = ttk.Button(blk_other_cal, text="Calibrate Compass",
-                                           command=self.calibrate_compass_callback)
-        btn_calibrate_compass.grid(row=1, padx=10, pady=5, sticky="W")
-
-        lbl_calibrate_compass = ttk.Label(blk_other_cal, wraplength=500, text='Performs compass calibration for your '
-                                                                              'screen. Perform when the compass is '
-                                                                              'visible in the cockpit.')
-        lbl_calibrate_compass.grid(row=1, column=1, padx=10, pady=5, sticky=tk.W)
-
         btn_calibrate_target = ttk.Button(blk_other_cal, text="Calibrate Target", command=self.calibrate_callback)
-        btn_calibrate_target.grid(row=2, padx=10, pady=5, sticky="W")
+        btn_calibrate_target.grid(row=1, padx=10, pady=5, sticky="W")
 
         lbl_calibrate_target = ttk.Label(blk_other_cal, wraplength=500, text='Performs target calibration for your '
                                                                              'screen. Perform when the target is '
                                                                              'visible center screen.')
-        lbl_calibrate_target.grid(row=2, column=1, padx=10, pady=5, sticky=tk.W)
+        lbl_calibrate_target.grid(row=1, column=1, padx=10, pady=5, sticky=tk.W)
 
     def save_ocr_calibration_data(self):
         # q = Quad.from_rect(self.ocr_calibration_data['EDCodex.full_panel']['rect'])
@@ -368,9 +359,6 @@ class Calibration:
             scaled_rect.crop(sub_reg_quad)
             self.ap.overlay.overlay_quad_pct('subregion select', scaled_rect, (0, 255, 0), 2, 15)
             self.ap.overlay.overlay_paint()
-
-    def calibrate_compass_callback(self):
-        self.ap.calibrate_compass()
 
     @staticmethod
     def calibrate_region_help():

@@ -388,9 +388,6 @@ class APGui:
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
 
-    def calibrate_compass_callback(self):
-        self.ed_ap.calibrate_compass()
-
     def quit(self):
         logger.debug("Entered: quit")
         self.close_window()

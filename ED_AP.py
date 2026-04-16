@@ -146,7 +146,7 @@ class EDAutopilot:
             self.hor_fov = round(self.ver_fov * self.scr.aspect_ratio, 4)
             logger.debug(f'Horizontal FOV: {self.hor_fov} deg (-{self.hor_fov / 2} to {self.hor_fov / 2}).')
 
-        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY, self.scr.scaleX, self.scr.scaleX)
+        self.templ = Image_Templates.Image_Templates(self.scr.scaleX, self.scr.scaleY)
         self.scrReg = Screen_Regions.Screen_Regions(self.scr, self.templ)
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
@@ -169,7 +169,6 @@ class EDAutopilot:
             self.mesg_server.start_server()
 
         # Set defaults for data read from ships config
-        self.compass_scale = 1.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0
@@ -189,7 +188,6 @@ class EDAutopilot:
         self.gui_loaded = False
         self._nav_cor_x = 0.0  # Nav Point correction to pitch
         self._nav_cor_y = 0.0  # Nav Point correction to yaw
-        self.target_scale = 0.0
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
@@ -353,8 +351,6 @@ class EDAutopilot:
             # NOTE!!! Add default values for new entries below!
             if 'SunBrightThreshold' not in cnf:
                 cnf['SunBrightThreshold'] = 125
-            if 'TargetScale' not in cnf:
-                cnf['TargetScale'] = 1.0
             if 'ScreenScale' not in cnf:
                 cnf['ScreenScale'] = 1.0
             if 'TCEDestinationFilepath' not in cnf:
@@ -451,12 +447,13 @@ class EDAutopilot:
             if self.current_ship_type not in self.ship_configs['Ship_Configs']:
                 self.ship_configs['Ship_Configs'][self.current_ship_type] = {}
                 logger.debug(f"Created new ship config entry for: {self.current_ship_type}")
-            
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['compass_scale'] = round(self.compass_scale, 4)
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchRate'] = self.pitchrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
+
+            self.current_ship_cfg = self.ship_configs['Ship_Configs'][self.current_ship_type]
+
+            self.current_ship_cfg['PitchRate'] = self.pitchrate
+            self.current_ship_cfg['RollRate'] = self.rollrate
+            self.current_ship_cfg['YawRate'] = self.yawrate
+            self.current_ship_cfg['SunPitchUp+Time'] = self.sunpitchuptime
 
             write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
@@ -470,7 +467,6 @@ class EDAutopilot:
         self.ap_ckb('log', f"Loading ship configuration for your {ship_type}")
 
         # Step 1: Use hardcoded defaults
-        self.compass_scale = self.scr.scaleX
         self.rollrate = 80.0
         self.pitchrate = 33.0
         self.yawrate = 8.0
@@ -481,7 +477,6 @@ class EDAutopilot:
         if ship_type in ship_rpy_sc_50:
             ship_defaults = ship_rpy_sc_50[ship_type]
             # Use default configuration - this means it's been modified and saved to ship_configs.json
-            self.compass_scale = self.scr.scaleX  # Always use current scale for compass
             self.rollrate = ship_defaults.get('RollRate', 80.0)
             self.pitchrate = ship_defaults.get('PitchRate', 33.0)
             self.yawrate = ship_defaults.get('YawRate', 8.0)
@@ -492,9 +487,8 @@ class EDAutopilot:
         if ship_type in self.ship_configs['Ship_Configs']:
             current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
             # Check if the custom config has actual values (not just empty dict)
-            if any(key in current_ship_cfg for key in ['compass_scale', 'RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
+            if any(key in current_ship_cfg for key in ['RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
                 # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.compass_scale = current_ship_cfg.get('compass_scale', self.scr.scaleX)
                 self.rollrate = current_ship_cfg.get('RollRate', 80.0)
                 self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
                 self.yawrate = current_ship_cfg.get('YawRate', 8.0)
@@ -572,7 +566,6 @@ class EDAutopilot:
         if self.galaxy_map:
             self.galaxy_map.SystemSelectDelay = self.config['GalMap_SystemSelectDelay']
 
-        self.target_scale = self.config['TargetScale']
         self.target_align_outer_lim = self.config['target_align_outer_lim']
         self.target_align_inner_lim = self.config['target_align_inner_lim']
 
@@ -641,7 +634,7 @@ class EDAutopilot:
             scale_y = scale_x
 
             # reload the templates with this scale value
-            self.templ.reload_templates(scale_x, scale_y, scale_x, scale_x)
+            self.templ.reload_templates(scale_x, scale_y, scale_x)
 
             # do image matching on the compass and the target
             image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region_x3(reg_name, templ_name)
@@ -706,35 +699,6 @@ class EDAutopilot:
 
         self.ap_ckb('log+vce', 'Calibration complete.')
 
-    def calibrate_compass(self):
-        """ Routine to find the optimal scaling values for the template images. """
-        msg = 'Select OK to begin Calibration. You must be in space and have the compass visible.'
-        self.vce.say(msg)
-        ans = messagebox.askokcancel('Calibration', msg)
-        if not ans:
-            return
-
-        self.ap_ckb('log+vce', 'Calibration starting.')
-
-        set_focus_elite_window()
-
-        # Draw the target and compass regions on the screen
-        key = 'compass'
-        targ_region = self.scrReg.reg[key]
-        self.overlay.overlay_rect1('calib_compass', targ_region['rect'], (0, 0, 255), 2, -1)
-        self.overlay.overlay_floating_text('calib_compass', key, targ_region['rect'][0], targ_region['rect'][1], (0, 0, 255), -1)
-        self.overlay.overlay_paint()
-
-        # Calibrate compass
-        self.calibrate_compass_worker()
-
-        # Clean up
-        self.overlay.overlay_remove_rect('calib_compass')
-        self.overlay.overlay_remove_floating_text('calib_compass')
-        self.overlay.overlay_paint()
-
-        self.ap_ckb('log+vce', 'Calibration complete.')
-
     def calibrate_target_worker(self):
         """ Calibrate target and screen. """
         range_low = 50  # Minimum scale (30%)
@@ -770,9 +734,7 @@ class EDAutopilot:
             self.ap_ckb('log', f'Target Cal: Best match: {max_val:5.4f}(%) at scale: {self.scr.scaleX:5.4f}')
             self.scr.scaleX = float(scale_max / 100)
             self.scr.scaleY = self.scr.scaleX
-            self.target_scale = self.scr.scaleX
             self.config['ScreenScale'] = round(self.scr.scaleX, 4)
-            self.config['TargetScale'] = round(self.target_scale, 4)
 
             self.scr.write_config(
                 data=None)  # None means the writer will use its own scales variable which we modified
@@ -781,109 +743,7 @@ class EDAutopilot:
                         f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val:5.4f}(%)')
 
         # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def quick_calibrate_target(self):
-        """ Quick Calibrate Target (not the screen) based on current scaling, without overlay. """
-        self.ap_ckb('log+vce', 'Performing quick target calibration.')
-
-        cur_scale = self.scr.scaleX * 100
-        range_low = cur_scale - 15  # Current scale - 15%
-        range_high = cur_scale + 15  # Current scale + 15%
-        range_step = 0.25  # Scale increment to step (0.25%)
-
-        # loop through the test.
-        threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
-        no_overlay = not self.debug_overlay
-        scale_max, max_val = self.calibrate_region(range_low, range_high, range_step, threshold, 'target','target', no_overlay)
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            self.ap_ckb('log', f'Target Cal: Best match: {max_val:5.4f}(%) at scale: {self.scr.scaleX:5.4f}')
-            # self.scr.scaleX = float(scale_max / 100)
-            # self.scr.scaleY = self.scr.scaleX
-            self.target_scale = float(scale_max / 100)
-            self.config['TargetScale'] = round(self.target_scale, 4)
-
-            self.scr.write_config(
-                data=None)  # None means the writer will use its own scales variable which we modified
-        else:
-            self.ap_ckb('log', f'Target Cal: Insufficient matching to meet reliability, max % match: {max_val:5.4f}(%)')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def calibrate_compass_worker(self):
-        """ Calibrate Compass """
-        range_low = 50  # Minimum scale (30%)
-        range_high = 200  # Maximum scale (200%)
-        range_step = 1  # Scale increment to step (1%)
-        scale_max = 0
-        max_val = 0
-
-        # loop through the test twice. Once over the wide scaling range at 1% increments and once over a
-        # small scaling range at 0.1% increments.
-        # Find out which scale factor meets the highest threshold value.
-        for i in range(1):
-            threshold = 0.0  # Minimum match is constant. Result will always be the highest match.
-            scale, max_pick = self.calibrate_region(range_low, range_high, range_step, threshold, 'compass','compass')
-            if scale != 0:
-                scale_max = scale
-                max_val = max_pick
-                range_low = scale - 5  # Current scale - 5%
-                range_high = scale + 5  # Current scale + 5%
-                range_step = 0.1  # Scale increment to step (0.1%)
-                if i == 1:
-                    self.ap_ckb('log',
-                                f'Target Cal: Best rough match: {max_val * 100:5.2f}% at scale: {float(scale_max / 100):5.4f}')
-                else:
-                    self.ap_ckb('log',
-                                f'Target Cal: Best fine match: {max_val * 100:5.2f}% at scale: {float(scale_max / 100):5.4f}')
-
-            else:
-                break  # no match found with threshold
-
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            c_scale_x = float(scale_max / 100)
-            self.ap_ckb('log',
-                        f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scale_x:5.4f}')
-            # Keep new value
-            self.compass_scale = c_scale_x
-
-        else:
-            self.ap_ckb('log',
-                        f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
-
-    def quick_calibrate_compass(self):
-        """ Quick Calibrate Compass based on current scaling, without overlay. """
-        self.ap_ckb('log+vce', 'Performing quick compass calibration.')
-
-        cur_scale = self.compass_scale * 100
-        range_low = cur_scale - 15  # Current scale - 15%
-        range_high = cur_scale + 15  # Current scale + 15%
-        range_step = 0.25  # Scale increment to step (0.25%)
-
-        # loop through the test.
-        threshold = 0.5  # Minimum match is constant. Result will always be the highest match.
-        no_overlay = not self.debug_overlay
-        scale_max, max_val = self.calibrate_region(range_low, range_high, range_step, threshold, 'compass','compass', no_overlay)
-        # if we found a scaling factor that meets our criteria, then save it to the resolution.json file
-        if max_val != 0:
-            c_scale_x = float(scale_max / 100)
-            self.ap_ckb('log',
-                        f'Compass Cal: Max best match: {max_val * 100:5.2f}% with scale: {c_scale_x:5.4f}')
-            # Keep new value
-            self.compass_scale = c_scale_x
-
-        else:
-            self.ap_ckb('log',
-                        f'Compass Cal: Insufficient matching to meet reliability, max % match: {max_val * 100:5.2f}%')
-
-        # reload the templates with the new (or previous value)
-        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY, self.compass_scale, self.target_scale)
+        self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
     def fss_detect_elw(self, scr_reg):
         """ Go into FSS, check to see if we have a signal waveform in the Earth, Water or Ammonia zone
@@ -1236,24 +1096,6 @@ class EDAutopilot:
                     pt_occ = [target_occ_quad.left, target_occ_quad.top]
 
         dst_image = target_image2
-        # maxLoc = 0
-        # max_val = 0
-        # for i in range(2):
-        #dst_image, (minVal, max_val, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target', inv_col=False)
-        # dst_image_occ, (minVal, maxVal_occ, minLoc, maxLoc_occ), match_occ = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
-        #
-        #     # need > x in the match to say we do have a destination
-        #     if max_val < (scr_reg.target_thresh / 2):
-        #         # If we are so far below threshold, then target must not be up
-        #         return None
-        #     elif max_val < scr_reg.target_thresh:
-        #         # We are below match, but only just, recalibrate
-        #         if not disable_auto_cal:
-        #             self.ap_ckb('log', f'Target Offset below threshold: {max_val:5.4f} with scale: {self.scr.scaleX:5.4f}')
-        #             self.quick_calibrate_target()
-
-        #pt = maxLoc
-        # pt_occ = maxLoc_occ
 
         # Check if target is occluded
         tar_quad = Quad()
@@ -1351,43 +1193,6 @@ class EDAutopilot:
             result = None
 
         return result
-
-    # def is_destination_occluded(self, scr_reg) -> bool:
-    #     """ Looks to see if the 'dashed' line of the target is present indicating the target
-    #     is occluded by the planet.
-    #     @param scr_reg: The screen region to check.
-    #     @return: True if target occluded (meets threshold), else False.
-    #     """
-    #     dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
-    #
-    #     pt = maxLoc
-    #
-    #     if self.cv_view:
-    #         dst_image_d = cv2.cvtColor(dst_image, cv2.COLOR_GRAY2RGB)
-    #         destination_width = scr_reg.reg['target']['width']
-    #         destination_height = scr_reg.reg['target']['height']
-    #
-    #         width  = scr_reg.templates.template['target_occluded']['width']
-    #         height = scr_reg.templates.template['target_occluded']['height']
-    #         try:
-    #             self.draw_match_rect(dst_image_d, pt, (pt[0]+width, pt[1]+height), (0, 0, 255), 2)
-    #             dim = (int(destination_width/2), int(destination_height/2))
-    #
-    #             img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
-    #             img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
-    #             cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-    #             cv2.imshow('occluded', img)
-    #             cv2.moveWindow('occluded', self.cv_view_x, self.cv_view_y+650)
-    #         except Exception as e:
-    #             print("exception in getdest: "+str(e))
-    #         cv2.waitKey(30)
-    #
-    #     if maxVal > scr_reg.target_occluded_thresh:
-    #         logger.debug(f"Target is occluded ({maxVal:5.4f} > {scr_reg.target_occluded_thresh:5.2f})")
-    #         return True
-    #     else:
-    #         #logger.debug(f"Target is not occluded ({maxVal:5.4f} < {scr_reg.target_occluded_thresh:5.2f})")
-    #         return False
 
     def sc_disengage_label_up(self, scr_reg) -> bool:
         """ look for messages like "PRESS [J] TO DISENGAGE" or "SUPERCRUISE OVERCHARGE ACTIVE",
@@ -2188,13 +1993,6 @@ class EDAutopilot:
         if self.speed_demand is None:
             self.set_speed_50()
 
-        # # Using Power calc for roll rate
-        # if 0 < abs_deg < 45:
-        #     value = self.rollrate * math.pow((abs_deg / 45), (1 / self.roll_factor))
-        #     value = min(value, self.rollrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
-
         # Calculate rate for less than 45 degrees, else use default
         if abs_deg < 45:
             # Roll rate from ship config
@@ -2234,13 +2032,6 @@ class EDAutopilot:
 
         if self.speed_demand is None:
             self.set_speed_50()
-
-        # # Using Power calc for pitch rate
-        # if 0 < abs_deg < 30:
-        #     value = self.pitchrate * math.pow((abs_deg / 30), (1 / self.pitch_factor))
-        #     value = min(value, self.pitchrate)
-        #     value = max(value, 0.01)
-        #     htime = abs_deg / value
 
         # Calculate rate for less than 30 degrees, else use default
         if abs_deg < 30:
