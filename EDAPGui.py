@@ -1110,7 +1110,7 @@ class APGui:
         blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky="NSEW")
         blk_dss = ttk.Frame(blk_buttons)
         blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky="NSEW")
-        lb_dss = ttk.Label(blk_dss, text="DSS Button: ")
+        lb_dss = ttk.Label(blk_dss, text="D-Scanner (Honk) Button: ")
         lb_dss.grid(row=0, column=0, sticky=tk.W)
         self.radiobuttonvar['dss_button'] = tk.StringVar()
         rb_dss_primary = ttk.Radiobutton(blk_dss, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))
