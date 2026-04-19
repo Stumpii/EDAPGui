@@ -411,21 +411,20 @@ class EDAutopilot:
             write_json_file(self.config, filepath='./configs/AP.json')
 
     def load_ship_configs(self):
+        """
+        Load all the ship configs from the ship configs file.
+        @return: N/A
+        """
         shp_cnf = read_json_file(filepath='./configs/ship_configs.json')
 
-        # if we read it then point to it, otherwise use the default table above
+        # if we read
+        # it then point to it, otherwise use the default table above
         if shp_cnf is not None:
-            if len(shp_cnf) != len(self.ship_configs):
-                # If configs of different lengths, then a new parameter was added.
-                # self.write_config(self.config)
-                # Add default values for new entries
-                if 'Ship_Configs' not in shp_cnf:
-                    shp_cnf['Ship_Configs'] = dict()
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
-            else:
-                self.ship_configs = shp_cnf
-                logger.debug("read Ships Config json:" + str(shp_cnf))
+            # Add default values for new entries
+            if 'Ship_Configs' not in shp_cnf:
+                shp_cnf['Ship_Configs'] = dict()
+            self.ship_configs = shp_cnf
+            logger.debug("read Ships Config json:" + str(shp_cnf))
         else:
             write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
 
@@ -479,34 +478,47 @@ class EDAutopilot:
             self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
             logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
 
-        # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
-        if ship_type in self.ship_configs['Ship_Configs']:
-            current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
-            # Check if the custom config has actual values (not just empty dict)
-            if any(key in current_ship_cfg for key in ['RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
-                # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.rollrate = current_ship_cfg.get('RollRate', 80.0)
-                self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
-                self.yawrate = current_ship_cfg.get('YawRate', 8.0)
-                self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
-                logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
-
-            # Check RPY Calibration
-            spd_dmd = 'SCSpeed50'
-            if spd_dmd not in current_ship_cfg:
-                self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
-            else:
-                speed_demand = current_ship_cfg[spd_dmd]
-                if 'RollRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
-                if 'PitchRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
-                if 'YawRate' not in speed_demand:
-                    self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
-
         # Add empty entry to ship_configs for future customization
         if ship_type not in self.ship_configs['Ship_Configs']:
             self.ship_configs['Ship_Configs'][ship_type] = dict()
+
+        # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
+        current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
+        # Check if the custom config has actual values (not just empty dict)
+        if any(key in current_ship_cfg for key in ['RollRate', 'PitchRate', 'YawRate', 'SunPitchUp+Time']):
+            # Use custom configuration - this means it's been modified and saved to ship_configs.json
+            self.rollrate = current_ship_cfg.get('RollRate', 80.0)
+            self.pitchrate = current_ship_cfg.get('PitchRate', 33.0)
+            self.yawrate = current_ship_cfg.get('YawRate', 8.0)
+            self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
+            logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
+
+        for spd_dmd in ['SCSpeed50']:
+            # Check RPY Calibration
+            if spd_dmd not in current_ship_cfg:
+                self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
+                current_ship_cfg[spd_dmd] = dict()
+
+            speed_demand = current_ship_cfg[spd_dmd]
+            if 'RollRate' not in speed_demand:
+                self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
+                # Default roll rates at 5, 45 and 90 deg
+                speed_demand['RollRate'] = {"50": self.rollrate / 2,
+                                            "450": self.rollrate,
+                                            "600": self.rollrate}
+            if 'PitchRate' not in speed_demand:
+                self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
+                # Default pitch rates at 0.5, 30 and 90 deg
+                speed_demand['PitchRate'] = {"5": self.pitchrate / 2,
+                                             "300": self.pitchrate,
+                                             "600": self.pitchrate}
+            if 'YawRate' not in speed_demand:
+                self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
+                # Default yaw rates at 0.5, 30 and 90 deg
+                speed_demand['YawRate'] = {"5": self.yawrate / 2,
+                                           "300": self.yawrate,
+                                           "600": self.yawrate}
+
 
     def update_overlay(self):
         """ Draw the overlay data on the ED Window """
@@ -1139,9 +1151,9 @@ class EDAutopilot:
         # so 3 o'clock is +90° and 9 o'clock is -90°.
         final_roll_deg = 0.0
         if final_x_pct > 0.0:
-            final_roll_deg = 90 - degrees(atan(final_pit_deg/final_yaw_deg))
+            final_roll_deg = 90 - degrees(atan(radians(final_pit_deg)/radians(final_yaw_deg)))
         elif final_x_pct < 0.0:
-            final_roll_deg = -90 - degrees(atan(final_pit_deg/final_yaw_deg))
+            final_roll_deg = -90 - degrees(atan(radians(final_pit_deg)/radians(final_yaw_deg)))
         elif final_y_pct < 0.0:
             final_roll_deg = 180.0
 
