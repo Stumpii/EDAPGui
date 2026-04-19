@@ -1,3 +1,12 @@
+# 4/19/2026 v1.9.0 b9
+- Removed 30 and 45 degree limits from RPY calculation to allow wider range on curves.
+- Added 60 deg to default curve.
+- Added auto sorting of calibration curves.
+- Moved some ship functions to ship control.
+- Removed templates that are no longer used (compass and target).
+- Removed compass scale and target scale. Not needed with ML.
+- Removed calibrate compass.
+
 # 4/12/2026 v1.9.0 b8
 - Added a RPY curve editor accessible via 3 new edit buttons under the RPY rates.
 - Removed the unused RPY Factor constants and code.
