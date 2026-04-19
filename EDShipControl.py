@@ -36,6 +36,10 @@ class EDShipControl:
         return True
 
     def roll_clockwise_anticlockwise(self, deg):
+        """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
+        @param deg: The angle to turn in degrees
+        @return: N/A
+        """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.rollrate
 
@@ -44,30 +48,26 @@ class EDShipControl:
 
         # Calculate rate for less than 45 degrees, else use default
         if self.ap.current_ship_cfg:
-            if abs_deg < 45:
-                # Roll rate from ship config
-                if self.ap.speed_demand not in self.ap.current_ship_cfg:
-                    self.ap.current_ship_cfg[self.ap.speed_demand] = dict()
+            # Roll rate from ship config
+            if self.ap.speed_demand in self.ap.current_ship_cfg:
                 speed_demand = self.ap.current_ship_cfg[self.ap.speed_demand]
-                if 'RollRate' not in speed_demand:
-                    speed_demand['RollRate'] = dict()
+                if 'RollRate' in speed_demand:
+                    last_deg = 0.0
+                    last_val = 0.0
+                    for key, value in speed_demand['RollRate'].items():
+                        key_deg = float(int(key)) / 10
+                        if abs_deg <= key_deg:
+                            print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                last_deg = 0.0
-                last_val = 0.0
-                for key, value in speed_demand['RollRate'].items():
-                    key_deg = float(int(key)) / 10
-                    if abs_deg <= key_deg:
-                        print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
+                            # Ratio based on the last value and this value
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                        # Ratio based on the last value and this value
-                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                        print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                        htime = abs_deg / ratio_val
-                        break
-                    else:
-                        last_deg = key_deg
-                        last_val = value
+                            htime = abs_deg / ratio_val
+                            break
+                        else:
+                            last_deg = key_deg
+                            last_val = value
 
         # Check if we are rolling right or left
         if deg > 0.0:
@@ -76,6 +76,10 @@ class EDShipControl:
             self.keys.send('RollLeftButton', hold=htime)
 
     def pitch_up_down(self, deg):
+        """ Pitch in deg. (> 0.0 for pitch up, < 0.0 for pitch down)
+        @param deg: The angle to turn in degrees
+        @return: N/A
+        """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.pitchrate
 
@@ -84,30 +88,26 @@ class EDShipControl:
 
         # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:
-            if abs_deg < 30:
-                # Pitch rate from ship config
-                if self.ap.speed_demand not in self.ap.current_ship_cfg:
-                    self.ap.current_ship_cfg[self.ap.speed_demand] = dict()
+            # Pitch rate from ship config
+            if self.ap.speed_demand in self.ap.current_ship_cfg:
                 speed_demand = self.ap.current_ship_cfg[self.ap.speed_demand]
-                if 'PitchRate' not in speed_demand:
-                    speed_demand['PitchRate'] = dict()
+                if 'PitchRate' in speed_demand:
+                    last_deg = 0.0
+                    last_val = 0.0
+                    for key, value in speed_demand['PitchRate'].items():
+                        key_deg = float(int(key)) / 10
+                        if abs_deg <= key_deg:
+                            print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                last_deg = 0.0
-                last_val = 0.0
-                for key, value in speed_demand['PitchRate'].items():
-                    key_deg = float(int(key)) / 10
-                    if abs_deg <= key_deg:
-                        print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
+                            # Ratio based on the last value and this value
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                        # Ratio based on the last value and this value
-                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                        print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                        htime = abs_deg / ratio_val
-                        break
-                    else:
-                        last_deg = key_deg
-                        last_val = value
+                            htime = abs_deg / ratio_val
+                            break
+                        else:
+                            last_deg = key_deg
+                            last_val = value
 
         # Check if we are pitching up or down
         if deg > 0.0:
@@ -117,7 +117,8 @@ class EDShipControl:
 
     def yaw_right_left(self, deg):
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
-        @return: The key hold duration.
+        @param deg: The angle to turn in degrees
+        @return: N/A
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.yawrate
@@ -127,30 +128,26 @@ class EDShipControl:
 
         # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:
-            if abs_deg < 30:
-                # Yaw rate from ship config
-                if self.ap.speed_demand not in self.ap.current_ship_cfg:
-                    self.ap.current_ship_cfg[self.ap.speed_demand] = dict()
+            # Yaw rate from ship config
+            if self.ap.speed_demand in self.ap.current_ship_cfg:
                 speed_demand = self.ap.current_ship_cfg[self.ap.speed_demand]
-                if 'YawRate' not in speed_demand:
-                    speed_demand['YawRate'] = dict()
+                if 'YawRate' in speed_demand:
+                    last_deg = 0.0
+                    last_val = 0.0
+                    for key, value in speed_demand['YawRate'].items():
+                        key_deg = float(int(key)) / 10
+                        if abs_deg <= key_deg:
+                            print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
 
-                last_deg = 0.0
-                last_val = 0.0
-                for key, value in speed_demand['YawRate'].items():
-                    key_deg = float(int(key)) / 10
-                    if abs_deg <= key_deg:
-                        print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
+                            # Ratio based on the last value and this value
+                            ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
+                            print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
 
-                        # Ratio based on the last value and this value
-                        ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                        print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
-
-                        htime = abs_deg / ratio_val
-                        break
-                    else:
-                        last_deg = key_deg
-                        last_val = value
+                            htime = abs_deg / ratio_val
+                            break
+                        else:
+                            last_deg = key_deg
+                            last_val = value
 
         # Check if we are yawing right or left
         if deg > 0.0:
@@ -244,6 +241,7 @@ class EDShipControl:
         # If we have logged values, add the ship default rate at 30 deg
         if len(self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate']) > 0:
             self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][300] = self.ap.pitchrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][600] = self.ap.pitchrate
             self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
 
         self.ap_ckb('log', "Completed Pitch Calibration.")
@@ -334,6 +332,7 @@ class EDShipControl:
         # If we have logged values, add the ship default rate at 45 deg
         if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
             self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][450] = self.ap.rollrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][600] = self.ap.rollrate
             self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
 
         self.ap_ckb('log', "Completed Roll Calibration.")
@@ -426,6 +425,7 @@ class EDShipControl:
         # If we have logged values, add the ship default rate at 30 deg
         if len(self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate']) > 0:
             self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][300] = self.ap.yawrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][600] = self.ap.yawrate
             self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
 
         self.ap_ckb('log', "Completed Yaw Calibration.")
