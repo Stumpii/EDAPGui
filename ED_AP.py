@@ -3,7 +3,7 @@ import os
 import traceback
 from datetime import timedelta
 from enum import Enum
-from math import atan, degrees
+from math import atan, degrees, tan, radians
 import random
 from string import Formatter
 from tkinter import messagebox
@@ -146,7 +146,7 @@ class EDAutopilot:
         self.jn = EDJournal(cb)
         self.keys = EDKeys(cb)
         self.afk_combat = AFK_Combat(self, self.keys, self.jn, self.vce)
-        self.waypoint = EDWayPoint(self, self.jn.ship_state()['odyssey'])
+        self.waypoint = EDWayPoint(self, cb, self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
         self.status = StatusParser()
         self.nav_route = NavRouteParser()
@@ -1539,7 +1539,7 @@ class EDAutopilot:
             if off is None:
                 self.ap_ckb('log', 'Unable to detect compass. Rolling to new position.')
                 # Try rolling if star glare is obscuring the compass
-                self.roll_clockwise_anticlockwise(90)
+                self.ship_control.roll_clockwise_anticlockwise(90)
                 continue
 
             logger.debug(f"Compass position: yaw: {str(off['yaw'])} pit: {str(off['pit'])}")
@@ -1568,7 +1568,7 @@ class EDAutopilot:
                             self.overlay.overlay_remove_floating_text('compass_rpy')
                             self.overlay.overlay_paint()
 
-                        self.roll_clockwise_anticlockwise(off['roll'])
+                        self.ship_control.roll_clockwise_anticlockwise(off['roll'])
                         sleep(1)
                         off = self.get_nav_offset(scr_reg)
                     else:
@@ -1589,7 +1589,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.pitch_up_down(off['pit'])
+                    self.ship_control.pitch_up_down(off['pit'])
                     sleep(0.75)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -1610,7 +1610,7 @@ class EDAutopilot:
                         self.overlay.overlay_remove_floating_text('compass_rpy')
                         self.overlay.overlay_paint()
 
-                    self.yaw_right_left(off['yaw'])
+                    self.ship_control.yaw_right_left(off['yaw'])
                     sleep(0.5)
                     off = self.get_nav_offset(scr_reg)
                 else:
@@ -1762,13 +1762,13 @@ class EDAutopilot:
             p_deg = 0.0
             if abs(off['pit']) > target_align_outer_lim:
                 p_deg = off['pit']
-                self.pitch_up_down(p_deg)
+                self.ship_control.pitch_up_down(p_deg)
 
             # Calc yaw time based on nav point location
             y_deg = 0.0
             if abs(off['yaw']) > target_align_outer_lim:
                 y_deg = off['yaw']
-                self.yaw_right_left(y_deg)
+                self.ship_control.yaw_right_left(y_deg)
 
             # Wait for ship to finish moving and picture to stabilize
             sleep(1.0)
@@ -1844,14 +1844,14 @@ class EDAutopilot:
         bring the target into view quickly. """
         self.ap_ckb('log+vce', 'Target occluded, repositioning.')
         self.set_speed_0()
-        self.pitch_up_down(-90)
+        self.ship_control.pitch_up_down(-90)
 
         # Speed away
         self.set_speed_100()
         sleep(15)
 
         self.set_speed_0()
-        self.pitch_up_down(90)
+        self.ship_control.pitch_up_down(90)
         self.compass_align(scr_reg)
         self.set_speed_50()
 
@@ -2064,7 +2064,7 @@ class EDAutopilot:
         elif is_star_scoopable == False:
             self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
-            self.pitch_up_down(20)
+            self.ship_control.pitch_up_down(20)
             return False
 
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
@@ -2075,11 +2075,11 @@ class EDAutopilot:
         elif not has_fuel_scoop:
             self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
             logger.debug('No fuel scoop fitted.')
-            self.pitch_up_down(20)
+            self.ship_control.pitch_up_down(20)
             return False
 
         else:
-            self.pitch_up_down(15)  # if not refueling pitch up somemore so we won't heat up
+            self.ship_control.pitch_up_down(15)  # if not refueling pitch up somemore so we won't heat up
             return False
 
     def waypoint_undock_seq(self):
@@ -2114,7 +2114,7 @@ class EDAutopilot:
                 if fleet_carrier or squadron_fleet_carrier:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(self.config['FCDepartureAngle'])
+                    self.ship_control.pitch_up_down(self.config['FCDepartureAngle'])
 
                     self.update_ap_status("Undock Complete, accelerating")
 
@@ -2129,7 +2129,7 @@ class EDAutopilot:
                 if on_orbital_construction_site:
                     self.ap_ckb('log+vce', 'Maneuvering')
                     # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-                    self.pitch_up_down(self.config['OCDepartureAngle'])
+                    self.ship_control.pitch_up_down(self.config['OCDepartureAngle'])
 
                 if starport_outpost or on_orbital_construction_site:
                     # In space (launched from starport or outpost etc.) OR construction site
@@ -2166,7 +2166,7 @@ class EDAutopilot:
             # Undocked or off the surface, so leave planet
             self.set_speed_50()
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-            self.pitch_up_down(90 * 1.25)
+            self.ship_control.pitch_up_down(90 * 1.25)
 
             # Engage Supercruise
             self.sc_engage(True)
@@ -2709,13 +2709,13 @@ class EDAutopilot:
 
             # Ship calibration functions
             if self.ship_tst_roll_enabled:
-                self.ship_tst_roll_new(0)
+                self.ship_control.ship_tst_roll_new(0)
                 self.ship_tst_roll_enabled = False
             if self.ship_tst_pitch_enabled:
-                self.ship_tst_pitch_new(0)
+                self.ship_control.ship_tst_pitch_new(0)
                 self.ship_tst_pitch_enabled = False
             if self.ship_tst_yaw_enabled:
-                self.ship_tst_yaw_new(0)
+                self.ship_control.ship_tst_yaw_new(0)
                 self.ship_tst_yaw_enabled = False
 
             if self.fsd_assist_enabled:
@@ -2903,7 +2903,7 @@ class EDAutopilot:
                         # Update GUI with ship config
                         self.ap_ckb('update_ship_cfg')
 
-                        # Reload templates
+                        # Reload templates for this ship
                         self.templ.reload_templates(self.scr.scaleX, self.scr.scaleY)
 
             self.update_overlay()
@@ -3050,7 +3050,7 @@ def main():
     # ed_ap.rotateLeft(1)
     x = 10
     ed_ap.pitchrate = 16.0
-    ed_ap.pitch_up_down(-x)
+    ed_ap.ship_control.pitch_up_down(-x)
 
     sleep(.5)
 
@@ -3061,7 +3061,7 @@ def main():
 
     sleep(.5)
 
-    ed_ap.pitch_up_down(x)
+    ed_ap.ship_control.pitch_up_down(x)
 
     # ed_ap.yawLeft(1)
 
