@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 from EDAP_data import *
+from EDlogger import logger
 from Screen import set_focus_elite_window
 from StatusParser import StatusParser
 from time import sleep
 
 
 def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
-    """ Does scaling of the input based on input and output min/max."""
+    """ Does scaling of the input based on input and output min/max.
+    @param inp: The input, typically with the range in_min to in_max, but can extend outside.
+    @param in_min: The min input value.
+    @param in_max: The max input value.
+    @param out_min: The min output value.
+    @param out_max: The max output value.
+    @return: The calculated input interpolated or extrapolated by the given ranges.
+    """
     return (inp - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
 
@@ -57,17 +65,27 @@ class EDShipControl:
                     for key, value in speed_demand['RollRate'].items():
                         key_deg = float(int(key)) / 10
                         if abs_deg <= key_deg:
-                            print(f"Roll demand: {deg}. Closest lookup: {key_deg}, {value}")
-
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            print(f"Roll demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                            # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            # logger.info(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
+
+                            last_deg = key_deg
+                            last_val = value
                             break
                         else:
                             last_deg = key_deg
                             last_val = value
+
+                    # Check if we are off the scale
+                    if abs_deg > last_deg:
+                        htime = abs_deg / last_val
+                        # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                        # logger.info(f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
 
         # Check if we are rolling right or left
         if deg > 0.0:
@@ -97,17 +115,27 @@ class EDShipControl:
                     for key, value in speed_demand['PitchRate'].items():
                         key_deg = float(int(key)) / 10
                         if abs_deg <= key_deg:
-                            print(f"Pitch demand: {deg}. Closest lookup: {key_deg}, {value}")
-
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            print(f"Pitch demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                            # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            # logger.info(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
+
+                            last_deg = key_deg
+                            last_val = value
                             break
                         else:
                             last_deg = key_deg
                             last_val = value
+
+                    # Check if we are off the scale
+                    if abs_deg > last_deg:
+                        htime = abs_deg / last_val
+                        # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                        # logger.info(f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
 
         # Check if we are pitching up or down
         if deg > 0.0:
@@ -137,17 +165,27 @@ class EDShipControl:
                     for key, value in speed_demand['YawRate'].items():
                         key_deg = float(int(key)) / 10
                         if abs_deg <= key_deg:
-                            print(f"Yaw demand: {deg}. Closest lookup: {key_deg}, {value}")
-
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
-                            print(f"Yaw demand: {deg}. Ratio value: {round(ratio_val, 2)}")
+                            # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            # logger.info(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                            self.ap_ckb('log', f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
 
                             htime = abs_deg / ratio_val
+
+                            last_deg = key_deg
+                            last_val = value
                             break
                         else:
                             last_deg = key_deg
                             last_val = value
+
+                    # Check if we are off the scale
+                    if abs_deg > last_deg:
+                        htime = abs_deg / last_val
+                        # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
+                        # logger.info(f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
+                        self.ap_ckb('log', f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
 
         # Check if we are yawing right or left
         if deg > 0.0:
