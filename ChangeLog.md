@@ -1,3 +1,7 @@
+# 4/25/2026 v1.9.0 b10
+- Changed layout of RPY test buttons.
+- Ship RPY now uses the last curve data value instead of defaulting to the default value when after the last curve point.
+
 # 4/19/2026 v1.9.0 b9
 - Removed 30 and 45 degree limits from RPY calculation to allow wider range on curves.
 - Added 60 deg to default curve.
