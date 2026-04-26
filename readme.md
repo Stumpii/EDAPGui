@@ -106,10 +106,7 @@ If you just want to download and run EDAP and have no interest in the source cod
 ## Advanced
 If you are interested in Python and making changes to the code, or seeing how it works, use this method:
 
-1. Clone this repository
-```sh
-> git clone https://github.com/sumzer0-git/EDAPGui
-```
+1. Clone this repository using the methods available under the green '<> Code' button above.
 2. Install requirements
 ```sh
 > cd EDAPGui

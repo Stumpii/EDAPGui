@@ -1,6 +1,7 @@
 import json
 import os
 from copy import copy
+from dataclasses import dataclass
 from typing import TypedDict
 
 import numpy as np
@@ -19,16 +20,231 @@ Author: sumzer0@yahoo.com
 """
 
 
-def scale_region(region_rect, sub_region_rect) -> [float, float, float, float]:
-    """ Converts a sub region scale to a region scale.
-    @param region_rect: A rectangle ([float, float, float, float]).
-    @param sub_region_rect: A rectangle ([float, float, float, float]).
-    @return: A rectangle ([float, float, float, float]).
+class Point:
+    """Creates a point on a coordinate plane with values x and y."""
+
+    def __init__(self, x, y):
+        """Defines x and y variables"""
+        self.x: float = x
+        self.y: float = y
+
+    def __str__(self):
+        return "Point(%s, %s)" % (self.x, self.y)
+
+    def get_x(self) -> float:
+        return self.x
+
+    def get_y(self) -> float:
+        return self.y
+
+    def to_list(self) -> [float, float]:
+        return [self.x, self.y]
+
+    @classmethod
+    def from_xy(cls, xy_tuple: (float, float)):
+        """ From (x, y) """
+        return cls(xy_tuple[0], xy_tuple[1])
+
+    @classmethod
+    def from_list(cls, xy_list: [float, float]):
+        """ From (x, y) """
+        return cls(xy_list[0], xy_list[1])
+
+
+class Quad:
+    """ Represents a quadrilateral (a four-sided polygon that has four edges and four vertices).
+    It can be classified into various types, such as squares, rectangles, trapezoids, and rhombuses.
     """
-    r = Quad.from_rect(region_rect)
-    sr = Quad.from_rect(sub_region_rect)
-    r.subregion_from_quad(sr)
-    return r.to_rect_list()
+
+    def __init__(self, p1: Point = None, p2: Point = None, p3: Point = None, p4: Point = None):
+        self.pt1: Point = p1
+        self.pt2: Point = p2
+        self.pt3: Point = p3
+        self.pt4: Point = p4
+
+    @classmethod
+    def from_list(cls, pt_list: [[float, float], [float, float], [float, float], [float, float]]):
+        """ Creates a quad from a list of points as
+        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
+        return cls(Point.from_list(pt_list[0]), Point.from_list(pt_list[1]),
+                   Point.from_list(pt_list[2]), Point.from_list(pt_list[3]))
+
+    @classmethod
+    def from_rect(cls, edge_list: [float, float, float, float]):
+        """ Creates a quad from a list of edges i.e. [left, top, right, bottom] """
+        return cls(Point(edge_list[0], edge_list[1]), Point(edge_list[2], edge_list[1]),
+                   Point(edge_list[2], edge_list[3]), Point(edge_list[0], edge_list[3]))
+
+    def to_rect_list(self, round_dp: int = -1) -> [float, float, float, float]:
+        """ Returns the bounds of the quadrilateral as a list of values [left, top, right, bottom].
+        @param: round_dp: If >=0, the number of decimal places to round numbers to, otherwise no rounding.
+        """
+        if round_dp < 0:
+            return [self.left, self.top, self.right, self.bottom]
+        else:
+            return [round(self.left, round_dp), round(self.top, round_dp),
+                    round(self.right, round_dp), round(self.bottom, round_dp)]
+
+    def to_list(self) -> [[float, float], [float, float], [float, float], [float, float]]:
+        """ Returns the list of points of the quadrilateral as
+        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
+        return [self.pt1.to_list(), self.pt2.to_list(), self.pt3.to_list(), self.pt4.to_list()]
+
+    @property
+    def top_left(self) -> Point:
+        """ Returns the top left point. """
+        pt = self.pt1
+        if self.pt2.x < pt.x and self.pt2.y < pt.y:
+            pt = self.pt2
+        if self.pt3.x < pt.x and self.pt3.y < pt.y:
+            pt = self.pt3
+        if self.pt4.x < pt.x and self.pt4.y < pt.y:
+            pt = self.pt4
+        return copy(pt)
+
+    @property
+    def bottom_right(self) -> Point:
+        """ Returns the bottom right point. """
+        pt = self.pt1
+        if self.pt2.x > pt.x and self.pt2.y > pt.y:
+            pt = self.pt2
+        if self.pt3.x > pt.x and self.pt3.y > pt.y:
+            pt = self.pt3
+        if self.pt4.x > pt.x and self.pt4.y > pt.y:
+            pt = self.pt4
+        return copy(pt)
+
+    @property
+    def left(self) -> float:
+        """ Returns the value of the left most point. """
+        return min(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
+
+    @property
+    def top(self) -> float:
+        """ Returns the value of the top most point. """
+        return min(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
+
+    @property
+    def right(self) -> float:
+        """ Returns the value of the right most point. """
+        return max(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
+
+    @property
+    def bottom(self) -> float:
+        """ Returns the value of the bottom most point. """
+        return max(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
+
+    @property
+    def width(self):
+        """Returns the maximum width."""
+        return self.right - self.left
+
+    @property
+    def height(self):
+        """Returns the maximum height."""
+        return self.bottom - self.top
+
+    @property
+    def bounds(self) -> (Point, Point):
+        """ Returns the bounds of the quadrilateral as a rectangle defined by two points,
+        the top-left and bottom-right."""
+        return Point(self.left, self.top), Point(self.right, self.bottom)
+
+    @property
+    def center(self) -> Point:
+        cx = (self.pt1.x + self.pt2.x + self.pt3.x + self.pt4.x) / 4
+        cy = (self.pt1.y + self.pt2.y + self.pt3.y + self.pt4.y) / 4
+        return Point(cx, cy)
+
+    def scale(self, fx: float, fy: float):
+        """ Scales the quad from the center.
+        @param fy: Scaling in the Y direction.
+        @param fx: Scaling in the X direction.
+        """
+        center = self.center
+        self.pt1 = self._scale_point(self.pt1, center, fx, fy)
+        self.pt2 = self._scale_point(self.pt2, center, fx, fy)
+        self.pt3 = self._scale_point(self.pt3, center, fx, fy)
+        self.pt4 = self._scale_point(self.pt4, center, fx, fy)
+
+    def inflate(self, x: float, y: float):
+        """ Scales the quad from the center.
+        @param y: Scaling in the Y direction.
+        @param x: Scaling in the X direction.
+        """
+        center = self.center
+        self.pt1 = self._inflate_point(self.pt1, center, x, y)
+        self.pt2 = self._inflate_point(self.pt2, center, x, y)
+        self.pt3 = self._inflate_point(self.pt3, center, x, y)
+        self.pt4 = self._inflate_point(self.pt4, center, x, y)
+
+    def crop(self, quad):
+        """ Crops the quad as region specified by the % (0.0-1.0) inputs.
+        NOTE: This assumes that the quad is a rectangle or square. Won't work with other shapes!
+        Example: An input of [0.0, 0.0, 1.0, 1.0] returns the quad unchanged.
+        Example: An input of [0.0, 0.0, 0.25, 0.25] returns the top left quarter of the quad.
+        @param quad: A quad.
+        """
+        new_l = (quad.left * self.width) + self.left
+        new_t = (quad.top * self.height) + self.top
+        new_r = (quad.right * self.width) + self.left
+        new_b = (quad.bottom * self.height) + self.top
+
+        self.pt1 = Point(new_l, new_t)
+        self.pt2 = Point(new_r, new_t)
+        self.pt3 = Point(new_r, new_b)
+        self.pt4 = Point(new_l, new_b)
+
+    def scale_from_origin(self, fx: float, fy: float):
+        """ Scales the quad from the origin (0,0).
+        @param fy: Scaling in the Y direction.
+        @param fx: Scaling in the X direction.
+        """
+        origin = Point(0, 0)
+        self.pt1 = self._scale_point(self.pt1, origin, fx, fy)
+        self.pt2 = self._scale_point(self.pt2, origin, fx, fy)
+        self.pt3 = self._scale_point(self.pt3, origin, fx, fy)
+        self.pt4 = self._scale_point(self.pt4, origin, fx, fy)
+
+    def offset(self, dx: float, dy: float):
+        """ Offsets (moves) the quad by the given amount.
+        @param dx: The amount to move in the x direction.
+        @param dy: The amount to move in the y direction.
+        """
+        self.pt1 = self._offset_point(self.pt1, dx, dy)
+        self.pt2 = self._offset_point(self.pt2, dx, dy)
+        self.pt3 = self._offset_point(self.pt3, dx, dy)
+        self.pt4 = self._offset_point(self.pt4, dx, dy)
+
+    @staticmethod
+    def _scale_point(pt: Point, center: Point, fx: float, fy: float) -> Point:
+        return Point(
+            center.x + (pt.x - center.x) * fx,
+            center.y + (pt.y - center.y) * fy
+        )
+
+    @staticmethod
+    def _inflate_point(pt: Point, center: Point, x: float, y: float) -> Point:
+        x1 = x
+        y1 = y
+        if pt.x < center.x:
+            x1 = -x
+        if pt.y < center.y:
+            y1 = -y
+        return Point(pt.x + x1, pt.y + y1)
+
+    @staticmethod
+    def _offset_point(pt: Point, dx: float, dy: float) -> Point:
+        """ Offsets the point.
+        Using this instead of calling offset on the point directly allows shallow copy of the quad."""
+        return Point(pt.x + dx, pt.y + dy)
+
+    def __str__(self):
+        return (f"Quadrilateral:\n"
+                f" pt1: ({self.pt1.x}, {self.pt1.y})\n"
+                f" pt2: ({self.pt2.x}, {self.pt2.y})\n"
+                f" pt3: ({self.pt3.x}, {self.pt3.y})\n"
+                f" pt4: ({self.pt4.x}, {self.pt4.y})")
 
 
 def load_calibrated_regions(prefix: str, reg: dict):
@@ -56,8 +272,42 @@ def load_calibrated_regions(prefix: str, reg: dict):
                     calibrated_sub_key = f"{prefix}.{key1}.subregion.{key2}"
                     if calibrated_sub_key in calibrated_regions:
                         # Scale the regions based on the sub-region.
-                        reg[key2]['rect'] = scale_region(reg[key1]['rect'],
-                                                         calibrated_regions[calibrated_sub_key]['rect'])
+                        x = Quad.from_rect(reg[key1]['rect'])
+                        sub_reg = Quad.from_rect(calibrated_regions[calibrated_sub_key]['rect'])
+                        x.crop(sub_reg)
+                        reg[key2]['rect'] = x.to_rect_list()
+
+
+def load_calibrated_regions_quad(prefix: str, reg_quad: dict[str, Quad]):
+    """ Read the custom region sizes from the calibration json file.
+    @param reg_quad: Dictionary of regions which is modified.
+    @param prefix: The dictionary key prefix (i.e. 'EDStationServicesInShip')
+    """
+    if not prefix or prefix == '' or not reg_quad:
+        return
+
+    calibration_file = 'configs/ocr_calibration.json'
+    if os.path.exists(calibration_file):
+        with open(calibration_file, 'r') as f:
+            calibrated_regions = json.load(f)
+
+        # Go through all regions in this class
+        for key1, value1 in reg_quad.items():
+            calibrated_key = f"{prefix}.{key1}"
+            if calibrated_key in calibrated_regions:
+                # Use region details from the calibration file.
+                reg_quad[key1] = Quad.from_rect(calibrated_regions[calibrated_key]['rect'])
+
+                # Check if this region has any sub-regions
+                for key2, value2 in reg_quad.items():
+                    calibrated_sub_key = f"{prefix}.{key1}.subregion.{key2}"
+                    if calibrated_sub_key in calibrated_regions:
+                        # Get the 'parent' region.
+                        x = copy(reg_quad[key1])
+                        # Scale the region based on the sub-region.
+                        sub_reg = Quad.from_rect(calibrated_regions[calibrated_sub_key]['rect'])
+                        x.crop(sub_reg)
+                        reg_quad[key2] = x
 
 
 class SubRegion(TypedDict):
@@ -82,30 +332,57 @@ class MyRegion(TypedDict):
     objects: dict[str, Objects]
 
 
-def load_ocr_calibration_data() -> dict[str, MyRegion]:
-    # TODO - Move this into Screen_Regions class
-    ocr_calibration_data = dict[str, MyRegion]
+def load_default_calib_data() -> dict[str, MyRegion]:
+    default_calib_data = dict[str, MyRegion]
     calibration_file = 'configs/ocr_calibration.json'
 
     default_regions = dict[str, MyRegion]
     default_regions = {
-        # "Screen_Regions.sun": {"rect": [0.30, 0.30, 0.70, 0.68]},
-        # "Screen_Regions.disengage": {"rect": [0.42, 0.65, 0.60, 0.80]},
-        # "Screen_Regions.sco": {"rect": [0.42, 0.65, 0.60, 0.80]},
-        # "Screen_Regions.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955]},
-        # "Screen_Regions.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86]},
-        # "Screen_Regions.missions": {"rect": [0.50, 0.78, 0.65, 0.85]},
+        "Screen_Regions.full_panel": {"rect": [0.0, 0.0, 1.0, 1.0],
+                                      "text": "1. Go to cockpit view.\n2. Select the optimum screen size using the predefined subregions.\nIt is likely that this value can be changed so that the default\nsubregions do not need to be changed.",
+                                      "readonly": False},
+        "Screen_Regions.full_panel.subregion.radar": {"rect": [0.411, 0.685, 0.588, 0.847],
+                                                      "text": "The area around the radar.",
+                                                      "readonly": False},
+        "Screen_Regions.full_panel.subregion.compass": {"rect": [0.33, 0.6, 0.46, 1.0],
+                                                        "text": "The area around the compass. Needs to be big enough for all ships while flying.",
+                                                        "readonly": False},
+        "Screen_Regions.full_panel.subregion.target": {"rect": [0.2, 0.15, 0.8, 0.75],
+                                                       "text": "The area around the target. Needs to be big enough for all ships while flying.",
+                                                       "readonly": False},
+        "Screen_Regions.full_panel.subregion.target_occluded": {"rect": [0.2, 0.15, 0.8, 0.75],
+                                                                "text": "The area around the target. Needs to be big enough for all ships while flying.",
+                                                                "readonly": False},
+        "Screen_Regions.full_panel.subregion.sun": {"rect": [0.30, 0.30, 0.70, 0.68],
+                                                    "text": "TBD",
+                                                    "readonly": False},
+        "Screen_Regions.full_panel.subregion.disengage": {"rect": [0.42, 0.65, 0.60, 0.80],
+                                                          "text": "The area above the radar where the disengage message appears.",
+                                                          "readonly": False},
+        "Screen_Regions.full_panel.subregion.sco": {"rect": [0.42, 0.65, 0.60, 0.80],
+                                                    "text": "The area above the radar where the supercruise overdrive active message appears.",
+                                                    "readonly": False},
+        "Screen_Regions.full_panel.subregion.fss": {"rect": [0.5045, 0.7545, 0.532, 0.7955],
+                                                    "text": "Should be replaced with the FSS screen regions.",
+                                                    "readonly": False},
+        "Screen_Regions.full_panel.subregion.mission_dest": {"rect": [0.46, 0.38, 0.65, 0.86],
+                                                             "text": "TBD.",
+                                                             "readonly": False},
+        "Screen_Regions.full_panel.subregion.missions": {"rect": [0.50, 0.78, 0.65, 0.85],
+                                                         "text": "TBD.",
+                                                         "readonly": False},
+
         "EDCodex.full_panel": {"rect": [0.0589, 0.0983, 0.9406, 0.8617],
-                               "text": "1. Open the Codex from right hand cockpit panel.\n2. Draw a rectangle from the top left corner of the codex 'book' to the end \nof the line above the exit button at the bottom right.",
+                               "text": "1. Open the Codex from right hand cockpit panel.\n2. Size the rectangle from the top left corner of the codex 'book' to the end \nof the line above the exit button at the bottom right.",
                                "readonly": False},
 
         "EDInternalStatusPanel.panel_bounds1": {
             "rect": [0.1197, 0.2733, 0.6937, 0.7125],
-            "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the top left corner of the nav panel to the bottom right corner.",
+            "text": "1. Open Internal Status Panel (right hand panel).\n2. Size the rectangle from the top left corner of the nav panel to the bottom right corner.",
             "readonly": False},
         "EDInternalStatusPanel.panel_bounds2": {
             "rect": [0.1541, 0.2408, 0.6781, 0.8],
-            "text": "1. Open Internal Status Panel (right hand panel).\n2. Draw a rectangle from the bottom left corner of the nav panel to the top right corner.",
+            "text": "1. Open Internal Status Panel (right hand panel).\n2. Size the rectangle from the bottom left corner of the nav panel to the top right corner.",
             "readonly": False},
         # "EDInternalStatusPanel.tab_bar": {"rect": [0.35, 0.2, 0.85, 0.26]},
         # "EDInternalStatusPanel.inventory_list": {"rect": [0.2, 0.3, 0.8, 0.9]},
@@ -114,11 +391,11 @@ def load_ocr_calibration_data() -> dict[str, MyRegion]:
 
         "EDNavigationPanel.panel_bounds1": {
             "rect": [0.1197, 0.2733, 0.6937, 0.7125],
-            "text": "1. Open Navigation Panel.\n2. Draw a rectangle from the top left corner of the nav panel to the bottom right corner.",
+            "text": "1. Open Navigation Panel.\n2. Size the rectangle from the top left corner of the nav panel to the bottom right corner.",
             "readonly": False},
         "EDNavigationPanel.panel_bounds2": {
             "rect": [0.1541, 0.2408, 0.6781, 0.8],
-            "text": "1. Open Navigation Panel.\n2. Draw a rectangle from the bottom left corner of the nav panel to the top right corner.",
+            "text": "1. Open Navigation Panel.\n2. Size the rectangle from the bottom left corner of the nav panel to the top right corner.",
             "readonly": False},
         # "EDNavigationPanel.tab_bar": {"rect": [0.0, 0.2, 0.7, 0.35]},
         # "EDNavigationPanel.size.nav_pnl_tab": {"width": 260, "height": 35},
@@ -144,7 +421,7 @@ def load_ocr_calibration_data() -> dict[str, MyRegion]:
 
         "EDStationServicesInShip.station_services": {
             "rect": [0.0809, 0.1136, 0.9186, 0.8464],
-            "text": "1. Open Station Service.\n2. Draw a rectangle from the top left of the left panel box to the bottom right of the right panel box.",
+            "text": "1. Open Station Service.\n2. Size the rectangle from the top left of the left panel box to the bottom right of the right panel box.",
             "readonly": False},
         "EDStationServicesInShip.commodities_market": {
             "rect": [0.0479, 0.0983, 0.9516, 0.8617],
@@ -174,6 +451,15 @@ def load_ocr_calibration_data() -> dict[str, MyRegion]:
             "rect": [0.1575, 0.252, 0.4075, 0.290],
             "text": "The first commodity name cell.",
             "readonly": False},
+
+        "EDFSS.full_panel": {
+            "rect": [0.0, 0.0, 0.0, 0.0],
+            "text": "This is calculated automatically from the Codex screen values. Do not change.",
+            "readonly": True},
+        "EDFSS.full_panel.subregion.analysis": {
+            "rect": [0.0, 0.0, 0.15, 0.075],
+            "text": "Select the analysis display.",
+            "readonly": False},
         # "EDStationServicesInShip.carrier_admin_header": {"rect": [0.4, 0.1, 0.6, 0.2]},
         # "EDStationServicesInShip.commodities_list": {"rect": [0.2, 0.2, 0.8, 0.9]},
         # "EDStationServicesInShip.commodity_quantity": {"rect": [0.4, 0.5, 0.6, 0.6]},
@@ -188,24 +474,24 @@ def load_ocr_calibration_data() -> dict[str, MyRegion]:
         # Create the file with default values if it doesn't exist
         with open(calibration_file, 'w') as f:
             json.dump(default_regions, f, indent=4)
-        ocr_calibration_data = default_regions
+        default_calib_data = default_regions
     else:
         with open(calibration_file, 'r') as f:
-            ocr_calibration_data = json.load(f)
+            default_calib_data = json.load(f)
 
         # Check for missing keys and add them
         updated = False
         for key, value in default_regions.items():
-            if key not in ocr_calibration_data:
-                ocr_calibration_data[key] = value
+            if key not in default_calib_data:
+                default_calib_data[key] = value
                 updated = True
 
         # If we updated the data, save it back to the file
         if updated:
             with open(calibration_file, 'w') as f:
-                json.dump(ocr_calibration_data, f, indent=4)
+                json.dump(default_calib_data, f, indent=4)
 
-    return ocr_calibration_data
+    return default_calib_data
 
 
 class Screen_Regions:
@@ -222,41 +508,73 @@ class Screen_Regions:
         self.disengage_thresh = 0.35
 
         # array is in HSV order which represents color ranges for filtering
-        self.orange_color_range   = [array([0, 130, 123]),  array([25, 235, 220])]
+        self.orange_color_range = [array([0, 130, 123]), array([25, 235, 220])]
         self.orange_2_color_range = [array([16, 165, 220]), array([98, 255, 255])]
-        self.target_occluded_range= [array([16, 31, 85]),   array([26, 160, 255])]
-        self.blue_color_range     = [array([0, 28, 170]), array([180, 100, 255])]
+        self.target_occluded_range = [array([16, 31, 85]), array([26, 160, 255])]
+        self.blue_color_range = [array([0, 28, 170]), array([180, 100, 255])]
         self.blue_sco_color_range = [array([10, 0, 0]), array([100, 150, 255])]
-        self.fss_color_range      = [array([95, 210, 70]),  array([105, 255, 120])]
+        self.fss_color_range = [array([95, 210, 70]), array([105, 255, 120])]
 
         self.reg = {}
         # regions with associated filter and color ranges
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
-        self.reg['target']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}  # also called destination
-        # self.reg['target']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
-        self.reg['target_occluded']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
-        # self.reg['target_occluded']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
-        self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
-        self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
-        self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
-        self.reg['fss']       = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['mission_dest']  = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['missions']    = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
-        self.reg['nav_panel']   = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['compass'] = {'rect': [0.33, 0.6, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,
+                               'filter': None}
+        self.reg['target'] = {'rect': [0.2, 0.15, 0.8, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color,
+                              'filter': self.orange_2_color_range}  # also called destination
+        self.reg['sun'] = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun,
+                           'filter': None}
+        self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1,
+                                 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
+        self.reg['sco'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color,
+                           'filter': self.blue_sco_color_range}
+        self.reg['fss'] = {'rect': [0.5045, 0.7545, 0.532, 0.7955], 'width': 1, 'height': 1, 'filterCB': self.equalize,
+                           'filter': None}
+        self.reg['mission_dest'] = {'rect': [0.46, 0.38, 0.65, 0.86], 'width': 1, 'height': 1,
+                                    'filterCB': self.equalize, 'filter': None}
+        self.reg['missions'] = {'rect': [0.50, 0.78, 0.65, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize,
+                                'filter': None}
+        self.reg['nav_panel'] = {'rect': [0.25, 0.36, 0.60, 0.85], 'width': 1, 'height': 1, 'filterCB': self.equalize,
+                                 'filter': None}
+
+        # The rect is top left x, y, and bottom right x, y in fraction of screen resolution
+        self.reg_pct = {'full_panel': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'radar': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'compass': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'target': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'sun': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'disengage': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'sco': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'fss': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'mission_dest': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'missions': {'rect': [0.0, 0.0, 0.0, 0.0]},
+                        'nav_panel': {'rect': [0.25, 0.36, 0.60, 0.85]},
+                        }
+
+        # Load custom regions from file
+        load_calibrated_regions('Screen_Regions', self.reg_pct)
 
         # convert rect from percent of screen into pixel location, calc the width/height of the area
         for i, key in enumerate(self.reg):
-            xx = self.reg[key]['rect']
+            # Take the percentage values
+            xx = self.reg_pct[key]['rect']
+            # Convert to pixels
             self.reg[key]['rect'] = [int(xx[0] * screen.screen_width), int(xx[1] * screen.screen_height),
                                      int(xx[2] * screen.screen_width), int(xx[3] * screen.screen_height)]
             self.reg[key]['width'] = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
             self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
 
+        pass
+
     def capture_region(self, screen, region_name, inv_col=True):
         """ Just grab the screen based on the region name/rect.
         Returns an unfiltered image. """
         return screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
+
+    def capture_region_percent(self, screen, region_name):
+        """ Just grab the screen based on the region name in %.
+        Returns an unfiltered image. """
+        return screen.get_screen_rect_pct(self.reg_pct[region_name]['rect'])
 
     def capture_region_filtered(self, screen, region_name, inv_col=True):
         """ Grab screen region and call its filter routine.
@@ -272,7 +590,8 @@ class Screen_Regions:
     def match_template_in_region(self, region_name, templ_name, inv_col=True):
         """ Attempt to match the given template in the given region which is filtered using the region filter.
         Returns the filtered image, detail of match and the match mask. """
-        img_region = self.capture_region_filtered(self.screen, region_name, inv_col)   # which would call, reg.capture_region('compass') and apply defined filter
+        img_region = self.capture_region_filtered(self.screen, region_name,
+                                                  inv_col)  # which would call, reg.capture_region('compass') and apply defined filter
         img_templ = self.templates.template[templ_name]['image']
 
         # now = datetime.now()
@@ -407,220 +726,3 @@ class Screen_Regions:
         result = int((wht / (wht + blk)) * 100)
 
         return result
-
-
-class Point:
-    """Creates a point on a coordinate plane with values x and y."""
-
-    def __init__(self, x, y):
-        """Defines x and y variables"""
-        self.x: float = x
-        self.y: float = y
-
-    def __str__(self):
-        return "Point(%s, %s)" % (self.x, self.y)
-
-    def get_x(self) -> float:
-        return self.x
-
-    def get_y(self) -> float:
-        return self.y
-
-    def to_list(self) -> [float, float]:
-        return [self.x, self.y]
-
-    @classmethod
-    def from_xy(cls, xy_tuple: (float, float)):
-        """ From (x, y) """
-        return cls(xy_tuple[0], xy_tuple[1])
-
-    @classmethod
-    def from_list(cls, xy_list: [float, float]):
-        """ From (x, y) """
-        return cls(xy_list[0], xy_list[1])
-
-
-class Quad:
-    """ Represents a quadrilateral (a four-sided polygon that has four edges and four vertices).
-    It can be classified into various types, such as squares, rectangles, trapezoids, and rhombuses.
-    """
-
-    def __init__(self, p1: Point = None, p2: Point = None, p3: Point = None, p4: Point = None):
-        self.pt1: Point = p1
-        self.pt2: Point = p2
-        self.pt3: Point = p3
-        self.pt4: Point = p4
-
-    @classmethod
-    def from_list(cls, pt_list: [[float, float], [float, float], [float, float], [float, float]]):
-        """ Creates a quad from a list of points as
-        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
-        return cls(Point.from_list(pt_list[0]), Point.from_list(pt_list[1]),
-                   Point.from_list(pt_list[2]), Point.from_list(pt_list[3]))
-
-    @classmethod
-    def from_rect(cls, pt_list: [float, float, float, float]):
-        """ Creates a quad from a list of points as [left, top, right, bottom] """
-        return cls(Point(pt_list[0], pt_list[1]), Point(pt_list[2], pt_list[1]),
-                   Point(pt_list[2], pt_list[3]), Point(pt_list[0], pt_list[3]))
-
-    def to_rect_list(self, round_dp: int = -1) -> [float, float, float, float]:
-        """ Returns the bounds of the quadrilateral as a list of values [left, top, right, bottom].
-        @param: round_dp: If >=0, the number of decimal places to round numbers to, otherwise no rounding.
-        """
-        if round_dp < 0:
-            return [self.get_left(), self.get_top(), self.get_right(), self.get_bottom()]
-        else:
-            return [round(self.get_left(), round_dp), round(self.get_top(), round_dp),
-                    round(self.get_right(), round_dp), round(self.get_bottom(), round_dp)]
-
-    def to_list(self) -> [[float, float], [float, float], [float, float], [float, float]]:
-        """ Returns the list of points of the quadrilateral as
-        [[left, top], [right, top], [right, bottom], [left, bottom]]."""
-        return [self.pt1.to_list(), self.pt2.to_list(), self.pt3.to_list(), self.pt4.to_list()]
-
-    def get_top_left(self) -> Point:
-        """ Returns the top left point. """
-        pt = self.pt1
-        if self.pt2.x < pt.x and self.pt2.y < pt.y:
-            pt = self.pt2
-        if self.pt3.x < pt.x and self.pt3.y < pt.y:
-            pt = self.pt3
-        if self.pt4.x < pt.x and self.pt4.y < pt.y:
-            pt = self.pt4
-        return copy(pt)
-
-    def get_bottom_right(self) -> Point:
-        """ Returns the bottom right point. """
-        pt = self.pt1
-        if self.pt2.x > pt.x and self.pt2.y > pt.y:
-            pt = self.pt2
-        if self.pt3.x > pt.x and self.pt3.y > pt.y:
-            pt = self.pt3
-        if self.pt4.x > pt.x and self.pt4.y > pt.y:
-            pt = self.pt4
-        return copy(pt)
-
-    def get_left(self) -> float:
-        """ Returns the value of the left most point. """
-        return min(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
-
-    def get_top(self) -> float:
-        """ Returns the value of the top most point. """
-        return min(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
-
-    def get_right(self) -> float:
-        """ Returns the value of the right most point. """
-        return max(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
-
-    def get_bottom(self) -> float:
-        """ Returns the value of the bottom most point. """
-        return max(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
-
-    def get_width(self):
-        """Returns the maximum width."""
-        return self.get_right() - self.get_left()
-
-    def get_height(self):
-        """Returns the maximum height."""
-        return self.get_bottom() - self.get_top()
-
-    def get_bounds(self) -> (Point, Point):
-        """ Returns the bounds of the quadrilateral as a rectangle defined by two points,
-        the top-left and bottom-right."""
-        return Point(self.get_left(), self.get_top()), Point(self.get_right(), self.get_bottom())
-
-    def get_center(self) -> Point:
-        cx = (self.pt1.x + self.pt2.x + self.pt3.x + self.pt4.x) / 4
-        cy = (self.pt1.y + self.pt2.y + self.pt3.y + self.pt4.y) / 4
-        return Point(cx, cy)
-
-    def scale(self, fx: float, fy: float):
-        """ Scales the quad from the center.
-        @param fy: Scaling in the Y direction.
-        @param fx: Scaling in the X direction.
-        """
-        center = self.get_center()
-        self.pt1 = self._scale_point(self.pt1, center, fx, fy)
-        self.pt2 = self._scale_point(self.pt2, center, fx, fy)
-        self.pt3 = self._scale_point(self.pt3, center, fx, fy)
-        self.pt4 = self._scale_point(self.pt4, center, fx, fy)
-
-    def inflate(self, x: float, y: float):
-        """ Scales the quad from the center.
-        @param fy: Scaling in the Y direction.
-        @param fx: Scaling in the X direction.
-        """
-        center = self.get_center()
-        self.pt1 = self._inflate_point(self.pt1, center, x, y)
-        self.pt2 = self._inflate_point(self.pt2, center, x, y)
-        self.pt3 = self._inflate_point(self.pt3, center, x, y)
-        self.pt4 = self._inflate_point(self.pt4, center, x, y)
-
-    def subregion_from_quad(self, quad):
-        """ Crops the quad as region specified by the % (0.0-1.0) inputs.
-        NOTE: This assumes that the quad is a rectangle or square. Won't work with other shapes!
-        Example: An input of [0.0, 0.0, 1.0, 1.0] returns the quad unchanged.
-        Example: An input of [0.0, 0.0, 0.25, 0.25] returns the top left quarter of the quad.
-        @param quad: A quad.
-        """
-        new_l = (quad.get_left() * self.get_width()) + self.get_left()
-        new_t = (quad.get_top() * self.get_height()) + self.get_top()
-        new_r = (quad.get_right() * self.get_width()) + self.get_left()
-        new_b = (quad.get_bottom() * self.get_height()) + self.get_top()
-
-        self.pt1 = Point(new_l, new_t)
-        self.pt2 = Point(new_r, new_t)
-        self.pt3 = Point(new_r, new_b)
-        self.pt4 = Point(new_l, new_b)
-
-    def scale_from_origin(self, fx: float, fy: float):
-        """ Scales the quad from the origin (0,0).
-        @param fy: Scaling in the Y direction.
-        @param fx: Scaling in the X direction.
-        """
-        origin = Point(0, 0)
-        self.pt1 = self._scale_point(self.pt1, origin, fx, fy)
-        self.pt2 = self._scale_point(self.pt2, origin, fx, fy)
-        self.pt3 = self._scale_point(self.pt3, origin, fx, fy)
-        self.pt4 = self._scale_point(self.pt4, origin, fx, fy)
-
-    def offset(self, dx: float, dy: float):
-        """ Offsets (moves) the quad by the given amount.
-        @param dx: The amount to move in the x direction.
-        @param dy: The amount to move in the y direction.
-        """
-        self.pt1 = self._offset_point(self.pt1, dx, dy)
-        self.pt2 = self._offset_point(self.pt2, dx, dy)
-        self.pt3 = self._offset_point(self.pt3, dx, dy)
-        self.pt4 = self._offset_point(self.pt4, dx, dy)
-
-    @staticmethod
-    def _scale_point(pt: Point, center: Point, fx: float, fy: float) -> Point:
-        return Point(
-            center.x + (pt.x - center.x) * fx,
-            center.y + (pt.y - center.y) * fy
-        )
-
-    @staticmethod
-    def _inflate_point(pt: Point, center: Point, x: float, y: float) -> Point:
-        x1 = x
-        y1 = y
-        if pt.x < center.x:
-            x1 = -x
-        if pt.y < center.y:
-            y1 = -y
-        return Point(pt.x + x1, pt.y + y1)
-
-    @staticmethod
-    def _offset_point(pt: Point, dx: float, dy: float) -> Point:
-        """ Offsets the point.
-        Using this instead of calling offset on the point directly allows shallow copy of the quad."""
-        return Point(pt.x + dx, pt.y + dy)
-
-    def __str__(self):
-        return (f"Quadrilateral:\n"
-                f" pt1: ({self.pt1.x}, {self.pt1.y})\n"
-                f" pt2: ({self.pt2.x}, {self.pt2.y})\n"
-                f" pt3: ({self.pt3.x}, {self.pt3.y})\n"
-                f" pt4: ({self.pt4.x}, {self.pt4.y})")

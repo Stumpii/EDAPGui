@@ -41,6 +41,7 @@ from ED_AP import *
 from EDAPWaypointEditor import WaypointEditorTab
 
 from EDlogger import logger
+from RPYLineEditor import line_editor
 
 """
 File:EDAPGui.py
@@ -63,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b4"
+EDAP_VERSION = "V1.9.0 b10"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -125,9 +126,6 @@ class APGui:
             'RollRate': "Roll rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'PitchRate': "Pitch (up/down) rate your ship has in deg/sec. Higher the number the more maneuverable the ship.",
             'YawRate': "Yaw rate (rudder) your ship has in deg/sec. Higher the number the more maneuverable the ship.",
-            'RollFactor': "TBD",
-            'PitchFactor': "TBD",
-            'YawFactor': "TBD",
             'SunPitchUp+Time': "This field are for ship that tend to overheat. \nProviding 1-2 more seconds of Pitch up when avoiding the Sun \nwill overcome this problem.",
             'Sun Bright Threshold': "The low level for brightness detection, \nrange 0-255, want to mask out darker items",
             'Nav Align Tries': "How many attempts the ap should make at alignment.",
@@ -161,6 +159,7 @@ class APGui:
         self.ed_ap = EDAutopilot(cb=self.callback)
         self.ed_ap.robigo.set_single_loop(self.ed_ap.config['Robigo_Single_Loop'])
         # self.calibrator = RegionCalibration(root, self.ed_ap, cb=self.callback)
+        self.calibration = None
 
         self.ocr_calibration_data = {}
 
@@ -192,6 +191,7 @@ class APGui:
         self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
         self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
         self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
+        self.checkboxvar['ELW Scanner'].set(self.ed_ap.config['ElwScannerEnable'])
         self.checkboxvar['Enable Hotkeys'].set(self.ed_ap.config['HotkeysEnable'])
         self.checkboxvar['Debug Overlay'].set(self.ed_ap.config['DebugOverlay'])
         self.checkboxvar['Debug OCR'].set(self.ed_ap.config['DebugOCR'])
@@ -204,9 +204,6 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-        self.entries['ship']['PitchFactor'].delete(0, tk.END)
-        self.entries['ship']['RollFactor'].delete(0, tk.END)
-        self.entries['ship']['YawFactor'].delete(0, tk.END)
 
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
         self.entries['autopilot']['Nav Align Tries'].delete(0, tk.END)
@@ -235,9 +232,6 @@ class APGui:
         self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
         self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
         self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
-        self.entries['ship']['PitchFactor'].insert(0, float(self.ed_ap.pitchfactor))
-        self.entries['ship']['RollFactor'].insert(0, float(self.ed_ap.rollfactor))
-        self.entries['ship']['YawFactor'].insert(0, float(self.ed_ap.yawfactor))
 
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
         self.entries['autopilot']['Nav Align Tries'].insert(0, int(self.ed_ap.config['NavAlignTries']))
@@ -385,23 +379,14 @@ class APGui:
         self.entries['ship']['RollRate'].delete(0, tk.END)
         self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-        self.entries['ship']['PitchFactor'].delete(0, tk.END)
-        self.entries['ship']['RollFactor'].delete(0, tk.END)
-        self.entries['ship']['YawFactor'].delete(0, tk.END)
 
         self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
         self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
         self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
-        self.entries['ship']['PitchFactor'].insert(0, self.ed_ap.pitchfactor)
-        self.entries['ship']['RollFactor'].insert(0, self.ed_ap.rollfactor)
-        self.entries['ship']['YawFactor'].insert(0, self.ed_ap.yawfactor)
 
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
-
-    def calibrate_compass_callback(self):
-        self.ed_ap.calibrate_compass()
 
     def quit(self):
         logger.debug("Entered: quit")
@@ -613,67 +598,125 @@ class APGui:
         self.log_msg(f"Status update: {txt}")
 
     def ship_tst_pitch(self):
-        # self.ed_ap.ship_tst_pitch(360)
-        # self.ed_ap.ship_tst_pitch_new(360)
+        # self.ed_ap.ship_control.ship_tst_pitch(360)
+        # self.ed_ap.ship_control.ship_tst_pitch_new(360)
         self.ed_ap.ship_tst_pitch_enabled = True
 
     def ship_tst_roll(self):
-        # self.ed_ap.ship_tst_roll(360)
-        # self.ed_ap.ship_tst_roll_new(360)
+        # self.ed_ap.ship_control.ship_tst_roll(360)
+        # self.ed_ap.ship_control.ship_tst_roll_new(360)
         self.ed_ap.ship_tst_roll_enabled = True
 
     def ship_tst_yaw(self):
-        # self.ed_ap.ship_tst_yaw(360)
-        # self.ed_ap.ship_tst_yaw_new(360)
+        # self.ed_ap.ship_control.ship_tst_yaw(360)
+        # self.ed_ap.ship_control.ship_tst_yaw_new(360)
         self.ed_ap.ship_tst_yaw_enabled = True
 
     def ship_tst_pitch_30(self):
-        self.ed_ap.ship_tst_pitch(30)
+        self.ed_ap.ship_control.ship_tst_pitch(30)
 
     def ship_tst_roll_30(self):
-        self.ed_ap.ship_tst_roll(30)
+        self.ed_ap.ship_control.ship_tst_roll(30)
 
     def ship_tst_yaw_30(self):
-        self.ed_ap.ship_tst_yaw(30)
+        self.ed_ap.ship_control.ship_tst_yaw(30)
 
     def ship_tst_pitch_45(self):
-        self.ed_ap.ship_tst_pitch(45)
+        self.ed_ap.ship_control.ship_tst_pitch(45)
 
     def ship_tst_roll_45(self):
-        self.ed_ap.ship_tst_roll(45)
+        self.ed_ap.ship_control.ship_tst_roll(45)
 
     def ship_tst_yaw_45(self):
-        self.ed_ap.ship_tst_yaw(45)
+        self.ed_ap.ship_control.ship_tst_yaw(45)
 
     def ship_tst_pitch_90(self):
-        self.ed_ap.ship_tst_pitch(90)
+        self.ed_ap.ship_control.ship_tst_pitch(90)
 
     def ship_tst_roll_90(self):
-        self.ed_ap.ship_tst_roll(90)
+        self.ed_ap.ship_control.ship_tst_roll(90)
 
     def ship_tst_yaw_90(self):
-        self.ed_ap.ship_tst_yaw(90)
+        self.ed_ap.ship_control.ship_tst_yaw(90)
+
+    def edit_roll_curve(self):
+        # Get current ship roll curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'RollRate' in speed_demand:
+                curve = speed_demand['RollRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['RollRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
+
+    def edit_pit_curve(self):
+        # Get current ship pitch curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'PitchRate' in speed_demand:
+                curve = speed_demand['PitchRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['PitchRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
+
+    def edit_yaw_curve(self):
+        # Get current ship yaw curve
+        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
+        if "SCSpeed50" in ship_cfg:
+            speed_demand = ship_cfg["SCSpeed50"]
+            if 'YawRate' in speed_demand:
+                curve = speed_demand['YawRate']
+
+                # Edit the curve
+                new_curve = line_editor(curve)
+                if new_curve is not None:
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
+                        speed_demand['YawRate'] = new_curve
+                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+            else:
+                messagebox.showinfo("EDAP", "Perform Calibration first.")
+        else:
+            messagebox.showinfo("EDAP", "Perform Calibration first.")
 
     def save_settings(self):
         self.entry_update(None)
         self.ed_ap.update_config()
         self.ed_ap.update_ship_configs()
-        self.calibration_tab.save_ocr_calibration_data()  # Delegate to Calibration instance which owns the OCR data
+        self.calibration.save_ocr_calibration_data()
         self.log_msg("Saved all settings.")
 
     def load_settings(self):
         self.ed_ap.load_ship_configs()
 
-    # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
+        """
+        # new data was added to a field, re-read them all for simple logic
+        @param event: A dummy argument required the calling function.
+        @return: Nothing
+        """
         try:
             self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
             self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
             self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
             self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
-            self.ed_ap.pitchfactor = float(self.entries['ship']['PitchFactor'].get())
-            self.ed_ap.rollfactor = float(self.entries['ship']['RollFactor'].get())
-            self.ed_ap.yawfactor = float(self.entries['ship']['YawFactor'].get())
 
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
             self.ed_ap.config['NavAlignTries'] = int(self.entries['autopilot']['Nav Align Tries'].get())
@@ -691,6 +734,7 @@ class APGui:
             self.ed_ap.config['HotKey_StartRobigo'] = str(self.entries['buttons']['Start Robigo'].get())
             self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
+            self.ed_ap.config['ElwScannerEnable'] = self.checkboxvar['ELW Scanner'].get()
             self.ed_ap.config['DebugOverlay'] = self.checkboxvar['Debug Overlay'].get()
             self.ed_ap.config['AFKCombat_AttackAtWill'] = self.checkboxvar['AFKCombat AttackAtWill'].get()
             self.ed_ap.config['HotkeysEnable'] = self.checkboxvar['Enable Hotkeys'].get()
@@ -705,10 +749,11 @@ class APGui:
         except:
             messagebox.showinfo("Exception", "Invalid float entered")
 
-    # ckbox.state:(ACTIVE | DISABLED)
-
-    # ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
     def check_cb(self, field):
+        """ Check checkbox
+            ckbox.state:(ACTIVE | DISABLED)
+            ('FSD Route Assist', 'Supercruise Assist', 'Enable Voice', 'Enable CV View')
+        """
         # print("got event:",  checkboxvar['FSD Route Assist'].get(), " ", str(FSD_A_running))
         if field == 'FSD Route Assist':
             if self.checkboxvar['FSD Route Assist'].get() == 1 and self.FSD_A_running == False:
@@ -917,7 +962,7 @@ class APGui:
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist')
-        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate', 'RollFactor', 'PitchFactor', 'YawFactor')
+        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
@@ -958,8 +1003,8 @@ class APGui:
         page_calibration.grid_columnconfigure(0, weight=1)
         nb.add(page_calibration, text="Calibration")
         # self.create_calibration_tab(page_calibration)
-        self.calibration_tab = Calibration(self.ed_ap, self.callback)
-        self.calibration_tab.create_calibration_tab(page_calibration)
+        self.calibration = Calibration(self.ed_ap, self.callback)
+        self.calibration.create_calibration_tab(page_calibration)
         # self.calibration_tab.frame.pack(fill="both", expand=True)
 
         # === Waypoint Editor Tab ===
@@ -1006,21 +1051,27 @@ class APGui:
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
-        lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%\n"
-                                                      "2. Target remote System\n"
+        lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%.\n"
+                                                      "2. Target remote System.\n"
                                                       "3. Maneuver target to 12 o'clock on compass.")
         lbl_calibrate_note.grid(row=7, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_roll = ttk.Button(blk_ship, text='Calibrate Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=8, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_roll = ttk.Button(blk_ship, text='4. Calibrate Roll Rate', command=self.ship_tst_roll)
+        btn_tst_roll.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_roll_edit = ttk.Button(blk_ship, text='5. Edit Roll Curve', command=self.edit_roll_curve)
+        btn_roll_edit.grid(row=8, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
-        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%\n"
-                                                       "2. Target remote System\n"
+        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%.\n"
+                                                       "2. Target remote System.\n"
                                                        "3. Maneuver target to center of screen (and compass).")
         lbl_calibrate_note2.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_pitch = ttk.Button(blk_ship, text='Calibrate Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=10, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
-        btn_tst_yaw = ttk.Button(blk_ship, text='Calibrate Yaw Rate', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=11, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        btn_tst_pitch = ttk.Button(blk_ship, text='4. Calibrate Pitch Rate', command=self.ship_tst_pitch)
+        btn_tst_pitch.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_pit_edit = ttk.Button(blk_ship, text='5. Edit Pitch Curve', command=self.edit_pit_curve)
+        btn_pit_edit.grid(row=10, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_tst_yaw = ttk.Button(blk_ship, text='6. Calibrate Yaw Rate', command=self.ship_tst_yaw)
+        btn_tst_yaw.grid(row=11, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
+        btn_yaw_edit = ttk.Button(blk_ship, text='7. Edit Yaw Curve', command=self.edit_yaw_curve)
+        btn_yaw_edit.grid(row=11, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))
@@ -1058,7 +1109,7 @@ class APGui:
         blk_buttons.grid(row=0, column=1, padx=2, pady=2, sticky="NSEW")
         blk_dss = ttk.Frame(blk_buttons)
         blk_dss.grid(row=0, column=0, columnspan=2, padx=0, pady=0, sticky="NSEW")
-        lb_dss = ttk.Label(blk_dss, text="DSS Button: ")
+        lb_dss = ttk.Label(blk_dss, text="D-Scanner (Honk) Button: ")
         lb_dss.grid(row=0, column=0, sticky=tk.W)
         self.radiobuttonvar['dss_button'] = tk.StringVar()
         rb_dss_primary = ttk.Radiobutton(blk_dss, text="Primary", variable=self.radiobuttonvar['dss_button'], value="Primary", command=(lambda field='dss_button': self.check_cb(field)))

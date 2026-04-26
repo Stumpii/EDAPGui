@@ -125,6 +125,8 @@ class OCR:
             logger.error(f"OCR failed: {e}")
             # Reinit to avoid hard crash on next call due to corrupted C++ state
             self._reinit_paddleocr()
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None, None
 
     def image_simple_ocr(self, image, name='') -> list[str] | None:
@@ -176,6 +178,8 @@ class OCR:
             logger.error(f"OCR failed: {e}")
             # Reinit to avoid hard crash on next call due to corrupted C++ state
             self._reinit_paddleocr()
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None
 
     def get_highlighted_item_data(self, image, item: Quad, name=''):
@@ -211,8 +215,8 @@ class OCR:
         @param image: The image to check.
         @return: The highlighted image and the matching Quad position in percentage of the image size, or (None, None)
         """
-        min_w = item.get_width()
-        min_h = item.get_height()
+        min_w = item.width
+        min_h = item.height
 
         # Existing size
         img_h, img_w, _ = image.shape
@@ -277,6 +281,7 @@ class OCR:
         """ Grab the image based on the region name/rect.
         Returns an unfiltered image, either from screenshot or provided image.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         rect = region['rect']
         image = self.screen.get_screen_rect_pct(rect)
@@ -306,6 +311,7 @@ class OCR:
         Return True if found, False if not and None if no item was selected.
         @param text: The text to check for.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         img = self.capture_region_pct(region)
@@ -347,6 +353,7 @@ class OCR:
         @param keys:
         @param text: Text to find.
         @param region: The region to check in % (0.0 - 1.0).
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
 
         in_list = False  # Have we seen one item yet? Prevents quiting if we have not selected the first item.
@@ -377,6 +384,7 @@ class OCR:
         @param region: The screen region to check in % (0.0 - 1.0) of the full screen.
         @param timeout: Time to wait for screen in seconds
         @return: True if text found, else False
+        TODO - Move this to Region or Screen code. Make all funcs in OCR use rect/quad, not region.
         """
         # Draw box around region
         abs_rect = self.screen.screen_rect_to_abs(region['rect'])

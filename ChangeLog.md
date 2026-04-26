@@ -1,3 +1,41 @@
+# 4/25/2026 v1.9.0 b10
+- Changed layout of RPY test buttons.
+- Ship RPY now uses the last curve data value instead of defaulting to the default value when after the last curve point.
+
+# 4/19/2026 v1.9.0 b9
+- Removed 30 and 45 degree limits from RPY calculation to allow wider range on curves.
+- Added 60 deg to default curve.
+- Added auto sorting of calibration curves.
+- Moved some ship functions to ship control.
+- Removed templates that are no longer used (compass and target).
+- Removed compass scale and target scale. Not needed with ML.
+- Removed calibrate compass.
+
+# 4/12/2026 v1.9.0 b8
+- Added a RPY curve editor accessible via 3 new edit buttons under the RPY rates.
+- Removed the unused RPY Factor constants and code.
+- Updated compass ML model.
+- Added some extra logging when checking station names.
+- Added extra debug (save input image) for OCR errors. Image saved to ocr_output folder.
+
+# 3/30/2026 v1.9.0 b7
+- Fixed some crashes thanks to clippy.
+- Fixed issue with loss of target and target occluded at the same time. 
+
+# 3/29/2026 v1.9.0 b6
+- Default debug on for new users.
+- Added logging of FSS tuning screenshot to debug image folder.
+- Added all remaining screen regions into new screen region dictionary to allow user to configure them.
+- Improved ML model type selection.
+- Enabled ML detection for target occluded.
+- Added Kestrel Mk II to data files.
+- Fixed ELW Scanning selection not appearing in GUI.
+- Updated compass model.
+
+# 2/10/2026 v1.9.0 b5
+- Expanded ML for target and compass navpoint.
+- Fixed save not working.
+
 # 2/10/2026 v1.9.0 b4
 - Added Machine Learning for compass.
 - 

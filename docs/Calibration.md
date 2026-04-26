@@ -8,6 +8,10 @@ Calibration is performed from the Calibration tab:
 ## Region Calibration and Sub-Region Calibration
 This performs calibration of certain regions of the screen that may change bsed on resolution and FOV settings. It may be required to recalibrate if either of these settings change.
 
+The regions are all defined in percentage of the screen resolution, so the default value should be close for similar aspect ratios, regardless of the pixel count. The sub-regions are also defined in percentage of the parent region, so the default values should be close even if the parent region is different.
+
+Note: Calibrate a region before calibrating sub-regions. For most users, once the region calibration is complete, the sub-regions will **not** have to be changed. If a sub-region is changed and the region is incorrect, all sub-regions will need to be changed as well.
+
 ![CalibrationRegionCalibration.png](../screen/CalibrationRegionCalibration.png)
 
 The process is generally the same for each region:
