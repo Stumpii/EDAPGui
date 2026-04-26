@@ -1,3 +1,12 @@
+# 4/25/2026 v1.9.0 b11
+- Updated cal doc.
+- Quick RPY bug fix.
+- Updated readme.
+- Included some of Wauxadd's changes (below). Thanks Wauxadd.
+- Prevent reload of waypoint file on internal change.
+- Reinit OCR on an internal failure.
+- Minor change to Status file checking.
+
 # 4/25/2026 v1.9.0 b10
 - Changed layout of RPY test buttons.
 - Ship RPY now uses the last curve data value instead of defaulting to the default value when after the last curve point.
