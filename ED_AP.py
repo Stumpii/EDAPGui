@@ -649,7 +649,7 @@ class EDAutopilot:
             scale_y = scale_x
 
             # reload the templates with this scale value
-            self.templ.reload_templates(scale_x, scale_y)
+            self.templ.reload_templates(scale_x, scale_y, scale_x)
 
             # do image matching on the compass and the target
             image, (minVal, maxVal, minLoc, maxLoc), match = self.scrReg.match_template_in_region_x3(reg_name, templ_name)

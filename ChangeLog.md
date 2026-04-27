@@ -1,6 +1,3 @@
-# 4/26/2026 v1.9.0 b12
-- Fixed template reload issue. Thanks Patrick.
-
 # 4/25/2026 v1.9.0 b11
 - Updated cal doc.
 - Quick RPY bug fix.
