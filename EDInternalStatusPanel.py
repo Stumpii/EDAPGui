@@ -11,7 +11,7 @@ from EDKeys import EDKeys
 from EDNavigationPanel import rects_to_quadrilateral, image_perspective_transform, image_reverse_perspective_transform
 from OCR import OCR
 from Screen import Screen, crop_image_by_pct
-from Screen_Regions import Quad
+from Screen_Regions import Quad, load_calibrated_regions
 from StatusParser import StatusParser
 from EDlogger import logger
 
@@ -40,36 +40,28 @@ class EDInternalStatusPanel:
         self.reg = {'panel_bounds1': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     }
-        # self.reg = {'right_panel': {'rect': [0.2, 0.2, 1.0, 0.35]}}
         self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'inventory_panel': {'rect': [0.174, 0.2265, 0.75, 0.8528]}}
-        self.sub_reg_size = {'sts_pnl_tab': {"width": 0.15, "height": 0.7},  # Nav panel tab size in percent
-                             'sts_pnl_location': {"width": 1.0, "height": 0.1577}}  # Nav panel location size in percent
+                        'H': {'rect': [0.174, 0.2265, 0.75, 0.8528]},
+                        'sts_pnl_tab': {'rect': [0.0, 0.0, 0.15, 0.7]},
+                        }
         self.panel_quad_pct = Quad()
         self.panel_quad_pix = Quad()
         self.panel = None
         self._transform = None  # Warp transform to deskew the Nav panel
         self._rev_transform = None  # Reverse warp transform to skew to match the Nav panel
 
-        self.load_calibrated_regions()
+        # Load custom regions from file
+        load_calibrated_regions('EDInternalStatusPanel', self.reg)
 
-    def load_calibrated_regions(self):
-        calibration_file = 'configs/ocr_calibration.json'
-        if os.path.exists(calibration_file):
-            with open(calibration_file, 'r') as f:
-                calibrated_regions = json.load(f)
+        self.customize_regions()
 
-            for key, value in self.reg.items():
-                calibrated_key = f"EDInternalStatusPanel.{key}"
-                if calibrated_key in calibrated_regions:
-                    self.reg[key]['rect'] = calibrated_regions[calibrated_key]['rect']
-
-            # Produce quadrilateral from the two bounds rectangles
-            reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
-            reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
-            self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
-            self.panel_quad_pix = copy(self.panel_quad_pct)
-            self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
+    def customize_regions(self):
+        # Produce quadrilateral from the two bounds rectangles
+        reg1 = Quad.from_rect(self.reg['panel_bounds1']['rect'])
+        reg2 = Quad.from_rect(self.reg['panel_bounds2']['rect'])
+        self.panel_quad_pct = rects_to_quadrilateral(reg1, reg2)
+        self.panel_quad_pix = copy(self.panel_quad_pct)
+        self.panel_quad_pix.scale_from_origin(self.ap.scr.screen_width, self.ap.scr.screen_height)
 
     def capture_panel_straightened(self):
         """ Grab the image based on the panel coordinates.
@@ -216,7 +208,8 @@ class EDInternalStatusPanel:
             if tab_bar is None:
                 return False, ""
 
-            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, self.sub_reg_size['sts_pnl_tab']['width'], self.sub_reg_size['sts_pnl_tab']['height'], 'status panel')
+            item = Quad.from_rect(self.sub_reg['sts_pnl_tab']['rect'])
+            img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, item, 'status panel')
             if img_selected is not None:
                 if self.ap.debug_overlay:
                     tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])

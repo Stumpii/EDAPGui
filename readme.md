@@ -270,8 +270,9 @@ The following keybindings are required by AP, so make sure a key is assigned to 
 * Pg Up - Start Robigo Assist
 * End  - Terminate any running assistants
 
-Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.  You can find the key names here:
-https://pythonhosted.org/pynput/keyboard.html
+Hot keys are now configurable in the config-AP.json file, so you can remap them. Be sure not to use any keys you have mapped in ED.
+The hotkey must be in the format 'ctrl+shift+a, s'. This would trigger when the user holds ctrl, shift and "a" at once, releases, and then presses "s". To represent literal commas, pluses, and spaces, use their names ('comma', 'plus', 'space').
+For those wanting a detailed list, refer to the [Keyboard](https://github.com/boppreh/keyboard/tree/master) module's [winkeyboard.py](https://github.com/boppreh/keyboard/blob/master/keyboard/_winkeyboard.py) file.
 
 ## Additional Configuration Settings
 The following settings from the AP.json file (in the configs folder) are **not** available through the GUI and must be changed directly within AP.json using any text editor:

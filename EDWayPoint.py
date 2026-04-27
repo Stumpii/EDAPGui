@@ -584,6 +584,7 @@ class EDWayPoint:
                 # Check if we are at the correct station. Note that for FCs, the station name
                 # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
                 # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
+                self.ap.ap_ckb('log', f"Docked at {cur_station}.")
                 if cur_station_type == StationType.FleetCarrier:
                     docked_at_stn = next_wp_station.endswith(cur_station)
                 elif cur_station_type == StationType.SquadronCarrier:
