@@ -58,6 +58,24 @@ class StatusParser:
     def get_file_modified_time(self) -> float:
         return os.path.getmtime(self.file_path)
 
+    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
+        """ Waits for the file to change.
+        Returns True if the file changes or False on a time-out.
+        @param start_timestamp: The initial timestamp from 'timestamp' value.
+        @param timeout: Timeout in seconds.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            # Check file and read now data
+            self.get_cleaned_data()
+            # Check if internal timestamp changed
+            if self.current_data['timestamp'] != start_timestamp:
+                return True
+
+            sleep(0.5)
+
+        return False
+
     def translate_flags(self, flags_value):
         """Translates flags integer to a dictionary of only True flags."""
         all_flags = {
@@ -445,24 +463,6 @@ class StatusParser:
             return False
         else:
             return False
-
-    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
-        """ Waits for the file to change.
-        Returns True if the file changes or False on a time-out.
-        @param start_timestamp: The initial timestamp from 'timestamp' value.
-        @param timeout: Timeout in seconds.
-        """
-        start_time = time.time()
-        while (time.time() - start_time) < timeout:
-            # Check file and read now data
-            self.get_cleaned_data()
-            # Check if internal timestamp changed
-            if self.current_data['timestamp'] != start_timestamp:
-                return True
-
-            sleep(0.5)
-
-        return False
 
 
 # Usage Example

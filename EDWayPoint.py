@@ -26,10 +26,12 @@ Author: sumzer0@yahoo.com
 class EDWayPoint:
     def __init__(self, ed_ap, is_odyssey=True):
         self.ap = ed_ap
-        self.is_odyssey = is_odyssey
-        self.filename = './waypoints.json'
+        # self.is_odyssey = is_odyssey
+        self.filename = ''
         self.stats_log = {'Colonisation': 0, 'Construction': 0, 'Fleet Carrier': 0, 'Station': 0}
         self.waypoints = {}
+        self.num_waypoints = 0
+        self.step = 0
         #  { "Ninabin": {"DockWithTarget": false, "TradeSeq": None, "Completed": false} }
         # for i, key in enumerate(self.waypoints):
         # self.waypoints[target]['DockWithTarget'] == True ... then go into SC Assist
@@ -37,30 +39,30 @@ class EDWayPoint:
         # if docked and self.waypoints[target]['Completed'] == False
         #    execute_seq(self.waypoints[target]['TradeSeq'])
 
-        ss = self.read_waypoints()
-
-        # if we read it then point to it, otherwise use the default table above
-        if ss is not None:
-            self.waypoints = ss
-            logger.debug("EDWayPoint: read json:" + str(ss))
-
-        self.num_waypoints = len(self.waypoints)
+        # ss = self._read_waypoints()
+        #
+        # # if we read it then point to it, otherwise use the default table above
+        # if ss is not None:
+        #     self.waypoints = ss
+        #     logger.debug("EDWayPoint: read json:" + str(ss))
+        #
+        # self.num_waypoints = len(self.waypoints)
 
         # print("waypoints: "+str(self.waypoints))
-        self.step = 0
 
-        self.mouse = MousePoint()
+        # self.mouse = MousePoint()
         self.market_parser = MarketParser()
         self.cargo_parser = CargoParser()
 
-    def load_waypoint_file(self, filename=None) -> bool:
-        if filename is None:
+    def load_waypoint_file(self, filename='./waypoints/waypoints.json') -> bool:
+        if not os.path.exists(filename):
             return False
 
-        ss = self.read_waypoints(filename)
+        ss = self._read_waypoints(filename)
 
         if ss is not None:
             self.waypoints = ss
+            self.num_waypoints = len(self.waypoints)
             self.filename = filename
             self.ap.config['WaypointFilepath'] = filename
             self.ap.ap_ckb('log', f"Loaded Waypoint file: {filename}")
@@ -70,7 +72,10 @@ class EDWayPoint:
         self.ap.ap_ckb('log', f"Waypoint file is invalid. Check log file for details.")
         return False
 
-    def read_waypoints(self, filename='./waypoints/waypoints.json'):
+    def _read_waypoints(self, filename='./waypoints/waypoints.json'):
+        if not os.path.exists(filename):
+            return None
+
         s = None
         self.ap.config['WaypointFilepath'] = filename
         try:

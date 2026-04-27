@@ -25,6 +25,7 @@ import pywinstyles
 import sys  # Do not delete - prevents a 'super' error from tktoolip.
 from tktooltip import ToolTip  # In requirements.txt as 'tkinter-tooltip'.
 
+from EDAPColonizeEditor import ColonizeEditorTab
 # from OCR import RegionCalibration
 # from Voice import *
 # from MousePt import MousePoint
@@ -62,7 +63,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.8.0"
+EDAP_VERSION = "V1.9.0 b1"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -122,9 +123,7 @@ class APGui:
             'Y Offset': "Offset down the screen to start place overlay text.",
             'Font Size': "Font size of the overlay.",
             'Calibrate': "Will iterate through a set of scaling values \ngetting the best match for your system. \nSee HOWTO-Calibrate.md",
-            'Waypoint List Button': "Read in a file with with your Waypoints.",
             'Cap Mouse XY': "This will provide the StationCoord value of the Station in the SystemMap. \nSelecting this button and then clicking on the Station in the SystemMap \nwill return the x,y value that can be pasted in the waypoints file",
-            'Reset Waypoint List': "Reset your waypoint list, \nthe waypoint assist will start again at the first point in the list.",
             'Debug Overlay': "Enables debug data to be displayed over the \nElite Dangerous screen while playing the game.",
             'Debug OCR': "Enables OCR debug output to be stored in the 'ocr_output' folder.",
             'Debug Images': "Enables debug images to be stored in the 'debug_output' folder.",
@@ -154,6 +153,7 @@ class APGui:
         self.single_waypoint_station = tk.StringVar()
         self._global_shopping_list_tab = None
         self.waypoint_editor_tab = None
+        self.colonize_tab = None
 
         self.FSD_A_running = False
         self.SC_A_running = False
@@ -621,27 +621,6 @@ class APGui:
 
     def ship_tst_yaw_90(self):
         self.ed_ap.ship_tst_yaw(90)
-        
-    def open_wp_file(self):
-        filetypes = (
-            ('json files', '*.json'),
-            ('All files', '*.*')
-        )
-        filename = fd.askopenfilename(title="Waypoint File", initialdir='./waypoints/', filetypes=filetypes)
-        if filename != "":
-            res = self.ed_ap.waypoint.load_waypoint_file(filename)
-            if res:
-                self.wp_filelabel.set("loaded: " + Path(filename).name)
-            else:
-                self.wp_filelabel.set("<no list loaded>")
-
-    def reset_wp_file(self):
-        if not self.WP_A_running:
-            mb = messagebox.askokcancel("Waypoint List Reset", "After resetting the Waypoint List, the Waypoint Assist will start again from the first point in the list at the next start.")
-            if mb:
-                self.ed_ap.waypoint.mark_all_waypoints_not_complete()
-        else:
-            mb = messagebox.showerror("Waypoint List Error", "Waypoint Assist must be disabled before you can reset the list.")
 
     def save_settings(self):
         self.entry_update(None)
@@ -649,6 +628,9 @@ class APGui:
         self.ed_ap.update_ship_configs()
         self.save_ocr_calibration_data()
         self.log_msg("Saved all settings.")
+
+    def load_settings(self):
+        self.ed_ap.load_ship_configs()
 
     # new data was added to a field, re-read them all for simple logic
     def entry_update(self, event):
@@ -1036,8 +1018,15 @@ class APGui:
         keys_entry_fields = ('Modifier Key Delay', 'Default Hold Time', 'Repeat Key Delay')
 
         # notebook pages
-        btn_save = ttk.Button(win, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
-        btn_save.grid(row=0, padx=10, pady=5, sticky="W")
+        blk_top_buttons = ttk.Frame(win)
+        blk_top_buttons.grid(row=0, column=0, padx=10, pady=5, sticky="EW")
+        blk_top_buttons.columnconfigure(0)
+        blk_top_buttons.columnconfigure(1, weight=1)
+
+        btn_load = ttk.Button(blk_top_buttons, text='Load All Settings', command=self.load_settings)
+        btn_load.grid(row=0, column=0, padx=5, pady=5, sticky="W")
+        btn_save = ttk.Button(blk_top_buttons, text='Save All Settings', command=self.save_settings, style="Accent.TButton")
+        btn_save.grid(row=0, column=1, padx=2, pady=5, sticky="W")
 
         nb = ttk.Notebook(win)
         nb.grid(row=1, padx=10, pady=5, sticky="NSEW")
@@ -1066,9 +1055,17 @@ class APGui:
         # === Waypoint Editor Tab ===
         page_waypoint_editor = ttk.Frame(nb)
         page_waypoint_editor.grid_columnconfigure(0, weight=1)
-        nb.add(page_waypoint_editor, text="Waypoint Editor")
+        nb.add(page_waypoint_editor, text="Waypoints")
         self.waypoint_editor_tab = WaypointEditorTab(page_waypoint_editor, self.ed_ap.waypoint)
         self.waypoint_editor_tab.frame.pack(fill="both", expand=True)
+
+        # === Colonization Editor Tab ===
+        colonize_editor = ttk.Frame(nb)
+        colonize_editor.grid_columnconfigure(0, weight=1)
+        nb.add(colonize_editor, text="Colonization")
+        self.colonize_tab = ColonizeEditorTab(self.ed_ap, self.check_cb)
+        self.colonize_tab.create_waypoints_tab(colonize_editor)
+        self.colonize_tab.frame.pack(fill="both", expand=True)
 
         # === TCE Integration ===
         page_tce_integration = ttk.Frame(nb)
