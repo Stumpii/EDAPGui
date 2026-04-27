@@ -1,3 +1,193 @@
+# 4/26/2026 v1.9.0 b12
+- Fixed template reload issue. Thanks Patrick.
+
+# 4/25/2026 v1.9.0 b11
+- Updated cal doc.
+- Quick RPY bug fix.
+- Updated readme.
+- Included some of Wauxadd's changes (below). Thanks Wauxadd.
+- Prevent reload of waypoint file on internal change.
+- Reinit OCR on an internal failure.
+- Minor change to Status file checking.
+
+# 4/25/2026 v1.9.0 b10
+- Changed layout of RPY test buttons.
+- Ship RPY now uses the last curve data value instead of defaulting to the default value when after the last curve point.
+
+# 4/19/2026 v1.9.0 b9
+- Removed 30 and 45 degree limits from RPY calculation to allow wider range on curves.
+- Added 60 deg to default curve.
+- Added auto sorting of calibration curves.
+- Moved some ship functions to ship control.
+- Removed templates that are no longer used (compass and target).
+- Removed compass scale and target scale. Not needed with ML.
+- Removed calibrate compass.
+
+# 4/12/2026 v1.9.0 b8
+- Added a RPY curve editor accessible via 3 new edit buttons under the RPY rates.
+- Removed the unused RPY Factor constants and code.
+- Updated compass ML model.
+- Added some extra logging when checking station names.
+- Added extra debug (save input image) for OCR errors. Image saved to ocr_output folder.
+
+# 3/30/2026 v1.9.0 b7
+- Fixed some crashes thanks to clippy.
+- Fixed issue with loss of target and target occluded at the same time. 
+
+# 3/29/2026 v1.9.0 b6
+- Default debug on for new users.
+- Added logging of FSS tuning screenshot to debug image folder.
+- Added all remaining screen regions into new screen region dictionary to allow user to configure them.
+- Improved ML model type selection.
+- Enabled ML detection for target occluded.
+- Added Kestrel Mk II to data files.
+- Fixed ELW Scanning selection not appearing in GUI.
+- Updated compass model.
+
+# 2/10/2026 v1.9.0 b5
+- Expanded ML for target and compass navpoint.
+- Fixed save not working.
+
+# 2/10/2026 v1.9.0 b4
+- Added Machine Learning for compass.
+- 
+# 2/4/2026 v1.9.0 b3
+- Improved calibration by adding sub-regions to the calibration tab to allow easier identification of the sub-regions.
+- Enable/disable hotkeys now no longer needs a restart.
+- Added current station to log when docking.
+- Changed detection of colonisation ship.
+- Additional OCR replacements.
+- Added Squad Carrier to leaving SC code.
+- Added cargo test when selling commodities to sell all when cargo is less than sell qty.
+- Added button for REPEAT waypoint.
+- Added FleetCarrier monitor class.
+
+# 1/4/2026 v1.9.0 b2
+- Added load last wp function.
+- Added Load Settings button to main form.
+- Refactor colonization editor.
+- Add Fleet Carrier data to colonization editor.
+- Consolidated json reading/writing for ship configs.
+- Added Colonization Editor to docs.
+
+# 12/30/2025 v1.9.0 b1
+- Added Colonization Tab.
+
+# 12/21/2025 v1.8.0
+- Minor update for release.
+
+# 12/6/2025 v1.8.0 b19
+- Rewrite of RPY calibration routines.
+- RPY movements now uses calibrated sample rates from calibration.
+- Updated PaddleOCR to latest version.
+
+# 12/2/2025 v1.8.0 b18
+- Added Caspian Explorer.
+- Updated readme to include options not on the GUI.
+
+# 11/22/2025 v1.8.0 b17
+- Add config parms for FC Leaving Angle and Obital Const Site Angle.
+- Added delay for gal map system select to config file.
+- Added some additional base types.
+- Added more compass debug overlay.
+- Reduced compass align multiplier to help PC2 when target is covered by cockpit.
+- Increased the margin for P/Y factor reduction.
+
+# 11/8/2025 v1.8.0 b16
+- Allow detection of squadron carrier and commodity buy/sell and transfer.
+
+# 11/6/2025 v1.8.0 b15
+ - Changed RPY factor calculation.
+ - Added automatic factor modification based on overshoot.
+ - Simplified saving.
+ - Added Plot to Station button to waypoint editor to allow testing of the waypoint bookmark.
+ - Disable disengage detection when not in cockpit view.
+ - Added Debug_ShowCompassOverlay and Debug_ShowTargetOverlay to config file (not GUI).
+
+# 11/3/2025 v1.8.0 b14
+ - Added function to track last EDAP speed command.
+ - Added hold > 0 check.
+ - Added potential fix for overlay error.
+ - Added RPY factors to the ship config file.
+ - Added RPY factors to calculate ship movement timings.
+ - Better ship config loading.
+ - Quicker (but less accurate) target occluded movement.
+
+# 10/25/2025 v1.8.0 b13
+ - Updated screenshots for github main page.
+ - Added Key class default values to config file for users to tune. Added to Settings tab as well.
+ - Added target align tuning values to config file.
+ - Increased some delays to improve performance on older computers.
+
+# 10/22/2025 v1.8.0 b12
+ - Added sell ALL and buy ALL to the waypoint trader for normal station and FC commodity markets.
+ - Added Debug OCR option to enable logging of OCR detection if there are OCR issues.
+ - Added Debug Images option to log some images for debug purposes.
+
+# 10/19/2025 v1.8.0 b11
+ - In English locale file, changed CONNECTED TO to CONNECTED.
+ - Added enable hotkey option (off by default) to help new players with bindings.
+ - Disabled target auto calibration (again).
+ - More improvements to SC.
+ - Enabled overlay for auto calibration.
+ - Added time indication for disengage overlay.
+ - Added OCR detection for disengage into sco thread.
+ - Fixed issue with target scale not being read from save file.
+ - Added auto deletion of old log files.
+ - Cleared target and compass overlays when moving the ship.
+ - Decreased margin for compass align and nav detect is more accurate.
+
+# 10/16/2025 v1.8.0 b10
+ - Reduced fallback for gal and sys map.
+ - Better detection of Col Ships.
+ - Improved sc disengaged image.
+ - Improved SC disengage operation.
+
+# 10/12/2025 v1.8.0 b9
+ - Added 'ScreenScale' to config as the auto target calibration is now messing with the other template scaling.
+ - Moved occluded target code into the target code. This should make occluded state easier to check and test.
+ - Changed target regions back to default and increased occluded target filtering.
+ - Updated occluded target image to regular target size.
+ - Added delay after ship movement in SC assist to allow ship to finish moving. 
+ - Added FSD ETA to overlay.
+ - Added logging of target offset, before and after for test.
+ - Added SC check to interdiction logic. Thanks vasconet.
+ - Added nav point correction when target aligned, to zero out any nav point offset errors.
+ - When in sc assist and compass is in control, increased the threshold as the compass is less accurate.
+ - Added ETA to system to log.
+
+# 10/9/2025 v1.8.0 b8
+ - Added Delete All global shopping button.
+ - Added Load Construction Commodities button to add construction commodity requirements to global shopping list.
+ - Added additional nav_align error checking.
+ - Changed sc_assist constants.
+
+# 10/7/2025 v1.8.0 b7
+ - Change auto calibration range.
+ - Added auto calibrate when first initialising SC instead while in SC.
+ - Target align now falls back to compass align automatically to keep on target.
+ - Changed target align thresholds.
+ - Added wait for removal of mass lock when leaving stations.
+ - Added construction requirements logging to 'configs\construction.json' file. Updated when docking with construction site.
+ - Fixed bug during auto calibration.
+ - Added FOV calculation.
+ - Updated calibration docs.
+ - Added Type-11 Prospector.
+
+# 9/1/2025 v1.8.0 b6:
+ - Updated PaddleOCR.
+ - Added screen calibration.
+
+# 9/1/2025 v1.8.0 b5:
+ - Updated requirements to remove OCR crash
+ - Made fix to Spansh import.
+ - Added waypoint editor tab from DankShaman's branch.
+ - Fixed error on missing NavRoute.json file.
+ - Updated GUI.
+ - Added auto calibration (WIP).
+ - Improved debug overlay.
+ - Improved fallback for ED client window detection.
+
 # 8/19/2025 v1.7.0: General updates.
  - Changed all Parser files to UTF-8 format.
  - Fixed CARTOGRAPHICS detection.

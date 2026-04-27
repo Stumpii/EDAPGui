@@ -1,5 +1,7 @@
 from __future__ import annotations
 import typing
+from copy import copy
+
 import cv2
 import win32con
 import win32gui
@@ -10,6 +12,7 @@ from dxcam.dxcam import Output, Device
 from dxcam.util.io import (enum_dxgi_adapters)
 
 from EDlogger import logger
+from Screen_Regions import Quad
 
 """
 File:Screen.py    
@@ -40,6 +43,30 @@ def set_focus_elite_window():
         except:
             print("set_focus_elite_window ERROR")
             pass
+
+
+def crop_image_by_pct(image, quad: Quad):
+    """ Crop an image using a percentage values (0.0 - 1.0).
+    Rect is an array of crop % [0.10, 0.20, 0.90, 0.95] = [Left, Top, Right, Bottom]
+    Returns the cropped image. """
+    # Existing size
+    h, w, ch = image.shape
+    # Make a local copy
+    q = copy(quad)
+    # Scale from percent to pixels
+    q.scale_from_origin(w, h)
+    # Crop image
+    cropped = crop_image_pix(image, q)
+    return cropped
+
+
+def crop_image_pix(image, quad: Quad):
+    """ Crop an image using a pixel values.
+    Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1] = [L, T, R, B]
+    Returns the cropped image."""
+    cropped = image[int(quad.top):int(quad.bottom),
+                    int(quad.left):int(quad.right)]  # i.e. [y:y+h, x:x+w]
+    return cropped
 
 
 class Screen:
@@ -218,8 +245,9 @@ class Screen:
         else:
             if self._screen_image is None:
                 return None
-       
-            image = self.crop_image_by_pct(self._screen_image, rect)
+
+            q = Quad.from_rect(rect)
+            image = crop_image_by_pct(self._screen_image, q)
             return image
 
     def screen_rect_to_abs(self, rect):
