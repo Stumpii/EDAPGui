@@ -68,8 +68,8 @@ def crop_image_pix(image, quad: Quad):
     """ Crop an image using a pixel values.
     Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1] = [L, T, R, B]
     Returns the cropped image."""
-    cropped = image[int(quad.get_top()):int(quad.get_bottom()),
-                    int(quad.get_left()):int(quad.get_right())]  # i.e. [y:y+h, x:x+w]
+    cropped = image[int(quad.top):int(quad.bottom),
+                    int(quad.left):int(quad.right)]  # i.e. [y:y+h, x:x+w]
     return cropped
 
 
@@ -227,8 +227,8 @@ class Screen:
         return s
 
     # reg defines a box as a percentage of screen width and height
-    def get_screen_region(self, reg, rgb=True):
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
+    def get_screen_region(self, rect, rgb=True):
+        image = self.get_screen(int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3]), rgb)
         return image
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):    # if absolute need to scale??

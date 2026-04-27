@@ -58,6 +58,24 @@ class StatusParser:
     def get_file_modified_time(self) -> float:
         return os.path.getmtime(self.file_path)
 
+    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
+        """ Waits for the file to change.
+        Returns True if the file changes or False on a time-out.
+        @param start_timestamp: The initial timestamp from 'timestamp' value.
+        @param timeout: Timeout in seconds.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            # Check file and read now data
+            self.get_cleaned_data()
+            # Check if internal timestamp changed
+            if self.current_data['timestamp'] != start_timestamp:
+                return True
+
+            sleep(0.5)
+
+        return False
+
     def translate_flags(self, flags_value):
         """Translates flags integer to a dictionary of only True flags."""
         all_flags = {
@@ -199,15 +217,19 @@ class StatusParser:
                 try:
                     with open(self.file_path, 'r', encoding='utf-8') as file:
                         data = json.load(file)
-                        if attempt > 1:
-                            print(f"Status file attempt: {attempt}")
+                        if attempt > 2:
+                            logger.debug(f'Status.json read succeeded on attempt {attempt}.')
                         break
                 except Exception as e:
-                    logger.debug('An error occurred reading Status.json file. File may be open.')
+                    if attempt >= 2:
+                        logger.debug(f'An error occurred reading Status.json file (attempt {attempt}). File may be open.')
                     sleep(backoff)
-                    logger.debug('Attempting to re-read Status.json file after delay.')
-                    backoff *= 2
-                    attempt = attempt + 1
+                    backoff = min(backoff * 2, 1.0)
+                    attempt += 1
+            else:
+                sleep(backoff)
+                backoff = min(backoff * 2, 1.0)
+                attempt += 1
 
         # Combine flags from Flags and Flags2 into a single dictionary
         # combined_flags = {**self.translate_flags(data['Flags'])}
@@ -445,24 +467,6 @@ class StatusParser:
             return False
         else:
             return False
-
-    def wait_for_file_change(self, start_timestamp, timeout: float = 5) -> bool:
-        """ Waits for the file to change.
-        Returns True if the file changes or False on a time-out.
-        @param start_timestamp: The initial timestamp from 'timestamp' value.
-        @param timeout: Timeout in seconds.
-        """
-        start_time = time.time()
-        while (time.time() - start_time) < timeout:
-            # Check file and read now data
-            self.get_cleaned_data()
-            # Check if internal timestamp changed
-            if self.current_data['timestamp'] != start_timestamp:
-                return True
-
-            sleep(0.5)
-
-        return False
 
 
 # Usage Example

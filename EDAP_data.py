@@ -39,13 +39,13 @@ FlagsInFighter = 1 << 25
 FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
-FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
+FlagsAverageAltitude = 1 << 29   # Alt from Average radius. On if alt shows OC/DRP, Off if alt not shown or showing 2Km/SURF.
 FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump. See also Flags2FsdHyperdriveCharging.
 FlagsSrvHighBeam = 1 << 31
 
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
-Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
+Flags2InTaxi = 1 << 1  # (or drop-ship/shuttle)
 Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4
@@ -133,6 +133,7 @@ ship_name_map = {
     'python_nx':                    'Python Mk II',
     'scout':                        'Taipan Fighter',
     'sidewinder':                   'Sidewinder',
+    'smallcombat01_nx':             'Kestrel Mk II',
     'testbuggy':                    'Scarab',
     'type6':                        'Type-6 Transporter',
     'type7':                        'Type-7 Transporter',
@@ -189,6 +190,7 @@ ship_size_map = {
     'python_nx':                     'M',
     'scout':                         '',
     'sidewinder':                    'S',
+    'smallcombat01_nx':              'S',
     'testbuggy':                     '',
     'type6':                         'M',
     'type7':                         'L',
@@ -241,6 +243,7 @@ ship_rpy_sc_50 = {
     'python':                       {'RollRate': 90.0,  'PitchRate': 23.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 90.0,  'PitchRate': 26.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 60.0,  'PitchRate': 17.0,  'YawRate': 18.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
@@ -292,6 +295,7 @@ ship_rpy_sc_100 = {
     'python':                       {'RollRate': 72.0,  'PitchRate': 14.0,  'YawRate': 6.0,   'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 72.0,  'PitchRate': 16.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 45.0,  'PitchRate': 11.0,  'YawRate': 11.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
