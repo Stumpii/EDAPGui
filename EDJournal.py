@@ -9,7 +9,7 @@ from json import loads
 from time import sleep, time
 from datetime import datetime
 
-from EDAP_data import ship_size_map, ship_name_map
+from EDAP_data import ship_size_map, ship_name_map, fuelscoop_rate_map
 from EDlogger import logger
 from WindowsKnownPaths import *
 
@@ -90,6 +90,22 @@ def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
     return False
 
 
+def get_fuel_scoop_rate(modules: list[dict[str, any]] | None) -> float:
+    """ Gets whether the ship has a fuel scoop.
+    """
+    # Default to fuel scoop fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if "fuelscoop" in module['Item'].lower():
+            rate = fuelscoop_rate_map[module['Item'].lower()]
+
+            return rate
+    return 0.0
+
+
 def check_adv_docking_computer(modules: list[dict[str, any]] | None) -> bool:
     """ Gets whether the ship has an advanced docking computer.
     Advanced docking computer will dock and undock automatically.
@@ -155,7 +171,7 @@ def check_station_type(station_type: str, station_name: str, station_services: l
 
     if station_type_upper == 'SurfaceStation'.upper():
         # Special case, for some reason the colonisation ship is a SurfaceStation in the journal.
-        if station_name_upper == 'ColonisationShip'.upper():
+        if 'ColonisationShip'.upper() in station_name_upper:
             return StationType.ColonisationShip
         else:
             return StationType.SurfaceStation
@@ -232,6 +248,8 @@ class EDJournal:
             'cargo_capacity': None,
             'ship_size': None,
             'has_fuel_scoop': None,
+            'fuel_scoop_rate': 0.0,  # The maximum scoop rate of the installed fuel scoop.
+            'sc_exit_body_type': '',
             'SupercruiseDestinationDrop_type': None,
             'has_adv_dock_comp': None,
             'has_std_dock_comp': None,
@@ -310,6 +328,7 @@ class EDJournal:
 
             elif log_event == 'SupercruiseEntry' or log_event == 'FSDJump':
                 self.ship['status'] = 'in_supercruise'
+                self.ship['sc_exit_body_type'] = ''
 
             elif log_event == "DockingGranted":
                 self.ship['status'] = 'dockinggranted'
@@ -321,6 +340,7 @@ class EDJournal:
             elif log_event == 'SupercruiseExit':
                 self.ship['status'] = 'in_space'
                 self.ship['body'] = log['Body']
+                self.ship['sc_exit_body_type'] = log.get('BodyType', '')
 
             elif log_event == 'SupercruiseDestinationDrop':
                 self.ship['SupercruiseDestinationDrop_type'] = log['Type']
@@ -404,6 +424,7 @@ class EDJournal:
                 self.ship['ship_size'] = get_ship_size(log['Ship'])
                 self.ship['cargo_capacity'] = log['CargoCapacity']
                 self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
+                self.ship['fuel_scoop_rate'] = get_fuel_scoop_rate(log['Modules'])
                 self.ship['has_adv_dock_comp'] = check_adv_docking_computer(log['Modules'])
                 self.ship['has_std_dock_comp'] = check_std_docking_computer(log['Modules'])
                 self.ship['has_sco_fsd'] = check_sco_fsd(log['Modules'])
@@ -616,6 +637,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 

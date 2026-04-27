@@ -133,6 +133,7 @@ ship_name_map = {
     'python_nx':                    'Python Mk II',
     'scout':                        'Taipan Fighter',
     'sidewinder':                   'Sidewinder',
+    'smallcombat01_nx':             'Kestrel Mk II',
     'testbuggy':                    'Scarab',
     'type6':                        'Type-6 Transporter',
     'type7':                        'Type-7 Transporter',
@@ -189,6 +190,7 @@ ship_size_map = {
     'python_nx':                     'M',
     'scout':                         '',
     'sidewinder':                    'S',
+    'smallcombat01_nx':              'S',
     'testbuggy':                     '',
     'type6':                         'M',
     'type7':                         'L',
@@ -241,6 +243,7 @@ ship_rpy_sc_50 = {
     'python':                       {'RollRate': 90.0,  'PitchRate': 23.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 120.0, 'PitchRate': 40.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 90.0,  'PitchRate': 26.0,  'YawRate': 12.0,  'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 60.0,  'PitchRate': 17.0,  'YawRate': 18.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
@@ -292,6 +295,7 @@ ship_rpy_sc_100 = {
     'python':                       {'RollRate': 72.0,  'PitchRate': 14.0,  'YawRate': 6.0,   'SunPitchUp+Time': 0.0},
     'python_nx':                    {'RollRate': 90.0,  'PitchRate': 22.0,  'YawRate': 10.0,  'SunPitchUp+Time': 0.0},
     'sidewinder':                   {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
+    'smallcombat01_nx':             {'RollRate': 90.0,  'PitchRate': 28.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type6':                        {'RollRate': 72.0,  'PitchRate': 16.0,  'YawRate': 8.0,   'SunPitchUp+Time': 0.0},
     'type7':                        {'RollRate': 45.0,  'PitchRate': 11.0,  'YawRate': 11.0,  'SunPitchUp+Time': 0.0},
     'type8':                        {'RollRate': 60.0,  'PitchRate': 16.0,  'YawRate': 9.0,   'SunPitchUp+Time': 0.0},
@@ -402,3 +406,54 @@ def sorted_commodities() -> list[str]:
         result = result + val
     result.sort()
     return result
+
+# Journal.log Ship Name to size constants
+fuelscoop_rate_map = {
+    'int_fuelscoop_size1_class1': 18.00,    # Size 1 Class E
+    'int_fuelscoop_size1_class2': 24.00,    # Size 1 Class D
+    'int_fuelscoop_size1_class3': 30.00,    # Size 1 Class C
+    'int_fuelscoop_size1_class4': 36.00,    # Size 1 Class B
+    'int_fuelscoop_size1_class5': 42.00,    # Size 1 Class A
+
+    'int_fuelscoop_size2_class1': 32.00,    # Size 2 Class E
+    'int_fuelscoop_size2_class2': 43.00,    # Size 2 Class D
+    'int_fuelscoop_size2_class3': 54.00,    # Size 2 Class C
+    'int_fuelscoop_size2_class4': 65.00,    # Size 2 Class B
+    'int_fuelscoop_size2_class5': 75.00,    # Size 2 Class A
+
+    'int_fuelscoop_size3_class1': 75.00,    # Size 3 Class E
+    'int_fuelscoop_size3_class2': 100.00,   # Size 3 Class D
+    'int_fuelscoop_size3_class3': 126.00,   # Size 3 Class C
+    'int_fuelscoop_size3_class4': 151.00,   # Size 3 Class B
+    'int_fuelscoop_size3_class5': 176.00,   # Size 3 Class A
+
+    'int_fuelscoop_size4_class1': 147.00,   # Size 4 Class E
+    'int_fuelscoop_size4_class2': 196.00,   # Size 4 Class D
+    'int_fuelscoop_size4_class3': 245.00,   # Size 4 Class C
+    'int_fuelscoop_size4_class4': 294.00,   # Size 4 Class B
+    'int_fuelscoop_size4_class5': 343.00,   # Size 4 Class A
+
+    'int_fuelscoop_size5_class1': 247.00,   # Size 5 Class E
+    'int_fuelscoop_size5_class2': 330.00,   # Size 5 Class D
+    'int_fuelscoop_size5_class3': 412.00,   # Size 5 Class C
+    'int_fuelscoop_size5_class4': 494.00,   # Size 5 Class B
+    'int_fuelscoop_size5_class5': 577.00,   # Size 5 Class A
+
+    'int_fuelscoop_size6_class1': 376.00,   # Size 6 Class E
+    'int_fuelscoop_size6_class2': 502.00,   # Size 6 Class D
+    'int_fuelscoop_size6_class3': 627.00,   # Size 6 Class C
+    'int_fuelscoop_size6_class4': 752.00,   # Size 6 Class B
+    'int_fuelscoop_size6_class5': 878.00,   # Size 6 Class A
+
+    'int_fuelscoop_size7_class1': 534.00,   # Size 7 Class E
+    'int_fuelscoop_size7_class2': 712.00,   # Size 7 Class D
+    'int_fuelscoop_size7_class3': 890.00,   # Size 7 Class C
+    'int_fuelscoop_size7_class4': 1068.00,  # Size 7 Class B
+    'int_fuelscoop_size7_class5': 1245.00,  # Size 7 Class A
+
+    'int_fuelscoop_size8_class1': 720.00,   # Size 8 Class E
+    'int_fuelscoop_size8_class2': 960.00,   # Size 8 Class D
+    'int_fuelscoop_size8_class3': 1200.00,  # Size 8 Class C
+    'int_fuelscoop_size8_class4': 1440.00,  # Size 8 Class B
+    'int_fuelscoop_size8_class5': 1680.00,  # Size 8 Class A
+}
