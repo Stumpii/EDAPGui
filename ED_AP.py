@@ -1,15 +1,11 @@
 import math
-import os
 import traceback
-from datetime import timedelta
-from enum import Enum
 from math import atan, degrees, tan, radians
 import random
 from string import Formatter
 from tkinter import messagebox
 
 import cv2
-from ultralytics import YOLO
 
 from EDAPColonizeEditor import read_json_file, write_json_file
 from EDFSS import EDFSS
@@ -71,7 +67,7 @@ class FSDAssistReturn(Enum):
 
 class EDAutopilot:
 
-    def __init__(self, cb, doThread=True):
+    def __init__(self, cb, do_thread=True):
         self.config = {}
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
@@ -84,7 +80,7 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
-        self.speed_demand = None
+        self.speed_demand = None  # 'Speed0', 'Speed50', 'Speed100', 'SCSpeed0', 'SCSpeed50' or 'SCSpeed100'
         self._tce_integration = None
         self._ocr = None
         self._fss_screen = None
@@ -164,8 +160,8 @@ class EDAutopilot:
             self.mesg_server.start_server()
 
         # Set defaults for data read from ships config
-        self.yawrate   = 8.0
-        self.rollrate  = 80.0
+        self.yawrate = 8.0
+        self.rollrate = 80.0
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
 
@@ -214,7 +210,7 @@ class EDAutopilot:
 
         #start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
-        if doThread:
+        if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
 
@@ -279,10 +275,10 @@ class EDAutopilot:
             "JumpTries": 3,  #
             "NavAlignTries": 3,  #
             "RefuelThreshold": 65,  # if fuel level get below this level, it will attempt refuel
-            "FuelThreasholdAbortAP": 10, # level at which AP will terminate, because we are not scooping well
-            "WaitForAutoDockTimer": 240, # After docking granted, wait this amount of time for us to get docked with autodocking
-            "SunBrightThreshold": 125, # The low level for brightness detection, range 0-255, want to mask out darker items
-            "FuelScoopTimeOut": 35, # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
+            "FuelThreasholdAbortAP": 10,  # level at which AP will terminate, because we are not scooping well
+            "WaitForAutoDockTimer": 240,  # After docking granted, wait this amount of time for us to get docked with autodocking
+            "SunBrightThreshold": 125,  # The low level for brightness detection, range 0-255, want to mask out darker items
+            "FuelScoopTimeOut": 35,  # number of second to wait for full tank, might mean we are not scooping well or got a small scooper
             "DockingRetries": 30,  # number of time to attempt docking
             "HotKey_StartFSD": "home",  # if going to use other keys, need to look at the python keyboard package
             "HotKey_StartSC": "ins",  # to determine other keynames, make sure these keys are not used in ED bindings
@@ -519,7 +515,6 @@ class EDAutopilot:
                                            "300": self.yawrate,
                                            "600": self.yawrate}
 
-
     def update_overlay(self):
         """ Draw the overlay data on the ED Window """
         if self.config['OverlayTextEnable']:
@@ -590,7 +585,7 @@ class EDAutopilot:
         hgt = pt2[1]-pt1[1]
 
         if wid < 20:
-            #cv2.rectangle(screen, pt, (pt[0] + compass_width, pt[1] + compass_height),  (0,0,255), 2)
+            # cv2.rectangle(screen, pt, (pt[0] + compass_width, pt[1] + compass_height),  (0,0,255), 2)
             cv2.rectangle(img, pt1, pt2, color, thick)
         else:
             len_wid = wid/5
@@ -671,7 +666,7 @@ class EDAutopilot:
                 if maxVal > max_pick:
                     max_pick = maxVal
                     scale = i
-                    #self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.4f}' + "% with scale:" + f'{self.scr.scaleX:5.4f}')
+                    # self.ap_ckb('log', 'Cal: Found match:' + f'{max_pick:5.4f}' + "% with scale:" + f'{self.scr.scaleX:5.4f}')
 
             # Next range
             i = i + range_step
@@ -782,14 +777,14 @@ class EDAutopilot:
 
         # Uncomment this to show on the ED Window where the region is define.  Must run this file as an App, so uncomment out
         # the main at the bottom of file
-        #self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
+        # self.overlay.overlay_rect('fss', (scr_reg.reg['fss']['rect'][0], scr_reg.reg['fss']['rect'][1]),
         #                (scr_reg.reg['fss']['rect'][2],  scr_reg.reg['fss']['rect'][3]), (120, 255, 0),2)
-        #self.overlay.overlay_paint()
+        # self.overlay.overlay_paint()
 
         if self.cv_view:
             elw_image_d = elw_image.copy()
             elw_image_d = cv2.cvtColor(elw_image_d, cv2.COLOR_GRAY2RGB)
-            #self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
+            # self.draw_match_rect(elw_image_d, maxLoc, (maxLoc[0]+15,maxLoc[1]+15), (255,255,255), 1)
             self.draw_match_rect(elw_image_d, maxLoc1, (maxLoc1[0]+15, maxLoc1[1]+25), (0, 0, 255), 1)
             cv2.putText(elw_image_d, f'{maxVal1:5.2f}> .70', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('fss', elw_image_d)
@@ -799,8 +794,8 @@ class EDAutopilot:
         logger.info("elw detected:{0:6.2f} ".format(maxVal)+" sig:{0:6.2f}".format(maxVal1))
 
         # check if the circle or the signal meets probability number, if so, determine which type by its region
-        #if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
-        # only check for singal
+        # if (maxVal > 0.65 or (maxVal1 > 0.60 and maxLoc1[1] < 30) ):
+        # only check for single
         if maxVal1 > 0.70 and maxLoc1[1] < 30:
             if maxLoc1[0] < wid_div3:
                 sstr = "Earth"
@@ -810,8 +805,8 @@ class EDAutopilot:
                 sstr = "Ammonia"
             # log the entry into the elw.txt file
             f = open("elw.txt", 'a')
-            f.write(self.jn.ship_state()["location"]+", Type: "+sstr+
-                    ", Probabilty: {0:3.0f}% ".format((maxVal1*100))+
+            f.write(self.jn.ship_state()["location"]+", Type: "+sstr +
+                    ", Probabilty: {0:3.0f}% ".format((maxVal1*100)) +
                     ", Date: "+str(datetime.now())+str("\n"))
             f.close()
             self.vce.say(sstr+" like world detected ")
@@ -876,7 +871,7 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False  # reset flag
         return True
 
-    def get_nav_offset(self, scr_reg, disable_auto_cal: bool = False):
+    def get_nav_offset(self, scr_reg):
         """ Determine the x,y offset from center of the compass of the nav point.
         @return: Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
         {'x': x.xx, 'y': y.yy, 'z': -1|0|+1,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
@@ -1031,8 +1026,8 @@ class EDAutopilot:
             nav_to_screen = copy(n_compass_quad)
             nav_to_screen.offset(compass_region.left, compass_region.top)
 
-            self.overlay.overlay_rect('compass', (compass_with_border.left,compass_with_border.top), (compass_with_border.right,compass_with_border.bottom), (0, 255, 0), 2)
-            self.overlay.overlay_rect('nav', (nav_to_screen.left,nav_to_screen.top), (nav_to_screen.right,nav_to_screen.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_rect('compass', (compass_with_border.left, compass_with_border.top), (compass_with_border.right, compass_with_border.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_rect('nav', (nav_to_screen.left, nav_to_screen.top), (nav_to_screen.right, nav_to_screen.bottom), (0, 255, 0), 2)
             self.overlay.overlay_floating_text('compass', f'Com: {max_val:5.2f} > {scr_reg.compass_match_thresh}', compass_with_border.left, compass_with_border.top - 85, (0, 255, 0))
             self.overlay.overlay_floating_text('nav', f'Nav: {n_max_val:5.2f} > {scr_reg.navpoint_match_thresh}', compass_with_border.left, compass_with_border.top - 65, (0, 255, 0))
             self.overlay.overlay_floating_text('nav_beh', f'NavB: {b_max_val:5.2f}', compass_with_border.left, compass_with_border.top - 45, (0, 255, 0))
@@ -1040,13 +1035,13 @@ class EDAutopilot:
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            #icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
+            # icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
             icompass_image_d = full_compass_image
-            self.draw_match_rect(icompass_image_d, (compass_quad.left,compass_quad.top), (compass_quad.right,compass_quad.bottom), (0, 0, 255), 2)
-            #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
-            #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
+            self.draw_match_rect(icompass_image_d, (compass_quad.left, compass_quad.top), (compass_quad.right, compass_quad.bottom), (0, 0, 255), 2)
+            # cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
+            # self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
             self.draw_match_rect(icompass_image_d, (n_compass_quad.left, n_compass_quad.top), (n_compass_quad.right, n_compass_quad.bottom), (0, 255, 0), 1)
-            #cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
+            # cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
@@ -1054,7 +1049,7 @@ class EDAutopilot:
             icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 60), (0, 0, 0), -1)
             cv2.putText(icompass_image_d, f'Compass: {max_val:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'Nav Point: {n_max_val:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            # cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('compass', icompass_image_d)
@@ -1087,6 +1082,7 @@ class EDAutopilot:
         max_val = 0.0
         maxVal_occ = 0.0
         target_quad = Quad()
+        sel_pt = [0.0, 0.0]
         pt = [0.0, 0.0]
         pt_occ = [0.0, 0.0]
         target_occ_quad = Quad()
@@ -1107,6 +1103,7 @@ class EDAutopilot:
 
         # Check if target is occluded
         tar_quad = Quad()
+        occluded = False
         if max_val > 0.0 or maxVal_occ > 0.0:
             if max_val >= maxVal_occ:
                 sel_pt = pt
@@ -1254,11 +1251,11 @@ class EDAutopilot:
             self.overlay.overlay_paint()
 
         if self.cv_view:
-            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
+            self.draw_match_rect(dis_image, pt, (pt[0] + width, pt[1] + height), (0, 255, 0), 2)
             dis_image = cv2.rectangle(dis_image, (0, 0), (1000, 25), (0, 0, 0), -1)
             cv2.putText(dis_image, f'{maxVal:5.4f} > {scr_reg.disengage_thresh}', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.imshow('disengage', dis_image)
-            cv2.moveWindow('disengage', self.cv_view_x-460,self.cv_view_y+575)
+            cv2.moveWindow('disengage', self.cv_view_x-460, self.cv_view_y+575)
             cv2.waitKey(1)
 
         if maxVal > scr_reg.disengage_thresh:
@@ -1451,7 +1448,7 @@ class EDAutopilot:
                 if self.jn.ship_state()['status'] == "dockinggranted":
                     granted = True
                     # Go back to navigation tab
-                    #self.request_docking_cleanup()
+                    # self.request_docking_cleanup()
                     break
                 if self.jn.ship_state()['status'] == "dockingdenied":
                     pass
@@ -1499,8 +1496,8 @@ class EDAutopilot:
 
         # close to core the 'sky' is very bright with close stars, if we are pitch due to a non-scoopable star
         #  which is dull red, the star field is 'brighter' than the sun, so our sun avoidance could pitch up
-        #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees, but
-        #  we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do
+        #  endlessly. So we will have a fail_safe_timeout to kick us out of pitch up if we've pitch past 110 degrees,
+        #  but we'll add 3 more second for pad in case the user has a higher pitch rate than the vehicle can do
         fail_safe_timeout = (120/self.pitchrate)+3
         starttime = time.time()
 
@@ -1515,7 +1512,7 @@ class EDAutopilot:
                 self.set_speed_0()
 
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
-            if ((time.time()-starttime) > fail_safe_timeout):
+            if (time.time()-starttime) > fail_safe_timeout:
                 logger.debug('sun avoid failsafe timeout')
                 print("sun avoid failsafe timeout")
                 break
@@ -1905,11 +1902,15 @@ class EDAutopilot:
         sleep(0.5)
         self.update_ap_status("Idle")
 
-    # position() happens after a refuel and performs
-    #   - accelerate past sun
-    #   - perform Discovery scan
-    #   - perform fss (if enabled)
     def position(self, scr_reg, did_refuel=True):
+        """ Position() happens after a refuel and performs
+            - accelerate past sun
+            - perform Discovery scan
+            - perform fss (if enabled)
+        @param scr_reg:
+        @param did_refuel:
+        @return:
+        """
         logger.debug('position')
         add_time = 12
 
@@ -1937,10 +1938,13 @@ class EDAutopilot:
         logger.debug('position=complete')
         return True
 
-    # jump() happens after we are aligned to Target
-    # TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
-    #       if thargoid, then we wait until reboot and continue on.. go back into FSD and align
     def jump(self, scr_reg):
+        """ jump() happens after we are aligned to Target
+        TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
+        if thargoid, then we wait until reboot and continue on.. go back into FSD and align
+        @param scr_reg:
+        @return:
+        """
         logger.debug('jump')
 
         self.vce.say("Frameshift Jump")
@@ -2068,7 +2072,7 @@ class EDAutopilot:
                 self.ap_ckb('log', 'Flag: FlagsScoopingFuel ON')
 
         # The log will not reflect a FuelScoop until first 5 tons filled, then every 5 tons until complete
-        #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
+            #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
         startime = time.time()
         while not self.status.get_flag(FlagsScoopingFuel):
             # check if we are being interdicted
@@ -2316,8 +2320,8 @@ class EDAutopilot:
         Returns True if we travel successfully travel there, else False. """
         # If waypoint file has a Station Name associated then attempt targeting it
         self.update_ap_status(f"Targeting Station: {station_name}")
-        #res = self.nav_panel.lock_destination(station_name)
-        #if not res:
+        # res = self.nav_panel.lock_destination(station_name)
+        # if not res:
         #    return False
 
         # if we are starting the waypoint docked at a station, we need to undock first
@@ -2389,8 +2393,8 @@ class EDAutopilot:
 
                 self.update_overlay()
 
-                self.ap_ckb('jumpcount', "Dist: {:,.1f}".format(self.total_dist_jumped)+"ly"+
-                            "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)+"  @{}s/j".format(int(avg_time_jump))+
+                self.ap_ckb('jumpcount', "Dist: {:,.1f}".format(self.total_dist_jumped)+"ly" +
+                            "  Jumps: {}of{}".format(self.jump_cnt, self.total_jumps)+"  @{}s/j".format(int(avg_time_jump)) +
                             "  Fu#: "+str(self.refuel_cnt) + " ETA: "+self._str_eta)
                 self.ap_ckb('log', 'ETA (to System): '+self._str_eta)
 
@@ -2554,7 +2558,7 @@ class EDAutopilot:
     # and thus redeploy another one
     def afk_combat_loop(self):
         while True:
-            if self.afk_combat.check_shields_up() == False:
+            if not self.afk_combat.check_shields_up():
                 set_focus_elite_window()
                 self.vce.say("Shields down, evading")
                 self.afk_combat.evade()
@@ -2562,7 +2566,7 @@ class EDAutopilot:
                 self.afk_combat.launch_fighter()  # at new location launch fighter
                 break
 
-            if self.afk_combat.check_fighter_destroyed() == True:
+            if self.afk_combat.check_fighter_destroyed():
                 set_focus_elite_window()
                 self.vce.say("Fighter Destroyed, redeploying")
                 self.afk_combat.launch_fighter()  # assuming two fighter bays
@@ -2611,9 +2615,13 @@ class EDAutopilot:
             if res is False:
                 return False
 
-    # raising an exception to the engine loop thread, so we can terminate its execution
-    #  if thread was in a sleep, the exception seems to not be delivered
     def ctype_async_raise(self, thread_obj, exception):
+        """ Raising an exception to the engine loop thread, so we can terminate its execution
+        if thread was in a sleep, the exception seems to not be delivered
+        @param thread_obj:
+        @param exception:
+        @return:
+        """
         found = False
         target_tid = 0
         for tid, tobj in threading._active.items():
@@ -2642,37 +2650,37 @@ class EDAutopilot:
     # Setter routines for state variables
     #
     def set_fsd_assist(self, enable=True):
-        if enable == False and self.fsd_assist_enabled == True:
+        if not enable and self.fsd_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
-        if enable == False and self.sc_assist_enabled == True:
+        if not enable and self.sc_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
-        if enable == False and self.waypoint_assist_enabled == True:
+        if not enable and self.waypoint_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
-        if enable == False and self.robigo_assist_enabled == True:
+        if not enable and self.robigo_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
-        if enable == False and self.afk_combat_assist_enabled == True:
+        if not enable and self.afk_combat_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
-        if enable == False and self.dss_assist_enabled == True:
+        if not enable and self.dss_assist_enabled:
             if self.ap_thread is not None and self.ap_thread.is_alive():
                 self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.dss_assist_enabled = enable
@@ -2689,7 +2697,7 @@ class EDAutopilot:
         self.cv_view = enable
         self.config['Enable_CV_View'] = int(self.cv_view)  # update the config
         self.update_config()  # save the config
-        if enable == True:
+        if enable:
             self.cv_view_x = x
             self.cv_view_y = y
         else:
@@ -2714,7 +2722,7 @@ class EDAutopilot:
         self.overlay.overlay_paint()
 
     def set_voice(self, enable=False):
-        if enable == True:
+        if enable:
             self.vce.set_on()
         else:
             self.vce.set_off()
@@ -2737,9 +2745,11 @@ class EDAutopilot:
         self.config["LogINFO"] = True
         logger.setLevel(logging.INFO)
 
-    # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
-    # have then then kill python exec
     def quit(self):
+        """ quit() is important to call to clean up, if we don't terminate the threads we created the AP will
+        hang on exit have then kill python exec.
+        @return:
+        """
         self.keys.release_all_keys()
         if self.vce != None:
             self.vce.quit()
@@ -2747,15 +2757,15 @@ class EDAutopilot:
             self.overlay.overlay_quit()
         self.terminate = True
 
-    #
-    # This function will execute in its own thread and will loop forever until
-    # the self.terminate flag is set
-    #
     def engine_loop(self):
+        """
+        This function will execute in its own thread and will loop forever until the self.terminate flag is set
+        @return:
+        """
         while not self.terminate:
             # TODO - Remove these show compass/target all the time
             if self.debug_show_compass_overlay:
-                self.get_nav_offset(self.scrReg, True)
+                self.get_nav_offset(self.scrReg)
             if self.debug_show_target_overlay:
                 self.get_target_offset(self.scrReg, True)
 
@@ -2764,13 +2774,13 @@ class EDAutopilot:
 
             # Ship calibration functions
             if self.ship_tst_roll_enabled:
-                self.ship_control.ship_tst_roll_new(0)
+                self.ship_control.ship_calibrate_roll()
                 self.ship_tst_roll_enabled = False
             if self.ship_tst_pitch_enabled:
-                self.ship_control.ship_tst_pitch_new(0)
+                self.ship_control.ship_calibrate_pitch()
                 self.ship_tst_pitch_enabled = False
             if self.ship_tst_yaw_enabled:
-                self.ship_control.ship_tst_yaw_new(0)
+                self.ship_control.ship_calibrate_yaw()
                 self.ship_tst_yaw_enabled = False
 
             if self.fsd_assist_enabled:
@@ -2806,10 +2816,10 @@ class EDAutopilot:
                     self.ap_ckb("sc_start")
 
                 # drop all out debug windows
-                #cv2.destroyAllWindows()
-                #cv2.waitKey(10)
+                # cv2.destroyAllWindows()
+                # cv2.waitKey(10)
 
-            elif self.sc_assist_enabled == True:
+            elif self.sc_assist_enabled:
                 logger.debug("Running sc_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -2830,7 +2840,7 @@ class EDAutopilot:
                 self.ap_ckb('sc_stop')
                 self.update_overlay()
 
-            elif self.waypoint_assist_enabled == True:
+            elif self.waypoint_assist_enabled:
                 logger.debug("Running waypoint_assist")
 
                 set_focus_elite_window()
@@ -2854,7 +2864,7 @@ class EDAutopilot:
                 self.ap_ckb('waypoint_stop')
                 self.update_overlay()
 
-            elif self.robigo_assist_enabled == True:
+            elif self.robigo_assist_enabled:
                 logger.debug("Running robigo_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -2873,7 +2883,7 @@ class EDAutopilot:
                 self.ap_ckb('robigo_stop')
                 self.update_overlay()
 
-            elif self.afk_combat_assist_enabled == True:
+            elif self.afk_combat_assist_enabled:
                 self.update_overlay()
                 try:
                     self.afk_combat_loop()
@@ -2890,7 +2900,7 @@ class EDAutopilot:
                 self.ap_ckb('afk_stop')
                 self.update_overlay()
 
-            elif self.dss_assist_enabled == True:
+            elif self.dss_assist_enabled:
                 logger.debug("Running dss_assist")
                 set_focus_elite_window()
                 self.update_overlay()
@@ -3060,8 +3070,8 @@ def strfdelta(tdelta, fmt='{H:02}h {M:02}m {S:02.0f}s', inputtype='timedelta'):
 
     f = Formatter()
     desired_fields = [field_tuple[1] for field_tuple in f.parse(fmt)]
-    possible_fields = ('Y','m','W', 'D', 'H', 'M', 'S', 'mS', 'µS')
-    constants = {'Y':86400*365.24,'m': 86400*30.44 ,'W': 604800, 'D': 86400, 'H': 3600, 'M': 60, 'S': 1, 'mS': 1/pow(10,3) , 'µS':1/pow(10,6)}
+    possible_fields = ('Y', 'm', 'W', 'D', 'H', 'M', 'S', 'mS', 'µS')
+    constants = {'Y': 86400*365.24, 'm': 86400*30.44, 'W': 604800, 'D': 86400, 'H': 3600, 'M': 60, 'S': 1, 'mS': 1/pow(10, 3), 'µS': 1/pow(10, 6)}
     values = {}
     for field in possible_fields:
         if field in desired_fields and field in constants:
@@ -3092,13 +3102,13 @@ def dummy_cb(msg, body=None):
 # This main is for testing purposes.
 #
 def main():
-    #handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
-    #if handle != None:
+    # handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    # if handle != None:
     #    win32gui.SetForegroundWindow(handle)  # put the window in foreground
 
     delete_old_log_files()
 
-    ed_ap = EDAutopilot(cb=dummy_cb, doThread=False)
+    ed_ap = EDAutopilot(cb=dummy_cb, do_thread=False)
 
     # for x in range(10):
     #     ed_ap.keys.send('RollLeftButton', 0.04)
@@ -3136,23 +3146,21 @@ def main():
     # sleep(1)
     # for x in range(10):
     #     ed_ap.keys.send('YawLeftButton', 0.04)
-
-        #target_align(scrReg)
-        # print("Calling nav_align")
-        #ed_ap.nav_align(ed_ap.scrReg)
-        #ed_ap.fss_detect_elw(ed_ap.scrReg)
-
-        #loc = get_destination_offset(scrReg)
-        #print("get_dest: " +str(loc))
-        #loc = get_nav_offset(scrReg)
-        #print("get_nav: " +str(loc))
-        # cv2.waitKey(0)
-        # print("Done nav")
-        # sleep(8)
+    #
+    #     target_align(scrReg)
+    #     print("Calling nav_align")
+    #     ed_ap.nav_align(ed_ap.scrReg)
+    #     ed_ap.fss_detect_elw(ed_ap.scrReg)
+    #
+    #     loc = get_destination_offset(scrReg)
+    #     print("get_dest: " +str(loc))
+    #     loc = get_nav_offset(scrReg)
+    #     print("get_nav: " +str(loc))
+    #     cv2.waitKey(0)
+    #     print("Done nav")
+    #     sleep(8)
 
     # ed_ap.overlay.overlay_quit()
-
-
 
 
 if __name__ == "__main__":
