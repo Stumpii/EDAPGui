@@ -522,8 +522,6 @@ class Screen_Regions:
                                'filter': None}
         self.reg['target'] = {'rect': [0.2, 0.15, 0.8, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color,
                               'filter': self.orange_2_color_range}  # also called destination
-        self.reg['target_occluded'] = {'rect': [0.2, 0.15, 0.8, 0.75], 'width': 1, 'height': 1,
-                                       'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
         self.reg['sun'] = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun,
                            'filter': None}
         self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1,
@@ -544,7 +542,6 @@ class Screen_Regions:
                         'radar': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'compass': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'target': {'rect': [0.0, 0.0, 0.0, 0.0]},
-                        'target_occluded': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'sun': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'disengage': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'sco': {'rect': [0.0, 0.0, 0.0, 0.0]},

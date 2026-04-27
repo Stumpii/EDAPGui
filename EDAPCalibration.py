@@ -158,25 +158,16 @@ class Calibration:
         r += 1
 
         # Compass and Target Calibrations
-        blk_other_cal = ttk.LabelFrame(tab, text="Compass and Target Calibrations")
+        blk_other_cal = ttk.LabelFrame(tab, text="Target Calibration")
         blk_other_cal.grid(row=r, column=0, padx=10, pady=5, sticky="NSEW")
 
-        btn_calibrate_compass = ttk.Button(blk_other_cal, text="Calibrate Compass",
-                                           command=self.calibrate_compass_callback)
-        btn_calibrate_compass.grid(row=1, padx=10, pady=5, sticky="W")
-
-        lbl_calibrate_compass = ttk.Label(blk_other_cal, wraplength=500, text='Performs compass calibration for your '
-                                                                              'screen. Perform when the compass is '
-                                                                              'visible in the cockpit.')
-        lbl_calibrate_compass.grid(row=1, column=1, padx=10, pady=5, sticky=tk.W)
-
         btn_calibrate_target = ttk.Button(blk_other_cal, text="Calibrate Target", command=self.calibrate_callback)
-        btn_calibrate_target.grid(row=2, padx=10, pady=5, sticky="W")
+        btn_calibrate_target.grid(row=1, padx=10, pady=5, sticky="W")
 
         lbl_calibrate_target = ttk.Label(blk_other_cal, wraplength=500, text='Performs target calibration for your '
                                                                              'screen. Perform when the target is '
                                                                              'visible center screen.')
-        lbl_calibrate_target.grid(row=2, column=1, padx=10, pady=5, sticky=tk.W)
+        lbl_calibrate_target.grid(row=1, column=1, padx=10, pady=5, sticky=tk.W)
 
     def save_ocr_calibration_data(self):
         # q = Quad.from_rect(self.ocr_calibration_data['EDCodex.full_panel']['rect'])
@@ -209,7 +200,7 @@ class Calibration:
         with open(calibration_file, 'w') as f:
             json.dump(self.ocr_calibration_data, f, indent=4)
         # self.log_msg("OCR calibration data saved.")
-        self.ap.ap_ckb('log', f"OCR calibration data saved.")
+        self.ap_ckb('log', f"OCR calibration data saved.")
         # messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
 
     def reset_all_calibrations(self):
@@ -219,7 +210,7 @@ class Calibration:
             if os.path.exists(calibration_file):
                 os.remove(calibration_file)
                 # self.log_msg("Removed existing ocr_calibration.json.")
-                self.ap.ap_ckb('log', f"Removed existing ocr_calibration.json.")
+                self.ap_ckb('log', f"Removed existing ocr_calibration.json.")
 
             # This will recreate the file with defaults
             self.ocr_calibration_data = load_default_calib_data()
@@ -242,7 +233,7 @@ class Calibration:
             # self.calibration_size_combo['values'] = size_keys
 
             # self.log_msg("All OCR calibrations have been reset to default.")
-            self.ap.ap_ckb('log', f"All OCR calibrations have been reset to default.")
+            self.ap_ckb('log', f"All OCR calibrations have been reset to default.")
             messagebox.showinfo("Reset Complete",
                                 "All calibrations have been reset to default. Please restart the application for all changes to take effect.")
 
@@ -368,9 +359,6 @@ class Calibration:
             scaled_rect.crop(sub_reg_quad)
             self.ap.overlay.overlay_quad_pct('subregion select', scaled_rect, (0, 255, 0), 2, 15)
             self.ap.overlay.overlay_paint()
-
-    def calibrate_compass_callback(self):
-        self.ap.calibrate_compass()
 
     @staticmethod
     def calibrate_region_help():

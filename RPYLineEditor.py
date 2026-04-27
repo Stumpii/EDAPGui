@@ -25,11 +25,17 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
     if curve is None:
         return None
 
-    print(f"Original curve: {curve}")
+    # print(f"Original curve: {curve}")
 
-    xs = list(curve.keys())
-    xs = [int(x) / 10 for x in xs]  # Convert each item to int and divide by 10
-    ys = list(curve.values())
+    # Convert each item to int and divide by 10
+    curve_int = {int(k) / 10: v for k, v in curve.items()}
+    # Sort the curve by angle (sorts ascending)
+    sorted_curve = dict(sorted(curve_int.items()))
+
+    # print(f"Sorted curve: {sorted_curve}")
+
+    xs = list(sorted_curve.keys())
+    ys = list(sorted_curve.values())
 
     fig, ax1 = plt.subplots()
     line = Line2D(xs, ys,
@@ -60,7 +66,7 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
             # Add to dict in format [str, float] format
             updated_curve[str(int(item[0] * 10))] = round(float(item[1]), 2)
 
-        print(f"Updated curve: {updated_curve}")
+        # print(f"Updated curve: {updated_curve}")
         return updated_curve
 
 
@@ -206,17 +212,18 @@ if __name__ == '__main__':
     PitchRate = {
         "5": 6.0,
         "10": 10.47,
-        "25": 16.81,
+        "55": 16.81,
         "43": 21.9,
         "93": 27.22,
-        "300": 39.7
+        "300": 39.7,
+        "600": 39.7
     }
-    print(f"old arr: {PitchRate}")
+    # print(f"old arr: {PitchRate}")
 
     new_arr = line_editor(PitchRate)
     if new_arr is not None:
         print("Line changed")
-        print(f"new arr: {new_arr}")
+        # print(f"new arr: {new_arr}")
         if messagebox.askyesno("RPY calibration", "Keep the changes made to calibration?"):
             messagebox.showinfo("EDAP", "Save configuration changes once complete.")
     else:

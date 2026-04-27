@@ -64,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b8"
+EDAP_VERSION = "V1.9.0 b9"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -388,9 +388,6 @@ class APGui:
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
 
-    def calibrate_compass_callback(self):
-        self.ed_ap.calibrate_compass()
-
     def quit(self):
         logger.debug("Entered: quit")
         self.close_window()
@@ -601,46 +598,46 @@ class APGui:
         self.log_msg(f"Status update: {txt}")
 
     def ship_tst_pitch(self):
-        # self.ed_ap.ship_tst_pitch(360)
-        # self.ed_ap.ship_tst_pitch_new(360)
+        # self.ed_ap.ship_control.ship_tst_pitch(360)
+        # self.ed_ap.ship_control.ship_tst_pitch_new(360)
         self.ed_ap.ship_tst_pitch_enabled = True
 
     def ship_tst_roll(self):
-        # self.ed_ap.ship_tst_roll(360)
-        # self.ed_ap.ship_tst_roll_new(360)
+        # self.ed_ap.ship_control.ship_tst_roll(360)
+        # self.ed_ap.ship_control.ship_tst_roll_new(360)
         self.ed_ap.ship_tst_roll_enabled = True
 
     def ship_tst_yaw(self):
-        # self.ed_ap.ship_tst_yaw(360)
-        # self.ed_ap.ship_tst_yaw_new(360)
+        # self.ed_ap.ship_control.ship_tst_yaw(360)
+        # self.ed_ap.ship_control.ship_tst_yaw_new(360)
         self.ed_ap.ship_tst_yaw_enabled = True
 
     def ship_tst_pitch_30(self):
-        self.ed_ap.ship_tst_pitch(30)
+        self.ed_ap.ship_control.ship_tst_pitch(30)
 
     def ship_tst_roll_30(self):
-        self.ed_ap.ship_tst_roll(30)
+        self.ed_ap.ship_control.ship_tst_roll(30)
 
     def ship_tst_yaw_30(self):
-        self.ed_ap.ship_tst_yaw(30)
+        self.ed_ap.ship_control.ship_tst_yaw(30)
 
     def ship_tst_pitch_45(self):
-        self.ed_ap.ship_tst_pitch(45)
+        self.ed_ap.ship_control.ship_tst_pitch(45)
 
     def ship_tst_roll_45(self):
-        self.ed_ap.ship_tst_roll(45)
+        self.ed_ap.ship_control.ship_tst_roll(45)
 
     def ship_tst_yaw_45(self):
-        self.ed_ap.ship_tst_yaw(45)
+        self.ed_ap.ship_control.ship_tst_yaw(45)
 
     def ship_tst_pitch_90(self):
-        self.ed_ap.ship_tst_pitch(90)
+        self.ed_ap.ship_control.ship_tst_pitch(90)
 
     def ship_tst_roll_90(self):
-        self.ed_ap.ship_tst_roll(90)
+        self.ed_ap.ship_control.ship_tst_roll(90)
 
     def ship_tst_yaw_90(self):
-        self.ed_ap.ship_tst_yaw(90)
+        self.ed_ap.ship_control.ship_tst_yaw(90)
 
     def edit_roll_curve(self):
         # Get current ship roll curve
