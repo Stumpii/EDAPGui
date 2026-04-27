@@ -39,13 +39,13 @@ FlagsInFighter = 1 << 25
 FlagsInSRV = 1 << 26
 FlagsAnalysisMode = 1 << 27      # Hud in Analysis mode
 FlagsNightVision = 1 << 28
-FlagsAverageAltitude = 1 << 29   # Altitude from Average radius. On when altimeter shows OC/DRP, Off if altimeter is not shown or showing 2Km/SURF.
+FlagsAverageAltitude = 1 << 29   # Alt from Average radius. On if alt shows OC/DRP, Off if alt not shown or showing 2Km/SURF.
 FlagsFsdJump = 1 << 30           # While jumping to super-cruise or system jump. See also Flags2FsdHyperdriveCharging.
 FlagsSrvHighBeam = 1 << 31
 
 # Status.json / Dashboard Flags2 constants
 Flags2OnFoot = 1 << 0
-Flags2InTaxi = 1 << 1  # (or dropship/shuttle)
+Flags2InTaxi = 1 << 1  # (or drop-ship/shuttle)
 Flags2InMulticrew = 1 << 2  # (ie in someone else’s ship)
 Flags2OnFootInStation = 1 << 3
 Flags2OnFootOnPlanet = 1 << 4

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from EDAP_data import *
-from EDlogger import logger
 from Screen import set_focus_elite_window
 from StatusParser import StatusParser
 from time import sleep
@@ -43,10 +42,10 @@ class EDShipControl:
 
         return True
 
-    def roll_clockwise_anticlockwise(self, deg):
+    def roll_clockwise_anticlockwise(self, deg: float) -> float:
         """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.rollrate
@@ -93,10 +92,13 @@ class EDShipControl:
         else:
             self.keys.send('RollLeftButton', hold=htime)
 
-    def pitch_up_down(self, deg):
+        # Return the hold time
+        return htime
+
+    def pitch_up_down(self, deg: float) -> float:
         """ Pitch in deg. (> 0.0 for pitch up, < 0.0 for pitch down)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.pitchrate
@@ -143,10 +145,13 @@ class EDShipControl:
         else:
             self.keys.send('PitchDownButton', hold=htime)
 
-    def yaw_right_left(self, deg):
+        # Return the hold time
+        return htime
+
+    def yaw_right_left(self, deg: float) -> float:
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.yawrate
@@ -193,25 +198,83 @@ class EDShipControl:
         else:
             self.ap.keys.send('YawLeftButton', hold=htime)
 
-    def ship_tst_pitch(self, angle: float):
-        """ Performs a ship pitch test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the pitch value.
-        If the ship rotates too much, increase the pitch value.
+        # Return the hold time
+        return htime
+
+    def ship_calibrate_roll(self):
+        """ Performs a ship roll test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the roll value.
+        If the ship rotates too much, increase the roll value.
         """
-        # if not self.ap.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.ap.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
+        self.ap_ckb('log', "Starting Roll Calibration.")
+        if not self.ap.speed_demand == 'SCSpeed50':
+            self.ap.set_speed_50()
+            # sleep(10)
 
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.ap.set_speed_50()
-        self.ap.pitch_up_down(angle)
+        if not self.ap.current_ship_cfg:
+            return
 
-    def ship_tst_pitch_new(self, angle: float):
+        if self.ap.speed_demand not in self.ap.current_ship_cfg:
+            self.ap.current_ship_cfg[self.ap.speed_demand] = dict()
+
+        # Clear existing data
+        self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'] = dict()
+
+        test_time = 0.05
+        delta_int = 0.0
+        for targ_ang in [40, 80, 160, 320]:
+            while 1:
+                set_focus_elite_window()
+                off = self.ap.get_nav_offset(self.ap.scrReg)
+                if not off:
+                    break
+
+                # Clear the overlays before moving
+                if self.ap.debug_overlay:
+                    self.ap.overlay.overlay_remove_rect('compass')
+                    self.ap.overlay.overlay_remove_floating_text('compass')
+                    self.ap.overlay.overlay_remove_floating_text('nav')
+                    self.ap.overlay.overlay_remove_floating_text('nav_beh')
+                    self.ap.overlay.overlay_remove_floating_text('compass_rpy')
+                    self.ap.overlay.overlay_paint()
+
+                if off['roll'] > 0:
+                    self.keys.send('RollRightButton', hold=test_time)
+                else:
+                    self.keys.send('RollLeftButton', hold=test_time)
+
+                sleep(1)
+
+                off2 = self.ap.get_nav_offset(self.ap.scrReg)
+                if not off2:
+                    break
+
+                delta = abs(off2['roll'] - off['roll'])
+                delta_int_lst = delta_int
+                delta_int = int(round(delta * 10, 0))
+
+                test_time = test_time * 1.03
+                rate = round(delta / test_time, 2)
+                rate = min(rate, self.ap.rollrate)  # Limit rate to no higher than the default
+                if delta_int >= targ_ang and delta_int > delta_int_lst:
+                    self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][delta_int] = rate
+
+                    print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    break
+                else:
+                    print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+
+        # If we have logged values, add the ship default rate at 45 deg
+        if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
+            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][450] = self.ap.rollrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][600] = self.ap.rollrate
+            self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
+
+        self.ap_ckb('log', "Completed Roll Calibration.")
+        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+
+    def ship_calibrate_pitch(self):
         """ Performs a ship pitch test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the pitch value.
         If the ship rotates too much, increase the pitch value.
@@ -285,116 +348,7 @@ class EDShipControl:
         self.ap_ckb('log', "Completed Pitch Calibration.")
         self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
 
-    def ship_tst_roll(self, angle: float):
-        """ Performs a ship roll test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the roll value.
-        If the ship rotates too much, increase the roll value.
-        """
-        # if not self.ap.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.ap.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.ap.set_speed_50()
-        self.roll_clockwise_anticlockwise(angle)
-
-    def ship_tst_roll_new(self, angle: float):
-        """ Performs a ship roll test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the roll value.
-        If the ship rotates too much, increase the roll value.
-        """
-        self.ap_ckb('log', "Starting Roll Calibration.")
-        if not self.ap.speed_demand == 'SCSpeed50':
-            self.ap.set_speed_50()
-            #sleep(10)
-
-        if not self.ap.current_ship_cfg:
-            return
-
-        if self.ap.speed_demand not in self.ap.current_ship_cfg:
-            self.ap.current_ship_cfg[self.ap.speed_demand] = dict()
-
-        # Clear existing data
-        self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'] = dict()
-
-        test_time = 0.05
-        delta_int = 0.0
-        for targ_ang in [40, 80, 160, 320]:
-            while 1:
-                set_focus_elite_window()
-                off = self.ap.get_nav_offset(self.ap.scrReg)
-                if not off:
-                    break
-
-                # Clear the overlays before moving
-                if self.ap.debug_overlay:
-                    self.ap.overlay.overlay_remove_rect('compass')
-                    self.ap.overlay.overlay_remove_floating_text('compass')
-                    self.ap.overlay.overlay_remove_floating_text('nav')
-                    self.ap.overlay.overlay_remove_floating_text('nav_beh')
-                    self.ap.overlay.overlay_remove_floating_text('compass_rpy')
-                    self.ap.overlay.overlay_paint()
-
-                if off['roll'] > 0:
-                    self.keys.send('RollRightButton', hold=test_time)
-                else:
-                    self.keys.send('RollLeftButton', hold=test_time)
-
-                sleep(1)
-
-                off2 = self.ap.get_nav_offset(self.ap.scrReg)
-                if not off2:
-                    break
-
-                delta = abs(off2['roll'] - off['roll'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
-
-                test_time = test_time * 1.03
-                rate = round(delta / test_time, 2)
-                rate = min(rate, self.ap.rollrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][delta_int] = rate
-
-                    print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    break
-                else:
-                    print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-
-        # If we have logged values, add the ship default rate at 45 deg
-        if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][450] = self.ap.rollrate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][600] = self.ap.rollrate
-            self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
-
-        self.ap_ckb('log', "Completed Roll Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
-
-    def ship_tst_yaw(self, angle: float):
-        """ Performs a ship yaw test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the yaw value.
-        If the ship rotates too much, increase the yaw value.
-        """
-        # if not self.ap.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.ap.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        sleep(0.25)
-        # self.ap.set_speed_50()
-        self.yaw_right_left(angle)
-
-    def ship_tst_yaw_new(self, angle: float):
+    def ship_calibrate_yaw(self):
         """ Performs a ship yaw test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the yaw value.
         If the ship rotates too much, increase the yaw value.
@@ -468,3 +422,63 @@ class EDShipControl:
 
         self.ap_ckb('log', "Completed Yaw Calibration.")
         self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+
+    def ship_tst_roll(self, angle: float):
+        """ Performs a ship roll test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the roll value.
+        If the ship rotates too much, increase the roll value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
+        """
+        # if not self.ap.status.get_flag(FlagsSupercruise):
+        #     self.ap_ckb('log', "Enter Supercruise and try again.")
+        #     return
+        #
+        # if self.ap.jn.ship_state()['target'] is None:
+        #     self.ap_ckb('log', "Select a target system and try again.")
+        #     return
+
+        set_focus_elite_window()
+        sleep(0.25)
+        # self.ap.set_speed_50()
+        self.roll_clockwise_anticlockwise(angle)
+
+    def ship_tst_pitch(self, angle: float):
+        """ Performs a ship pitch test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the pitch value.
+        If the ship rotates too much, increase the pitch value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
+        """
+        # if not self.ap.status.get_flag(FlagsSupercruise):
+        #     self.ap_ckb('log', "Enter Supercruise and try again.")
+        #     return
+        #
+        # if self.ap.jn.ship_state()['target'] is None:
+        #     self.ap_ckb('log', "Select a target system and try again.")
+        #     return
+
+        set_focus_elite_window()
+        sleep(0.25)
+        # self.ap.set_speed_50()
+        self.ap.pitch_up_down(angle)
+
+    def ship_tst_yaw(self, angle: float):
+        """ Performs a ship yaw test by pitching 360 degrees.
+        If the ship does not rotate enough, decrease the yaw value.
+        If the ship rotates too much, increase the yaw value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
+        """
+        # if not self.ap.status.get_flag(FlagsSupercruise):
+        #     self.ap_ckb('log', "Enter Supercruise and try again.")
+        #     return
+        #
+        # if self.ap.jn.ship_state()['target'] is None:
+        #     self.ap_ckb('log', "Select a target system and try again.")
+        #     return
+
+        set_focus_elite_window()
+        sleep(0.25)
+        # self.ap.set_speed_50()
+        self.yaw_right_left(angle)
