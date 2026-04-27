@@ -174,9 +174,6 @@ class EDAutopilot:
         self.rollrate  = 80.0
         self.pitchrate = 33.0
         self.sunpitchuptime = 0.0
-        self.yawfactor = 0.0
-        self.rollfactor = 0.0
-        self.pitchfactor = 0.0
 
         self.ap_ckb = cb
 
@@ -460,9 +457,6 @@ class EDAutopilot:
             self.ship_configs['Ship_Configs'][self.current_ship_type]['RollRate'] = self.rollrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['YawRate'] = self.yawrate
             self.ship_configs['Ship_Configs'][self.current_ship_type]['SunPitchUp+Time'] = self.sunpitchuptime
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['PitchFactor'] = self.pitchfactor
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['RollFactor'] = self.rollfactor
-            self.ship_configs['Ship_Configs'][self.current_ship_type]['YawFactor'] = self.yawfactor
 
             write_json_file(self.ship_configs, filepath='./configs/ship_configs.json')
             logger.debug(f"Saved ship config for: {self.current_ship_type}")
@@ -481,9 +475,6 @@ class EDAutopilot:
         self.pitchrate = 33.0
         self.yawrate = 8.0
         self.sunpitchuptime = 0.0
-        self.rollfactor = 20.0
-        self.pitchfactor = 12.0
-        self.yawfactor = 12.0
         logger.info(f"Loaded hardcoded default configuration for {ship_type}")
 
         # Step 2: Try to load defaults from ship file
@@ -497,14 +488,6 @@ class EDAutopilot:
             self.sunpitchuptime = ship_defaults.get('SunPitchUp+Time', 0.0)
             logger.info(f"Loaded default configuration for {ship_type} from default ship cfg file")
 
-        # if ship_type in ship_rpy_factor_sc_50:
-        #     ship_defaults = ship_rpy_factor_sc_50[ship_type]
-        #     # Use default configuration - this means it's been modified and saved to ship_configs.json
-        #     self.rollfactor = ship_defaults.get('RollFactor', 20.0)
-        #     self.pitchfactor = ship_defaults.get('PitchFactor', 12.0)
-        #     self.yawfactor = ship_defaults.get('YawFactor', 12.0)
-        #     # return
-
         # Step 3: Check if we have custom config in ship_configs.json (skip if forcing defaults)
         if ship_type in self.ship_configs['Ship_Configs']:
             current_ship_cfg = self.ship_configs['Ship_Configs'][ship_type]
@@ -517,13 +500,6 @@ class EDAutopilot:
                 self.yawrate = current_ship_cfg.get('YawRate', 8.0)
                 self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
                 logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
-
-            if any(key in current_ship_cfg for key in ['RollFactor', 'PitchFactor', 'YawFactor']):
-                # Use custom configuration - this means it's been modified and saved to ship_configs.json
-                self.rollfactor = current_ship_cfg.get('RollFactor', 20.0)
-                self.pitchfactor = current_ship_cfg.get('PitchFactor', 12.0)
-                self.yawfactor = current_ship_cfg.get('YawFactor', 12.0)
-                # return
 
             # Check RPY Calibration
             spd_dmd = 'SCSpeed50'
@@ -2013,23 +1989,9 @@ class EDAutopilot:
 
             if tar_off1 and tar_off2:
                 # Check diff from before and after movement
+                # TODO - At some point check/increase the RPY if we overshoot?
                 pit_delta = tar_off2['pit'] - tar_off1['pit']
                 yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
-                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far. Reducing Pitch Factor.")
-                    # Correct factor
-                    # self.pitchfactor = self.pitchfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
-                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far. Reducing Yaw Factor.")
-                    # Correct factor
-                    # self.yawfactor = self.yawfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
 
             if tar_off2:
                 # Store current offsets
@@ -3419,104 +3381,6 @@ class EDAutopilot:
         self.ap_ckb('log', "Completed Pitch Calibration.")
         self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
 
-    def ship_tst_pitch_calc_power(self, angle: float):
-        """ Performs a ship pitch test by pitching 360 degrees.
-        If the ship does not rotate enough, decrease the pitch value.
-        If the ship rotates too much, increase the pitch value.
-        """
-        # if not self.status.get_flag(FlagsSupercruise):
-        #     self.ap_ckb('log', "Enter Supercruise and try again.")
-        #     return
-        #
-        # if self.jn.ship_state()['target'] is None:
-        #     self.ap_ckb('log', "Select a target system and try again.")
-        #     return
-
-        set_focus_elite_window()
-        # sleep(0.25)
-        # # self.set_speed_50()
-        # self.pitch_up_down(angle)
-
-        target_align_outer_lim = 1.0
-        target_align_inner_lim = 0.5
-
-        off = None
-        tar_off1 = None
-        tar_off2 = None
-
-        # Try to get the target 5 times before quiting
-        for i in range(5):
-            # Check Target and Compass
-            tar_off1 = self.get_target_offset(self.scrReg)
-            if tar_off1:
-                # Target detected
-                off = tar_off1
-
-            # Quit loop if we found Target or Compass
-            if off:
-                break
-
-        # We have Target or Compass. Are we close to Target?
-        while ((abs(off['yaw']) > target_align_outer_lim) or
-               (abs(off['pit']) > target_align_outer_lim)):
-
-            target_align_outer_lim = target_align_inner_lim  # Keep aligning until we are within this lower range.
-
-            # Clear the overlays before moving
-            if self.debug_overlay:
-                self.overlay.overlay_remove_rect('target')
-                self.overlay.overlay_remove_floating_text('target')
-                self.overlay.overlay_remove_floating_text('target_occ')
-                self.overlay.overlay_remove_floating_text('target_rpy')
-                self.overlay.overlay_paint()
-
-            # Calc pitch time based on nav point location
-            logger.debug(f"sc_target_align before: pit: {off['pit']} yaw: {off['yaw']} ")
-
-            p_deg = 0.0
-            if abs(off['pit']) > target_align_outer_lim:
-                p_deg = off['pit']
-                self.pitch_up_down(p_deg)
-
-            # Calc yaw time based on nav point location
-            y_deg = 0.0
-            if abs(off['yaw']) > target_align_outer_lim:
-                y_deg = off['yaw']
-                self.yaw_right_left(y_deg)
-
-            # Wait for ship to finish moving and picture to stabilize
-            sleep(2.0)
-
-            # Check Target and Compass
-            tar_off2 = self.get_target_offset(self.scrReg)
-            if tar_off2:
-                off = tar_off2
-                logger.debug(f"sc_target_align after: pit:{off['pit']} yaw: {off['yaw']}")
-
-            if tar_off1 and tar_off2:
-                # Check diff from before and after movement
-                pit_delta = tar_off2['pit'] - tar_off1['pit']
-                yaw_delta = tar_off2['yaw'] - tar_off1['yaw']
-                if ((tar_off1['pit'] < 0.0 and tar_off2['pit'] > target_align_outer_lim) or
-                        (tar_off1['pit'] > 0.0 and tar_off2['pit'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Pitch correction gone too far {round(abs(pit_delta),2)} > {round(abs(tar_off1['pit']),2) + target_align_outer_lim}. Reducing Pitch Factor.")
-                    # Correct factor
-                    # self.pitchfactor = self.pitchfactor - 1.0
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-                if ((tar_off1['yaw'] < 0.0 and tar_off2['yaw'] > target_align_outer_lim) or
-                        (tar_off1['yaw'] > 0.0 and tar_off2['yaw'] < -target_align_outer_lim)):
-                    self.ap_ckb('log', f"TEST - Yaw correction gone too far {round(abs(yaw_delta),2)} > {round(abs(tar_off1['yaw']),2) + target_align_outer_lim}. Reducing Yaw Factor.")
-                    # Correct factor
-                    # self.yawfactor = self.yawfactor + 0.1
-                    # Update GUI with ship config
-                    self.ap_ckb('update_ship_cfg')
-
-            if tar_off2:
-                # Store current offsets
-                tar_off1 = tar_off2.copy()
-
     def ship_tst_roll(self, angle: float):
         """ Performs a ship roll test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the roll value.
@@ -3718,6 +3582,7 @@ class EDAutopilot:
             self.speed_demand = 'Speed100'
 
         self.keys.send('SetSpeed100', repeat)
+
 
 def delete_old_log_files():
     """ Deleted old .log files from the main folder."""

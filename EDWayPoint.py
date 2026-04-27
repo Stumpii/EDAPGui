@@ -585,13 +585,25 @@ class EDWayPoint:
                 # reported by the Journal is only the ship identifier (ABC-123) and not the carrier name.
                 # So we need to check if the ID (ABC-123) is at the end of the target ('Fleety McFleet ABC-123').
                 self.ap.ap_ckb('log', f"Docked at {cur_station}.")
+                self.ap.ap_ckb('log', f"Checking station name against target station: {next_wp_station}.")
                 if cur_station_type == StationType.FleetCarrier:
-                    docked_at_stn = next_wp_station.endswith(cur_station)
+                    if next_wp_station.endswith(cur_station):
+                        docked_at_stn = True
+                    else:
+                        self.ap.ap_ckb('log', f"FleetCarrier name: {next_wp_station} does not end with: {cur_station}.")
+
                 elif cur_station_type == StationType.SquadronCarrier:
-                    docked_at_stn = next_wp_station.endswith(cur_station)
+                    if next_wp_station.endswith(cur_station):
+                        docked_at_stn = True
+                    else:
+                        self.ap.ap_ckb('log', f"SquadronCarrier name: {next_wp_station} does not end with: {cur_station}.")
+
                 elif 'System Colonisation Ship'.upper() in next_wp_station:
                     if cur_station_type == StationType.ColonisationShip:
                         docked_at_stn = True
+                    else:
+                        self.ap.ap_ckb('log', f"Current station is not a Colonisation Ship.")
+
                 # elif next_wp_station.startswith('Orbital Construction Site'.upper()):
                 #     if (cur_station_type == 'SurfaceStation'.upper() and
                 #             'Orbital Construction Site'.upper() in cur_station.upper()):
@@ -599,10 +611,13 @@ class EDWayPoint:
                 elif cur_station == next_wp_station:
                     docked_at_stn = True
 
+                if not docked_at_stn:
+                    self.ap.ap_ckb('log', f"We are not docked at the target station.")
+
             # Check current station and go to it if different
             if docked_at_stn:
                 if new_waypoint:
-                    self.ap.ap_ckb('log+vce', f"Already at target Station: {next_wp_station}")
+                    self.ap.ap_ckb('log+vce', f"Already at target Station: {next_wp_station}.")
             else:
                 # Check if we need to travel to a station, else we are done.
                 # This may be by 1) System bookmark, 2) Galaxy bookmark or 3) by Station Name text

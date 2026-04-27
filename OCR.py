@@ -109,6 +109,8 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None, None
 
     def image_simple_ocr(self, image, name='') -> list[str] | None:
@@ -158,6 +160,8 @@ class OCR:
 
         except Exception as e:
             logger.error(f"OCR failed: {e}")
+            logger.error(f"Image stored to ocr_output folder.")
+            cv2.imwrite(f"./ocr_output/{name}", image)
             return None
 
     def get_highlighted_item_data(self, image, item: Quad, name=''):
