@@ -1,3 +1,7 @@
+# 3/30/2026 v1.9.0 b7
+- Fixed some crashes thanks to clippy.
+- Fixed issue with loss of target and target occluded at the same time. 
+
 # 3/29/2026 v1.9.0 b6
 - Default debug on for new users.
 - Added logging of FSS tuning screenshot to debug image folder.

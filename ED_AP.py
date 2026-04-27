@@ -1281,16 +1281,22 @@ class EDAutopilot:
 
         # Check if target is occluded
         tar_quad = Quad()
-        if max_val > 0.0 and max_val > maxVal_occ:
-            sel_pt = pt
-            sel_loc = pt
-            tar_quad = target_quad
-            occluded = False
-        elif maxVal_occ > 0.0 and maxVal_occ > max_val:
-            sel_pt = pt_occ
-            sel_loc = pt_occ
-            tar_quad = target_occ_quad
-            occluded = True
+        if max_val > 0.0 or maxVal_occ > 0.0:
+            if max_val >= maxVal_occ:
+                sel_pt = pt
+                sel_loc = pt
+                tar_quad = target_quad
+                occluded = False
+            elif maxVal_occ > max_val:
+                sel_pt = pt_occ
+                sel_loc = pt_occ
+                tar_quad = target_occ_quad
+                occluded = True
+        else:
+            if self.debug_images:
+                f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image_unfiltered)
+            return None
 
         target_region = Quad.from_rect(scr_reg.reg['target']['rect'])
         # destination_left = scr_reg.reg['target']['rect'][0]
@@ -3007,37 +3013,44 @@ class EDAutopilot:
     #
     def set_fsd_assist(self, enable=True):
         if enable == False and self.fsd_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
         if enable == False and self.sc_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
         if enable == False and self.waypoint_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
         if enable == False and self.robigo_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
         if enable == False and self.afk_combat_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
         if enable == False and self.dss_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if not enable and self.single_waypoint_enabled:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread is not None and self.ap_thread.is_alive():
+                self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
         self._single_waypoint_system = system
         self._single_waypoint_station = station
         self.single_waypoint_enabled = enable
