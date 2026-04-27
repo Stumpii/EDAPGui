@@ -548,7 +548,7 @@ class Screen_Regions:
                         'fss': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'mission_dest': {'rect': [0.0, 0.0, 0.0, 0.0]},
                         'missions': {'rect': [0.0, 0.0, 0.0, 0.0]},
-                        'nav_panel': {'rect': [0.25, 0.36, 0.60, 0.85]},
+                        'nav_panel': {'rect': [0.25, 0.36, 0.60, 0.85]},  # For Robigo
                         }
 
         # Load custom regions from file

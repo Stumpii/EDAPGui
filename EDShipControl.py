@@ -80,8 +80,8 @@ class EDShipControl:
                             last_deg = key_deg
                             last_val = value
 
-                    # Check if we are off the scale
-                    if abs_deg > last_deg:
+                    # Check if found one curve point and we are off the scale
+                    if abs_deg > last_deg and last_val > 0.0:
                         htime = abs_deg / last_val
                         # print(f"Roll demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Roll demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
@@ -130,8 +130,8 @@ class EDShipControl:
                             last_deg = key_deg
                             last_val = value
 
-                    # Check if we are off the scale
-                    if abs_deg > last_deg:
+                    # Check if found one curve point and we are off the scale
+                    if abs_deg > last_deg and last_val > 0.0:
                         htime = abs_deg / last_val
                         # print(f"Pitch demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Pitch demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
@@ -180,8 +180,8 @@ class EDShipControl:
                             last_deg = key_deg
                             last_val = value
 
-                    # Check if we are off the scale
-                    if abs_deg > last_deg:
+                    # Check if found one curve point and we are off the scale
+                    if abs_deg > last_deg and last_val > 0.0:
                         htime = abs_deg / last_val
                         # print(f"Yaw demand: {deg}. Calc value: {round(ratio_val, 2)} deg/s")
                         # logger.info(f"Yaw demand: {deg}. Calc value: {round(last_val, 2)} deg/s")
