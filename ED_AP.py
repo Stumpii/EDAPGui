@@ -67,7 +67,7 @@ class FSDAssistReturn(Enum):
 
 class EDAutopilot:
 
-    def __init__(self, cb, doThread=True):
+    def __init__(self, cb, do_thread=True):
         self.config = {}
         self.ship_configs = {
             "Ship_Configs": {},  # Dictionary of ship types with additional settings
@@ -80,7 +80,7 @@ class EDAutopilot:
         self._single_waypoint_system = None
         self._prev_star_system = None
         self.honk_thread = None
-        self.speed_demand = None
+        self.speed_demand = None  # 'Speed0', 'Speed50', 'Speed100', 'SCSpeed0', 'SCSpeed50' or 'SCSpeed100'
         self._tce_integration = None
         self._ocr = None
         self._fss_screen = None
@@ -210,7 +210,7 @@ class EDAutopilot:
 
         #start the engine thread
         self.terminate = False  # terminate used by the thread to exit its loop
-        if doThread:
+        if do_thread:
             self.ap_thread = kthread.KThread(target=self.engine_loop, name="EDAutopilot")
             self.ap_thread.start()
 
@@ -871,7 +871,7 @@ class EDAutopilot:
         self.jn.ship_state()['interdicted'] = False  # reset flag
         return True
 
-    def get_nav_offset(self, scr_reg, disable_auto_cal: bool = False):
+    def get_nav_offset(self, scr_reg):
         """ Determine the x,y offset from center of the compass of the nav point.
         @return: Returns the x,y,z value as x,y in degrees (-90 to 90) and z as 1 or -1.
         {'x': x.xx, 'y': y.yy, 'z': -1|0|+1,'roll': r.rr, 'pit': p.pp, 'yaw': y.yy} | None
@@ -1082,6 +1082,7 @@ class EDAutopilot:
         max_val = 0.0
         maxVal_occ = 0.0
         target_quad = Quad()
+        sel_pt = [0.0, 0.0]
         pt = [0.0, 0.0]
         pt_occ = [0.0, 0.0]
         target_occ_quad = Quad()
@@ -1102,6 +1103,7 @@ class EDAutopilot:
 
         # Check if target is occluded
         tar_quad = Quad()
+        occluded = False
         if max_val > 0.0 or maxVal_occ > 0.0:
             if max_val >= maxVal_occ:
                 sel_pt = pt
@@ -1900,11 +1902,15 @@ class EDAutopilot:
         sleep(0.5)
         self.update_ap_status("Idle")
 
-    # position() happens after a refuel and performs
-    #   - accelerate past sun
-    #   - perform Discovery scan
-    #   - perform fss (if enabled)
     def position(self, scr_reg, did_refuel=True):
+        """ Position() happens after a refuel and performs
+            - accelerate past sun
+            - perform Discovery scan
+            - perform fss (if enabled)
+        @param scr_reg:
+        @param did_refuel:
+        @return:
+        """
         logger.debug('position')
         add_time = 12
 
@@ -1932,10 +1938,13 @@ class EDAutopilot:
         logger.debug('position=complete')
         return True
 
-    # jump() happens after we are aligned to Target
-    # TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
-    #       if thargoid, then we wait until reboot and continue on.. go back into FSD and align
     def jump(self, scr_reg):
+        """ jump() happens after we are aligned to Target
+        TODO: nees to check for Thargoid interdiction and their wave that would shut us down,
+        if thargoid, then we wait until reboot and continue on.. go back into FSD and align
+        @param scr_reg:
+        @return:
+        """
         logger.debug('jump')
 
         self.vce.say("Frameshift Jump")
@@ -2565,9 +2574,13 @@ class EDAutopilot:
             if res is False:
                 return False
 
-    # raising an exception to the engine loop thread, so we can terminate its execution
-    #  if thread was in a sleep, the exception seems to not be delivered
     def ctype_async_raise(self, thread_obj, exception):
+        """ Raising an exception to the engine loop thread, so we can terminate its execution
+        if thread was in a sleep, the exception seems to not be delivered
+        @param thread_obj:
+        @param exception:
+        @return:
+        """
         found = False
         target_tid = 0
         for tid, tobj in threading._active.items():
@@ -2691,9 +2704,11 @@ class EDAutopilot:
         self.config["LogINFO"] = True
         logger.setLevel(logging.INFO)
 
-    # quit() is important to call to clean up, if we don't terminate the threads we created the AP will hang on exit
-    # have then then kill python exec
     def quit(self):
+        """ quit() is important to call to clean up, if we don't terminate the threads we created the AP will
+        hang on exit have then kill python exec.
+        @return:
+        """
         self.keys.release_all_keys()
         if self.vce != None:
             self.vce.quit()
@@ -2701,15 +2716,15 @@ class EDAutopilot:
             self.overlay.overlay_quit()
         self.terminate = True
 
-    #
-    # This function will execute in its own thread and will loop forever until
-    # the self.terminate flag is set
-    #
     def engine_loop(self):
+        """
+        This function will execute in its own thread and will loop forever until the self.terminate flag is set
+        @return:
+        """
         while not self.terminate:
             # TODO - Remove these show compass/target all the time
             if self.debug_show_compass_overlay:
-                self.get_nav_offset(self.scrReg, True)
+                self.get_nav_offset(self.scrReg)
             if self.debug_show_target_overlay:
                 self.get_target_offset(self.scrReg, True)
 
@@ -2718,13 +2733,13 @@ class EDAutopilot:
 
             # Ship calibration functions
             if self.ship_tst_roll_enabled:
-                self.ship_control.ship_tst_roll_new(0)
+                self.ship_control.ship_calibrate_roll()
                 self.ship_tst_roll_enabled = False
             if self.ship_tst_pitch_enabled:
-                self.ship_control.ship_tst_pitch_new(0)
+                self.ship_control.ship_calibrate_pitch()
                 self.ship_tst_pitch_enabled = False
             if self.ship_tst_yaw_enabled:
-                self.ship_control.ship_tst_yaw_new(0)
+                self.ship_control.ship_calibrate_yaw()
                 self.ship_tst_yaw_enabled = False
 
             if self.fsd_assist_enabled:
@@ -3052,7 +3067,7 @@ def main():
 
     delete_old_log_files()
 
-    ed_ap = EDAutopilot(cb=dummy_cb, doThread=False)
+    ed_ap = EDAutopilot(cb=dummy_cb, do_thread=False)
 
     # for x in range(10):
     #     ed_ap.keys.send('RollLeftButton', 0.04)

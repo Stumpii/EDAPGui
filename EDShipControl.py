@@ -42,10 +42,10 @@ class EDShipControl:
 
         return True
 
-    def roll_clockwise_anticlockwise(self, deg):
+    def roll_clockwise_anticlockwise(self, deg: float) -> float:
         """ Roll in deg. (> 0.0 for roll right, < 0.0 for roll left)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.rollrate
@@ -92,10 +92,13 @@ class EDShipControl:
         else:
             self.keys.send('RollLeftButton', hold=htime)
 
-    def pitch_up_down(self, deg):
+        # Return the hold time
+        return htime
+
+    def pitch_up_down(self, deg: float) -> float:
         """ Pitch in deg. (> 0.0 for pitch up, < 0.0 for pitch down)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.pitchrate
@@ -142,10 +145,13 @@ class EDShipControl:
         else:
             self.keys.send('PitchDownButton', hold=htime)
 
-    def yaw_right_left(self, deg):
+        # Return the hold time
+        return htime
+
+    def yaw_right_left(self, deg: float) -> float:
         """ Yaw in deg. (> 0.0 for yaw right, < 0.0 for yaw left)
         @param deg: The angle to turn in degrees
-        @return: N/A
+        @return: The hold time for the movement in seconds.
         """
         abs_deg = abs(deg)
         htime = abs_deg / self.ap.yawrate
@@ -191,6 +197,9 @@ class EDShipControl:
             self.ap.keys.send('YawRightButton', hold=htime)
         else:
             self.ap.keys.send('YawLeftButton', hold=htime)
+
+        # Return the hold time
+        return htime
 
     def ship_calibrate_roll(self):
         """ Performs a ship roll test by pitching 360 degrees.
@@ -418,6 +427,8 @@ class EDShipControl:
         """ Performs a ship roll test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the roll value.
         If the ship rotates too much, increase the roll value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
         """
         # if not self.ap.status.get_flag(FlagsSupercruise):
         #     self.ap_ckb('log', "Enter Supercruise and try again.")
@@ -436,6 +447,8 @@ class EDShipControl:
         """ Performs a ship pitch test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the pitch value.
         If the ship rotates too much, increase the pitch value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
         """
         # if not self.ap.status.get_flag(FlagsSupercruise):
         #     self.ap_ckb('log', "Enter Supercruise and try again.")
@@ -454,6 +467,8 @@ class EDShipControl:
         """ Performs a ship yaw test by pitching 360 degrees.
         If the ship does not rotate enough, decrease the yaw value.
         If the ship rotates too much, increase the yaw value.
+        @param angle: The angle to move in degrees.
+        @return: N/A
         """
         # if not self.ap.status.get_flag(FlagsSupercruise):
         #     self.ap_ckb('log', "Enter Supercruise and try again.")

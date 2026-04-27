@@ -302,7 +302,7 @@ class EDKeys:
             # Focus Elite window if configured.
             if self.activate_window:
                 set_focus_elite_window()
-                sleep(0.15)
+                sleep(0.05)
 
             if state is None or state == 1:
                 for mod in key['mods']:
