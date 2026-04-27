@@ -1,7 +1,7 @@
 task: detect
 mode: train
 model: yolo26n.pt
-data: compass-detection.v17i.yolo26/data.yaml
+data: compass-detection.v18i.yolo26/data.yaml
 epochs: 100
 time: null
 patience: 100

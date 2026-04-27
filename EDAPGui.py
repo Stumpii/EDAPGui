@@ -63,7 +63,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b5"
+EDAP_VERSION = "V1.9.0 b6"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -193,6 +193,7 @@ class APGui:
         self.checkboxvar['Automatic logout'].set(self.ed_ap.config['AutomaticLogout'])
         self.checkboxvar['Enable Overlay'].set(self.ed_ap.config['OverlayTextEnable'])
         self.checkboxvar['Enable Voice'].set(self.ed_ap.config['VoiceEnable'])
+        self.checkboxvar['ELW Scanner'].set(self.ed_ap.config['ElwScannerEnable'])
         self.checkboxvar['Enable Hotkeys'].set(self.ed_ap.config['HotkeysEnable'])
         self.checkboxvar['Debug Overlay'].set(self.ed_ap.config['DebugOverlay'])
         self.checkboxvar['Debug OCR'].set(self.ed_ap.config['DebugOCR'])
@@ -696,6 +697,7 @@ class APGui:
             self.ed_ap.config['HotKey_StartRobigo'] = str(self.entries['buttons']['Start Robigo'].get())
             self.ed_ap.config['HotKey_StopAllAssists'] = str(self.entries['buttons']['Stop All'].get())
             self.ed_ap.config['VoiceEnable'] = self.checkboxvar['Enable Voice'].get()
+            self.ed_ap.config['ElwScannerEnable'] = self.checkboxvar['ELW Scanner'].get()
             self.ed_ap.config['DebugOverlay'] = self.checkboxvar['Debug Overlay'].get()
             self.ed_ap.config['AFKCombat_AttackAtWill'] = self.checkboxvar['AFKCombat AttackAtWill'].get()
             self.ed_ap.config['HotkeysEnable'] = self.checkboxvar['Enable Hotkeys'].get()

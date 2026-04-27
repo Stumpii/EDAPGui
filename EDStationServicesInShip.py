@@ -10,7 +10,7 @@ from MarketParser import MarketParser
 from StatusParser import StatusParser
 from time import sleep
 from EDlogger import logger
-from Screen_Regions import Quad, scale_region, load_calibrated_regions
+from Screen_Regions import Quad, load_calibrated_regions
 
 """
 File:StationServicesInShip.py    

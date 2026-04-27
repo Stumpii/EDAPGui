@@ -1,3 +1,13 @@
+# 3/29/2026 v1.9.0 b6
+- Default debug on for new users.
+- Added logging of FSS tuning screenshot to debug image folder.
+- Added all remaining screen regions into new screen region dictionary to allow user to configure them.
+- Improved ML model type selection.
+- Enabled ML detection for target occluded.
+- Added Kestrel Mk II to data files.
+- Fixed ELW Scanning selection not appearing in GUI.
+- Updated compass model.
+
 # 2/10/2026 v1.9.0 b5
 - Expanded ML for target and compass navpoint.
 - Fixed save not working.
