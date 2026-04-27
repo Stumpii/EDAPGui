@@ -232,11 +232,9 @@ class Screen_Regions:
         self.reg = {}
         # regions with associated filter and color ranges
         # The rect is [L, T, R, B] top left x, y, and bottom right x, y in fraction of screen resolution
-        self.reg['compass']   = {'rect': [0.33, 0.65, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize,                                'filter': None}
-        self.reg['target']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}  # also called destination
-        # self.reg['target']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}   # also called destination
-        self.reg['target_occluded']    = {'rect': [0.33, 0.25, 0.66, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
-        # self.reg['target_occluded']    = {'rect': [0.0, 0.1, 0.99, 0.9], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
+        self.reg['compass']   = {'rect': [0.33, 0.6, 0.46, 1.0], 'width': 1, 'height': 1, 'filterCB': self.equalize, 'filter': None}
+        self.reg['target']    = {'rect': [0.2, 0.15, 0.8, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.orange_2_color_range}  # also called destination
+        self.reg['target_occluded']    = {'rect': [0.2, 0.15, 0.8, 0.75], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.target_occluded_range}
         self.reg['sun']       = {'rect': [0.30, 0.30, 0.70, 0.68], 'width': 1, 'height': 1, 'filterCB': self.filter_sun, 'filter': None}
         self.reg['disengage'] = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
         self.reg['sco']       = {'rect': [0.42, 0.65, 0.60, 0.80], 'width': 1, 'height': 1, 'filterCB': self.filter_by_color, 'filter': self.blue_sco_color_range}
@@ -469,17 +467,18 @@ class Quad:
         @param: round_dp: If >=0, the number of decimal places to round numbers to, otherwise no rounding.
         """
         if round_dp < 0:
-            return [self.get_left(), self.get_top(), self.get_right(), self.get_bottom()]
+            return [self.left, self.top, self.right, self.bottom]
         else:
-            return [round(self.get_left(), round_dp), round(self.get_top(), round_dp),
-                    round(self.get_right(), round_dp), round(self.get_bottom(), round_dp)]
+            return [round(self.left, round_dp), round(self.top, round_dp),
+                    round(self.right, round_dp), round(self.bottom, round_dp)]
 
     def to_list(self) -> [[float, float], [float, float], [float, float], [float, float]]:
         """ Returns the list of points of the quadrilateral as
         [[left, top], [right, top], [right, bottom], [left, bottom]]."""
         return [self.pt1.to_list(), self.pt2.to_list(), self.pt3.to_list(), self.pt4.to_list()]
 
-    def get_top_left(self) -> Point:
+    @property
+    def top_left(self) -> Point:
         """ Returns the top left point. """
         pt = self.pt1
         if self.pt2.x < pt.x and self.pt2.y < pt.y:
@@ -490,7 +489,8 @@ class Quad:
             pt = self.pt4
         return copy(pt)
 
-    def get_bottom_right(self) -> Point:
+    @property
+    def bottom_right(self) -> Point:
         """ Returns the bottom right point. """
         pt = self.pt1
         if self.pt2.x > pt.x and self.pt2.y > pt.y:
@@ -501,36 +501,44 @@ class Quad:
             pt = self.pt4
         return copy(pt)
 
-    def get_left(self) -> float:
+    @property
+    def left(self) -> float:
         """ Returns the value of the left most point. """
         return min(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
 
-    def get_top(self) -> float:
+    @property
+    def top(self) -> float:
         """ Returns the value of the top most point. """
         return min(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
 
-    def get_right(self) -> float:
+    @property
+    def right(self) -> float:
         """ Returns the value of the right most point. """
         return max(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
 
-    def get_bottom(self) -> float:
+    @property
+    def bottom(self) -> float:
         """ Returns the value of the bottom most point. """
         return max(self.pt1.y, self.pt2.y, self.pt3.y, self.pt4.y)
 
-    def get_width(self):
+    @property
+    def width(self):
         """Returns the maximum width."""
-        return self.get_right() - self.get_left()
+        return self.right - self.left
 
-    def get_height(self):
+    @property
+    def height(self):
         """Returns the maximum height."""
-        return self.get_bottom() - self.get_top()
+        return self.bottom - self.top
 
-    def get_bounds(self) -> (Point, Point):
+    @property
+    def bounds(self) -> (Point, Point):
         """ Returns the bounds of the quadrilateral as a rectangle defined by two points,
         the top-left and bottom-right."""
-        return Point(self.get_left(), self.get_top()), Point(self.get_right(), self.get_bottom())
+        return Point(self.left, self.top), Point(self.right, self.bottom)
 
-    def get_center(self) -> Point:
+    @property
+    def center(self) -> Point:
         cx = (self.pt1.x + self.pt2.x + self.pt3.x + self.pt4.x) / 4
         cy = (self.pt1.y + self.pt2.y + self.pt3.y + self.pt4.y) / 4
         return Point(cx, cy)
@@ -540,7 +548,7 @@ class Quad:
         @param fy: Scaling in the Y direction.
         @param fx: Scaling in the X direction.
         """
-        center = self.get_center()
+        center = self.center
         self.pt1 = self._scale_point(self.pt1, center, fx, fy)
         self.pt2 = self._scale_point(self.pt2, center, fx, fy)
         self.pt3 = self._scale_point(self.pt3, center, fx, fy)
@@ -548,10 +556,10 @@ class Quad:
 
     def inflate(self, x: float, y: float):
         """ Scales the quad from the center.
-        @param fy: Scaling in the Y direction.
-        @param fx: Scaling in the X direction.
+        @param y: Scaling in the Y direction.
+        @param x: Scaling in the X direction.
         """
-        center = self.get_center()
+        center = self.center
         self.pt1 = self._inflate_point(self.pt1, center, x, y)
         self.pt2 = self._inflate_point(self.pt2, center, x, y)
         self.pt3 = self._inflate_point(self.pt3, center, x, y)
@@ -564,10 +572,10 @@ class Quad:
         Example: An input of [0.0, 0.0, 0.25, 0.25] returns the top left quarter of the quad.
         @param quad: A quad.
         """
-        new_l = (quad.get_left() * self.get_width()) + self.get_left()
-        new_t = (quad.get_top() * self.get_height()) + self.get_top()
-        new_r = (quad.get_right() * self.get_width()) + self.get_left()
-        new_b = (quad.get_bottom() * self.get_height()) + self.get_top()
+        new_l = (quad.left * self.width) + self.left
+        new_t = (quad.top * self.height) + self.top
+        new_r = (quad.right * self.width) + self.left
+        new_b = (quad.bottom * self.height) + self.top
 
         self.pt1 = Point(new_l, new_t)
         self.pt2 = Point(new_r, new_t)

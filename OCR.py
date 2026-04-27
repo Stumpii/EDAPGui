@@ -193,8 +193,8 @@ class OCR:
         @param image: The image to check.
         @return: The highlighted image and the matching Quad position in percentage of the image size, or (None, None)
         """
-        min_w = item.get_width()
-        min_h = item.get_height()
+        min_w = item.width
+        min_h = item.height
 
         # Existing size
         img_h, img_w, _ = image.shape

@@ -1025,69 +1025,97 @@ class EDAutopilot:
             180deg (6 o'clock clockwise)
         """
         full_compass_image = None
-        # full_compass_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
+        # full_compass_image, (minVal, max_val, minLoc, maxLoc), match = scr_reg.match_template_in_region_x3('compass', 'compass')
         full_compass_image = scr_reg.capture_region(self.scr, 'compass', inv_col=False)
 
         # ML test
-        maxVal = 0
+        max_val = 0.0
         compass_quad = Quad()
+        # pt = [0.0, 0.0]
+        n_max_val = 0.0
+        n_compass_quad = Quad()
+        # n_pt = [0.0, 0.0]
+        b_max_val = 0.0
+        b_compass_quad = Quad()
+        # b_pt = [0.0, 0.0]
         full_compass_image2 = cv2.cvtColor(full_compass_image, cv2.COLOR_BGRA2BGR)
-        ml_res = self.mach_learn.predict(full_compass_image2)
-        if ml_res and len(ml_res) == 1:
-            maxVal = ml_res[0].match_pct
-            compass_quad = ml_res[0].bounding_quad
-        else:
+        ml_compass = self.mach_learn.compass_model_predict(full_compass_image2, '')
+        if ml_compass and len(ml_compass) > 0:
+            for ml in ml_compass:
+                if ml.class_name == 'compass':
+                    max_val = ml.match_pct
+                    compass_quad = ml.bounding_quad
+                    # pt = [compass_quad.left, compass_quad.top]
+                if ml.class_name == 'navpoint':
+                    n_max_val = ml.match_pct
+                    n_compass_quad = ml.bounding_quad
+                    # n_pt = [n_compass_quad.left, n_compass_quad.top]
+                if ml.class_name == 'navpoint-behind':
+                    b_max_val = ml.match_pct
+                    b_compass_quad = ml.bounding_quad
+                    # b_pt = [b_compass_quad.left, b_compass_quad.top]
+
+        # Check compass
+        if max_val == 0.0:
             # Log screenshot for diagnostics/training
             if self.debug_images:
                 f = get_timestamped_filename('[get_nav_offset] no_compass_match', '', 'png')
                 cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image2)
             return None
-
-        pt = [compass_quad.get_left(), compass_quad.get_top()]
-
-        # get wid/hgt of templates
-        c_left = scr_reg.reg['compass']['rect'][0]
-        c_top = scr_reg.reg['compass']['rect'][1]
-        compass_region = Quad.from_rect(scr_reg.reg['compass']['rect'])
-        # c_wid = scr_reg.templates.template['compass']['width']
-        # c_hgt = scr_reg.templates.template['compass']['height']
-        wid = scr_reg.templates.template['navpoint']['width']
-        hgt = scr_reg.templates.template['navpoint']['height']
-
-        # cut out the compass from the region
-        pad = 5
-        # compass_image = full_compass_image[abs(pt[1]-pad): pt[1]+c_hgt+pad, abs(pt[0]-pad): pt[0]+c_wid+pad].copy()
-        compass_image = Screen.crop_image_pix(full_compass_image, compass_quad)
-        #compass_image_gray = cv2.cvtColor(compass_image, cv2.COLOR_BGR2GRAY)
-        # compass_image_gray = self.scrReg.equalize(compass_image)
-
-        # find the nav point within the compass box
-        navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
-        navpt_image_beh, (n_minVal, n_maxVal_beh, n_minLoc, n_maxLoc_beh), match_beh = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
-
-        n_pt = n_maxLoc
-        n_pt_beh = n_maxLoc_beh
-
-        compass_x_min = 0
-        compass_x_max = compass_quad.get_width() - wid
-        compass_y_min = 0
-        compass_y_max = compass_quad.get_height() - hgt
+        # Check navpoint
+        if n_max_val == 0.0 and b_max_val == 0.0:
+            # Log screenshot for diagnostics/training
+            if self.debug_images:
+                f = get_timestamped_filename('[get_nav_offset] no_navpoint_match', '', 'png')
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', full_compass_image2)
+            return None
 
         # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
-        if n_maxVal > scr_reg.navpoint_match_thresh:
+        if n_max_val > b_max_val:
             final_z_pct = 1.0  # Ahead
-            n_pt = n_maxLoc
+            n_compass_quad = n_compass_quad
         else:
             final_z_pct = -1.0  # Behind
-            n_pt = n_maxLoc_beh
+            n_compass_quad = b_compass_quad
+
+        # get wid/hgt of templates
+        # c_left = scr_reg.reg['compass']['rect'][0]
+        # c_top = scr_reg.reg['compass']['rect'][1]
+        compass_region = Quad.from_rect(scr_reg.reg['compass']['rect'])
+        # wid = scr_reg.templates.template['navpoint']['width']
+        # hgt = scr_reg.templates.template['navpoint']['height']
+
+        # cut out the compass from the region
+        # pad = 5
+        # compass_image = Screen.crop_image_pix(full_compass_image, compass_quad)
+
+        # find the nav point within the compass box
+        # navpt_image, (n_minVal, n_maxVal, n_minLoc, n_maxLoc), match = scr_reg.match_template_in_image_x3(compass_image, 'navpoint')
+        # navpt_image_beh, (n_minVal, n_maxVal_beh, n_minLoc, n_maxLoc_beh), match_beh = scr_reg.match_template_in_image_x3(compass_image, 'navpoint-behind')
+
+        # n_pt = n_maxLoc
+        # n_pt_beh = n_maxLoc_beh
+
+        # compass_x_min = 0
+        # compass_x_max = compass_quad.get_width() - n_compass_quad.get_width()
+        # compass_y_min = 0
+        # compass_y_max = compass_quad.get_height() - n_compass_quad.get_height()
+
+        # Check if the Nav Point is visible. If not, the Nav Point Behind may be visible
+        # if n_maxVal > scr_reg.navpoint_match_thresh:
+        #     final_z_pct = 1.0  # Ahead
+        #     n_pt = n_maxLoc
+        # else:
+        #     final_z_pct = -1.0  # Behind
+        #     n_pt = n_maxLoc_beh
 
         # Continue calc
-        final_x_pct = 2*(((n_pt[0]-compass_x_min)/(compass_x_max-compass_x_min))-0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
-        final_x_pct = final_x_pct - self._nav_cor_x
+        final_x_pct = 2*(((n_compass_quad.left-compass_quad.left) / (compass_quad.width - n_compass_quad.width)) - 0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
+        # final_x_pct = final_x_pct - self._nav_cor_x
         final_x_pct = max(min(final_x_pct, 1.0), -1.0)
 
-        final_y_pct = -2*(((n_pt[1]-compass_y_min)/(compass_y_max-compass_y_min))-0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
-        final_y_pct = final_y_pct - self._nav_cor_y
+        final_y_pct = -2*(((n_compass_quad.top-compass_quad.top) / (compass_quad.height - n_compass_quad.height)) - 0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
+        # final_y_pct = final_y_pct - self._nav_cor_y
         final_y_pct = max(min(final_y_pct, 1.0), -1.0)
 
         # Calc angle in degrees starting at 0 deg at 12 o'clock and increasing clockwise
@@ -1132,38 +1160,39 @@ class EDAutopilot:
         # Draw box around region
         if self.debug_overlay:
             border = 10  # border to prevent the box from interfering with future matches
-            left = c_left + compass_quad.get_left()
-            top = c_top + compass_quad.get_top()
+            # left = c_left + compass_quad.left
+            # top = c_top + compass_quad.top
             # Copy compass quad and offset to screen co-ords
             compass_to_screen = copy(compass_quad)
-            compass_to_screen.offset(compass_region.get_left(), compass_region.get_top())
+            compass_to_screen.offset(compass_region.left, compass_region.top)
             compass_with_border = copy(compass_to_screen)
-            compass_with_border.inflate(10, 10)
+            compass_with_border.inflate(border, border)
+            nav_to_screen = copy(n_compass_quad)
+            nav_to_screen.offset(compass_region.left, compass_region.top)
 
-            # self.overlay.overlay_rect('compass', (left - border, top - border), (left + c_wid + border, top + c_hgt + border), (0, 255, 0), 2)
-            self.overlay.overlay_rect('compass', (compass_with_border.get_left(), compass_with_border.get_top()), (compass_with_border.get_right(), compass_with_border.get_bottom()), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('compass', f'Com: {maxVal:5.2f} > {scr_reg.compass_match_thresh}', left - border, top - border - 85, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav', f'Nav: {n_maxVal:5.2f} > {scr_reg.navpoint_match_thresh}', left - border, top - border - 65, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav_beh', f'NavB: {n_maxVal_beh:5.2f}', left - border, top - border - 45, (0, 255, 0))
-            # self.overlay.overlay_floating_text('ML', f'ML: {conf:5.2f}', left - border, top - border - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + compass_quad.get_height() + border, (0, 255, 0))
+            self.overlay.overlay_rect('compass', (compass_with_border.left,compass_with_border.top), (compass_with_border.right,compass_with_border.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_rect('nav', (nav_to_screen.left,nav_to_screen.top), (nav_to_screen.right,nav_to_screen.bottom), (0, 255, 0), 2)
+            self.overlay.overlay_floating_text('compass', f'Com: {max_val:5.2f} > {scr_reg.compass_match_thresh}', compass_with_border.left, compass_with_border.top - 85, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav', f'Nav: {n_max_val:5.2f} > {scr_reg.navpoint_match_thresh}', compass_with_border.left, compass_with_border.top - 65, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav_beh', f'NavB: {b_max_val:5.2f}', compass_with_border.left, compass_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', compass_with_border.left, compass_with_border.bottom, (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
             #icompass_image_d = cv2.cvtColor(compass_image_gray, cv2.COLOR_GRAY2RGB)
             icompass_image_d = full_compass_image
-            self.draw_match_rect(icompass_image_d, pt, (pt[0]+compass_quad.get_width(), pt[1]+compass_quad.get_height()), (0, 0, 255), 2)
+            self.draw_match_rect(icompass_image_d, (compass_quad.left,compass_quad.top), (compass_quad.right,compass_quad.bottom), (0, 0, 255), 2)
             #cv2.rectangle(icompass_image_display, pt, (pt[0]+c_wid, pt[1]+c_hgt), (0, 0, 255), 2)
             #self.draw_match_rect(compass_image, n_pt, (n_pt[0] + wid, n_pt[1] + hgt), (255,255,255), 2)
-            self.draw_match_rect(icompass_image_d, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0]+wid-pad, pt[1]+n_pt[1]+hgt-pad), (0, 255, 0), 1)
+            self.draw_match_rect(icompass_image_d, (n_compass_quad.left, n_compass_quad.top), (n_compass_quad.right, n_compass_quad.bottom), (0, 255, 0), 1)
             #cv2.rectangle(icompass_image_display, (pt[0]+n_pt[0]-pad, pt[1]+n_pt[1]-pad), (pt[0]+n_pt[0] + wid-pad, pt[1]+n_pt[1] + hgt-pad), (0, 0, 255), 2)
 
             #   dim = (int(destination_width/3), int(destination_height/3))
 
             #   img = cv2.resize(dst_image, dim, interpolation =cv2.INTER_AREA)
             icompass_image_d = cv2.rectangle(icompass_image_d, (0, 0), (1000, 60), (0, 0, 0), -1)
-            cv2.putText(icompass_image_d, f'Compass: {maxVal:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
-            cv2.putText(icompass_image_d, f'Nav Point: {n_maxVal:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Compass: {max_val:5.4f} > {scr_reg.compass_match_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(icompass_image_d, f'Nav Point: {n_max_val:5.4f} > {scr_reg.navpoint_match_thresh:5.2f}', (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             #cv2.putText(icompass_image_d, f'Result: {result}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'x: {final_x_pct:5.2f} y: {final_y_pct:5.2f} z: {final_z_pct:5.2f}', (1, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
             cv2.putText(icompass_image_d, f'r: {final_roll_deg:5.2f}deg p: {final_pit_deg:5.2f}deg y: {final_yaw_deg:5.2f}deg', (1, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
@@ -1190,30 +1219,43 @@ class EDAutopilot:
         #     self.overlay.overlay_remove_floating_text('target_rpy')
         #     self.overlay.overlay_paint()
 
+        dst_image_unfiltered = scr_reg.capture_region(self.scr, 'target', inv_col=False)
+
+        # ML test
+        max_val = 0.0
+        target_quad = Quad()
+        pt = [0.0, 0.0]
+        target_image2 = cv2.cvtColor(dst_image_unfiltered, cv2.COLOR_BGRA2BGR)
+        ml_res = self.mach_learn.target_model_predict(target_image2, 'target')
+        if ml_res and len(ml_res) == 1:
+            max_val = ml_res[0].match_pct
+            target_quad = ml_res[0].bounding_quad
+            pt = [target_quad.left, target_quad.top]
+
         dst_image = None
-        maxLoc = 0
-        maxVal = 0
+        # maxLoc = 0
+        # max_val = 0
         # for i in range(2):
-        dst_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target')
+        #dst_image, (minVal, max_val, minLoc, maxLoc), match = scr_reg.match_template_in_region('target', 'target', inv_col=False)
         dst_image_occ, (minVal, maxVal_occ, minLoc, maxLoc_occ), match_occ = scr_reg.match_template_in_region('target_occluded', 'target_occluded', inv_col=False)
         #
         #     # need > x in the match to say we do have a destination
-        #     if maxVal < (scr_reg.target_thresh / 2):
+        #     if max_val < (scr_reg.target_thresh / 2):
         #         # If we are so far below threshold, then target must not be up
         #         return None
-        #     elif maxVal < scr_reg.target_thresh:
+        #     elif max_val < scr_reg.target_thresh:
         #         # We are below match, but only just, recalibrate
         #         if not disable_auto_cal:
-        #             self.ap_ckb('log', f'Target Offset below threshold: {maxVal:5.4f} with scale: {self.scr.scaleX:5.4f}')
+        #             self.ap_ckb('log', f'Target Offset below threshold: {max_val:5.4f} with scale: {self.scr.scaleX:5.4f}')
         #             self.quick_calibrate_target()
 
-        pt = maxLoc
+        #pt = maxLoc
         pt_occ = maxLoc_occ
 
         # Check if target is occluded
-        if maxVal > maxVal_occ:
+        if max_val > maxVal_occ:
             sel_pt = pt
-            sel_loc = maxLoc
+            sel_loc = pt
             occluded = False
         else:
             sel_pt = pt_occ
@@ -1258,7 +1300,7 @@ class EDAutopilot:
             left = destination_left + sel_loc[0]
             top = destination_top + sel_loc[1]
             self.overlay.overlay_rect('target', (left - border, top - border), (left + width + border, top + height + border), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('target', f'Tar: {maxVal:5.2f} > {scr_reg.target_thresh}', left - border, top - border - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('target', f'Tar: {max_val:5.2f} > {scr_reg.target_thresh}', left - border, top - border - 45, (0, 255, 0))
             self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', left - border, top - border - 25, (0, 255, 0))
             self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', left - border, top + height + border, (0, 255, 0))
             self.overlay.overlay_paint()
@@ -1271,7 +1313,7 @@ class EDAutopilot:
 
                 img = cv2.resize(dst_image_d, dim, interpolation=cv2.INTER_AREA)
                 img = cv2.rectangle(img, (0, 0), (1000, 25), (0, 0, 0), -1)
-                cv2.putText(img, f'{maxVal:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+                cv2.putText(img, f'{max_val:5.4f} > {scr_reg.target_thresh:5.2f}', (1, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.putText(img, f'p: {round(final_pit_deg, 4)} y: {round(final_yaw_deg, 4)}',
                             (1, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
                 cv2.imshow('target', img)
@@ -1281,10 +1323,11 @@ class EDAutopilot:
             cv2.waitKey(30)
 
         # must be > x to have solid hit, otherwise we are facing wrong way (empty circle)
-        if maxVal < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
+        # Added max_val ==0 as ML gives any match > 0
+        if max_val == 0 and max_val < scr_reg.target_thresh and maxVal_occ < scr_reg.target_occluded_thresh:
             if self.debug_images:
                 f = get_timestamped_filename('[get_target_offset] no_target_match', '', 'png')
-                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image)
+                cv2.imwrite(f'{self.debug_image_folder}/{f}', dst_image_unfiltered)
             result = None
         else:
             result = {'roll': round(final_roll_deg, 2), 'pit': round(final_pit_deg, 2), 'yaw': round(final_yaw_deg, 2), 'occ': occluded}

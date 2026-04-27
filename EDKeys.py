@@ -64,6 +64,7 @@ class EDKeys:
             'IncreaseEnginesPower',
             'IncreaseWeaponsPower',
             'IncreaseSystemsPower',
+            'ResetPowerDistribution',
             'GalaxyMapOpen',
             'CamZoomIn',  # Gal map zoom in
             'SystemMapOpen',

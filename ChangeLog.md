@@ -1,3 +1,7 @@
+# 2/10/2026 v1.9.0 b5
+- Expanded ML for target and compass navpoint.
+- Fixed save not working.
+
 # 2/10/2026 v1.9.0 b4
 - Added Machine Learning for compass.
 - 
