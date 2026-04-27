@@ -7,9 +7,9 @@ from copy import copy
 from time import sleep
 import cv2
 from EDAP_data import *
-from EDKeys import EDKeys
+# from EDKeys import EDKeys
 from EDNavigationPanel import rects_to_quadrilateral, image_perspective_transform, image_reverse_perspective_transform
-from OCR import OCR
+# from OCR import OCR
 from Screen import Screen, crop_image_by_pct
 from Screen_Regions import Quad, load_calibrated_regions
 from StatusParser import StatusParser

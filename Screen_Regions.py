@@ -253,10 +253,10 @@ class Screen_Regions:
             self.reg[key]['width'] = self.reg[key]['rect'][2] - self.reg[key]['rect'][0]
             self.reg[key]['height'] = self.reg[key]['rect'][3] - self.reg[key]['rect'][1]
 
-    def capture_region(self, screen, region_name):
+    def capture_region(self, screen, region_name, inv_col=True):
         """ Just grab the screen based on the region name/rect.
         Returns an unfiltered image. """
-        return screen.get_screen_region(self.reg[region_name]['rect'])
+        return screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
 
     def capture_region_filtered(self, screen, region_name, inv_col=True):
         """ Grab screen region and call its filter routine.
@@ -479,6 +479,28 @@ class Quad:
         [[left, top], [right, top], [right, bottom], [left, bottom]]."""
         return [self.pt1.to_list(), self.pt2.to_list(), self.pt3.to_list(), self.pt4.to_list()]
 
+    def get_top_left(self) -> Point:
+        """ Returns the top left point. """
+        pt = self.pt1
+        if self.pt2.x < pt.x and self.pt2.y < pt.y:
+            pt = self.pt2
+        if self.pt3.x < pt.x and self.pt3.y < pt.y:
+            pt = self.pt3
+        if self.pt4.x < pt.x and self.pt4.y < pt.y:
+            pt = self.pt4
+        return copy(pt)
+
+    def get_bottom_right(self) -> Point:
+        """ Returns the bottom right point. """
+        pt = self.pt1
+        if self.pt2.x > pt.x and self.pt2.y > pt.y:
+            pt = self.pt2
+        if self.pt3.x > pt.x and self.pt3.y > pt.y:
+            pt = self.pt3
+        if self.pt4.x > pt.x and self.pt4.y > pt.y:
+            pt = self.pt4
+        return copy(pt)
+
     def get_left(self) -> float:
         """ Returns the value of the left most point. """
         return min(self.pt1.x, self.pt2.x, self.pt3.x, self.pt4.x)
@@ -524,6 +546,17 @@ class Quad:
         self.pt3 = self._scale_point(self.pt3, center, fx, fy)
         self.pt4 = self._scale_point(self.pt4, center, fx, fy)
 
+    def inflate(self, x: float, y: float):
+        """ Scales the quad from the center.
+        @param fy: Scaling in the Y direction.
+        @param fx: Scaling in the X direction.
+        """
+        center = self.get_center()
+        self.pt1 = self._inflate_point(self.pt1, center, x, y)
+        self.pt2 = self._inflate_point(self.pt2, center, x, y)
+        self.pt3 = self._inflate_point(self.pt3, center, x, y)
+        self.pt4 = self._inflate_point(self.pt4, center, x, y)
+
     def subregion_from_quad(self, quad):
         """ Crops the quad as region specified by the % (0.0-1.0) inputs.
         NOTE: This assumes that the quad is a rectangle or square. Won't work with other shapes!
@@ -568,6 +601,16 @@ class Quad:
             center.x + (pt.x - center.x) * fx,
             center.y + (pt.y - center.y) * fy
         )
+
+    @staticmethod
+    def _inflate_point(pt: Point, center: Point, x: float, y: float) -> Point:
+        x1 = x
+        y1 = y
+        if pt.x < center.x:
+            x1 = -x
+        if pt.y < center.y:
+            y1 = -y
+        return Point(pt.x + x1, pt.y + y1)
 
     @staticmethod
     def _offset_point(pt: Point, dx: float, dy: float) -> Point:

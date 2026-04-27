@@ -1,3 +1,6 @@
+# 2/10/2026 v1.9.0 b4
+- Added Machine Learning for compass.
+- 
 # 2/4/2026 v1.9.0 b3
 - Improved calibration by adding sub-regions to the calibration tab to allow easier identification of the sub-regions.
 - Enable/disable hotkeys now no longer needs a restart.

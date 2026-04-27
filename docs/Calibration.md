@@ -5,19 +5,18 @@ Calibration is performed from the Calibration tab:
 
 ![Calibration.png](../screen/Calibration.png)
 
-## Region Calibration
+## Region Calibration and Sub-Region Calibration
 This performs calibration of certain regions of the screen that may change bsed on resolution and FOV settings. It may be required to recalibrate if either of these settings change.
 
 ![CalibrationRegionCalibration.png](../screen/CalibrationRegionCalibration.png)
 
 The process is generally the same for each region:
 1. Select a region from the dropdown list. The region will be highlighted on the screen.
-2. Review the procedure which explains the process. It may be that the highlighted region is already correct. If the procedure states 'Do not change', then the region is read only, it will automatically be calculated when **Save All Calibrations** is clicked.
-3. Follow the pictures below, if unsure of the instructions.
-4. Click the **Calibrate Region** button.
-5. The current region will be highlighted in green.
-6. Left click and drag with the mouse to select a new region. It will be highlighted blue. Release the mouse button to complete the selection. To cancel selection, right click the mouse.
-7. Click **Save All Calibrations** and select the region again in the dropdown list to check the region is correct. Repeat until correct.
+1. Review the procedure which explains the process. It may be that the highlighted region is already correct. If the procedure states 'Do not change', then the region is read only, it will automatically be calculated when **Save All Calibrations** is clicked.
+1. Follow the pictures below, if unsure of the instructions.
+1. Use the number entry fields to change the region size and location. It will be highlighted as it changes.
+1. Once happy, click **Save All Calibrations** and select the region again in the dropdown list to check the region is correct. Repeat until correct.
+1. If the sub-region dropdown contains items, select an item and using the same process as above, check the sub-region and adjust as necessary.
 
 To further aid calibration, the following give examples of the correct region. Note that in the examples below, some additional space was added to make it easier to see where the region is. Try to get as close as possible to the line, without going over.
 
