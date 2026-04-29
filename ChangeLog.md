@@ -1,3 +1,6 @@
+# 4/28/2026 v1.9.0 b13
+- Added Lynx Highliner
+
 # 4/26/2026 v1.9.0 b12
 - Fixed template reload issue. Thanks Patrick.
 
