@@ -597,6 +597,15 @@ class APGui:
         self.status.configure(text="Status: " + txt)
         self.log_msg(f"Status update: {txt}")
 
+    def ship_speed_0(self):
+        self.ed_ap.set_speed_0()
+
+    def ship_speed_50(self):
+        self.ed_ap.set_speed_50()
+
+    def ship_speed_100(self):
+        self.ed_ap.set_speed_100()
+
     def ship_tst_pitch(self):
         # self.ed_ap.ship_control.ship_tst_pitch(360)
         # self.ed_ap.ship_control.ship_tst_pitch_new(360)
@@ -642,17 +651,16 @@ class APGui:
     def edit_roll_curve(self):
         # Get current ship roll curve
         ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if "SCSpeed50" in ship_cfg:
-            speed_demand = ship_cfg["SCSpeed50"]
-            if 'RollRate' in speed_demand:
-                curve = speed_demand['RollRate']
+        if self.ed_ap.speed_demand in ship_cfg:
+            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
+            if 'RollRate' in spd_dmd_dict:
+                curve = spd_dmd_dict['RollRate']
 
                 # Edit the curve
                 new_curve = line_editor(curve)
                 if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
-                        speed_demand['RollRate'] = new_curve
-                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                        spd_dmd_dict['RollRate'] = new_curve
             else:
                 messagebox.showinfo("EDAP", "Perform Calibration first.")
         else:
@@ -661,17 +669,16 @@ class APGui:
     def edit_pit_curve(self):
         # Get current ship pitch curve
         ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if "SCSpeed50" in ship_cfg:
-            speed_demand = ship_cfg["SCSpeed50"]
-            if 'PitchRate' in speed_demand:
-                curve = speed_demand['PitchRate']
+        if self.ed_ap.speed_demand in ship_cfg:
+            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
+            if 'PitchRate' in spd_dmd_dict:
+                curve = spd_dmd_dict['PitchRate']
 
                 # Edit the curve
                 new_curve = line_editor(curve)
                 if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
-                        speed_demand['PitchRate'] = new_curve
-                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                        spd_dmd_dict['PitchRate'] = new_curve
             else:
                 messagebox.showinfo("EDAP", "Perform Calibration first.")
         else:
@@ -680,17 +687,16 @@ class APGui:
     def edit_yaw_curve(self):
         # Get current ship yaw curve
         ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if "SCSpeed50" in ship_cfg:
-            speed_demand = ship_cfg["SCSpeed50"]
-            if 'YawRate' in speed_demand:
-                curve = speed_demand['YawRate']
+        if self.ed_ap.speed_demand in ship_cfg:
+            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
+            if 'YawRate' in spd_dmd_dict:
+                curve = spd_dmd_dict['YawRate']
 
                 # Edit the curve
                 new_curve = line_editor(curve)
                 if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve?"):
-                        speed_demand['YawRate'] = new_curve
-                        messagebox.showinfo("EDAP", "Save configuration changes once complete.")
+                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                        spd_dmd_dict['YawRate'] = new_curve
             else:
                 messagebox.showinfo("EDAP", "Perform Calibration first.")
         else:
@@ -1051,27 +1057,34 @@ class APGui:
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
+        btn_speed_0 = ttk.Button(blk_ship, text='0% Throttle', command=self.ship_speed_0)
+        btn_speed_0.grid(row=7, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_speed_50 = ttk.Button(blk_ship, text='50% Throttle', command=self.ship_speed_50)
+        btn_speed_50.grid(row=7, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_speed_100 = ttk.Button(blk_ship, text='100% Throttle', command=self.ship_speed_100)
+        btn_speed_100.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+
         lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%.\n"
                                                       "2. Target remote System.\n"
                                                       "3. Maneuver target to 12 o'clock on compass.")
-        lbl_calibrate_note.grid(row=7, columnspan=2, pady=5, sticky=tk.W)
+        lbl_calibrate_note.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
         btn_tst_roll = ttk.Button(blk_ship, text='4. Calibrate Roll Rate', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_tst_roll.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
         btn_roll_edit = ttk.Button(blk_ship, text='5. Edit Roll Curve', command=self.edit_roll_curve)
-        btn_roll_edit.grid(row=8, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_roll_edit.grid(row=10, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
         lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%.\n"
                                                        "2. Target remote System.\n"
                                                        "3. Maneuver target to center of screen (and compass).")
-        lbl_calibrate_note2.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
+        lbl_calibrate_note2.grid(row=11, columnspan=2, pady=5, sticky=tk.W)
         btn_tst_pitch = ttk.Button(blk_ship, text='4. Calibrate Pitch Rate', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_tst_pitch.grid(row=12, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
         btn_pit_edit = ttk.Button(blk_ship, text='5. Edit Pitch Curve', command=self.edit_pit_curve)
-        btn_pit_edit.grid(row=10, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_pit_edit.grid(row=12, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
         btn_tst_yaw = ttk.Button(blk_ship, text='6. Calibrate Yaw Rate', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=11, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
+        btn_tst_yaw.grid(row=13, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
         btn_yaw_edit = ttk.Button(blk_ship, text='7. Edit Yaw Curve', command=self.edit_yaw_curve)
-        btn_yaw_edit.grid(row=11, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_yaw_edit.grid(row=14, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))

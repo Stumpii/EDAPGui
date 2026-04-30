@@ -62,7 +62,7 @@ class EDShipControl:
                     last_deg = 0.0
                     last_val = 0.0
                     for key, value in speed_demand['RollRate'].items():
-                        key_deg = float(int(key)) / 10
+                        key_deg = float(key)
                         if abs_deg <= key_deg:
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
@@ -115,7 +115,7 @@ class EDShipControl:
                     last_deg = 0.0
                     last_val = 0.0
                     for key, value in speed_demand['PitchRate'].items():
-                        key_deg = float(int(key)) / 10
+                        key_deg = float(key)
                         if abs_deg <= key_deg:
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
@@ -168,7 +168,7 @@ class EDShipControl:
                     last_deg = 0.0
                     last_val = 0.0
                     for key, value in speed_demand['YawRate'].items():
-                        key_deg = float(int(key)) / 10
+                        key_deg = float(key)
                         if abs_deg <= key_deg:
                             # Ratio based on the last value and this value
                             ratio_val = scale(abs_deg, last_deg, key_deg, last_val, value)
@@ -207,9 +207,10 @@ class EDShipControl:
         If the ship rotates too much, increase the roll value.
         """
         self.ap_ckb('log', "Starting Roll Calibration.")
-        if not self.ap.speed_demand == 'SCSpeed50':
-            self.ap.set_speed_50()
-            # sleep(10)
+
+        if not self.ap.speed_demand or self.ap.speed_demand == '':
+            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            return
 
         if not self.ap.current_ship_cfg:
             return
@@ -221,8 +222,9 @@ class EDShipControl:
         self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'] = dict()
 
         test_time = 0.05
-        delta_int = 0.0
-        for targ_ang in [40, 80, 160, 320]:
+        delta = 0.0
+        rate = self.ap.rollrate
+        for targ_ang in [2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0, 144.0]:
             while 1:
                 set_focus_elite_window()
                 off = self.ap.get_nav_offset(self.ap.scrReg)
@@ -249,30 +251,28 @@ class EDShipControl:
                 if not off2:
                     break
 
-                delta = abs(off2['roll'] - off['roll'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
+                delta_lst = delta
+                delta = round(abs(off2['roll'] - off['roll']), 1)
 
-                test_time = test_time * 1.03
+                test_time = test_time * 1.04
                 rate = round(delta / test_time, 2)
-                rate = min(rate, self.ap.rollrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][delta_int] = rate
+                # rate = min(rate, self.ap.rollrate)  # Limit rate to no higher than the default
+                if delta >= targ_ang and delta > delta_lst:
+                    self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(delta)] = rate
 
-                    print(f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Roll Angle: {round(delta, 1)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Roll Angle: {round(delta, 1)}: Time: {round(test_time, 2)} Rate: {rate}")
                     break
                 else:
-                    print(f"Ignored Roll Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Ignored Roll Angle: {round(delta, 1)}: Time: {round(test_time, 2)} Rate: {rate}")
 
-        # If we have logged values, add the ship default rate at 45 deg
-        if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][450] = self.ap.rollrate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][600] = self.ap.rollrate
-            self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
+        # If we have logged values, add the last rate for 45 and 60 deg
+        # if len(self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate']) > 0:
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(45.0)] = rate
+        #     self.ap.current_ship_cfg[self.ap.speed_demand]['RollRate'][str(60.0)] = rate
+        #     self.ap_ckb('log', f"Default: Roll Angle: 45: Rate: {self.ap.rollrate}")
 
-        self.ap_ckb('log', "Completed Roll Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+        self.ap_ckb('log', "Completed Roll Calibration. Remember to Save.")
 
     def ship_calibrate_pitch(self):
         """ Performs a ship pitch test by pitching 360 degrees.
@@ -280,9 +280,10 @@ class EDShipControl:
         If the ship rotates too much, increase the pitch value.
         """
         self.ap_ckb('log', "Starting Pitch Calibration.")
-        if not self.ap.speed_demand == 'SCSpeed50':
-            self.ap.set_speed_50()
-            # sleep(10)
+
+        if not self.ap.speed_demand or self.ap.speed_demand == '':
+            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            return
 
         if not self.ap.current_ship_cfg:
             return
@@ -294,8 +295,9 @@ class EDShipControl:
         self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'] = dict()
 
         test_time = 0.05
-        delta_int = 0.0
-        for targ_ang in [5, 10, 20, 40, 80, 160]:
+        delta = 0.0
+        rate = self.ap.pitchrate
+        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0]:
             while 1:
                 set_focus_elite_window()
                 off = self.ap.get_target_offset(self.ap.scrReg)
@@ -323,30 +325,28 @@ class EDShipControl:
                     print(f"Target lost")
                     break
 
-                delta = abs(off2['pit'] - off['pit'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
+                delta_lst = delta
+                delta = round(abs(off2['pit'] - off['pit']), 1)
 
                 test_time = test_time * 1.04
                 rate = round(delta / test_time, 2)
-                rate = min(rate, self.ap.pitchrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][delta_int] = rate
+                # rate = min(rate, self.ap.pitchrate)  # Limit rate to no higher than the default
+                if delta >= targ_ang and delta > delta_lst:
+                    self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(delta)] = rate
 
-                    print(f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Pitch Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Pitch Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
                     break
                 else:
-                    print(f"Ignored Pitch Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Ignored Pitch Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
 
-        # If we have logged values, add the ship default rate at 30 deg
+        # If we have logged values, add the last rate for 30 and 60 deg
         if len(self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][300] = self.ap.pitchrate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][600] = self.ap.pitchrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(30.0)] = rate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['PitchRate'][str(60.0)] = rate
             self.ap_ckb('log', f"Default: Pitch Angle: 30: Rate: {self.ap.pitchrate}")
 
-        self.ap_ckb('log', "Completed Pitch Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+        self.ap_ckb('log', "Completed Pitch Calibration. Remember to Save.")
 
     def ship_calibrate_yaw(self):
         """ Performs a ship yaw test by pitching 360 degrees.
@@ -354,12 +354,10 @@ class EDShipControl:
         If the ship rotates too much, increase the yaw value.
         """
         self.ap_ckb('log', "Starting Yaw Calibration.")
-        # self.ap.compass_align(self.ap.scrReg)
-        # self.ap.sc_target_align(self.ap.scrReg)
 
-        if not self.ap.speed_demand == 'SCSpeed50':
-            self.ap.set_speed_50()
-            # sleep(10)
+        if not self.ap.speed_demand or self.ap.speed_demand == '':
+            self.ap_ckb('log', "WARNING: Set speed before calibrating.")
+            return
 
         if not self.ap.current_ship_cfg:
             return
@@ -371,8 +369,9 @@ class EDShipControl:
         self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'] = dict()
 
         test_time = 0.07
-        delta_int = 0.0
-        for targ_ang in [5, 10, 20, 40, 80, 160]:
+        delta = 0.0
+        rate = self.ap.yawrate
+        for targ_ang in [0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 16.0]:
             while 1:
                 set_focus_elite_window()
                 off = self.ap.get_target_offset(self.ap.scrReg)
@@ -398,30 +397,28 @@ class EDShipControl:
                 if not off2:
                     break
 
-                delta = abs(off2['yaw'] - off['yaw'])
-                delta_int_lst = delta_int
-                delta_int = int(round(delta * 10, 0))
+                delta_lst = delta
+                delta = round(abs(off2['yaw'] - off['yaw']), 1)
 
                 test_time = test_time * 1.05
                 rate = round(delta / test_time, 2)
-                rate = min(rate, self.ap.yawrate)  # Limit rate to no higher than the default
-                if delta_int >= targ_ang and delta_int > delta_int_lst:
-                    self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][delta_int] = rate
+                # rate = min(rate, self.ap.yawrate)  # Limit rate to no higher than the default
+                if delta >= targ_ang and delta > delta_lst:
+                    self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(delta)] = rate
 
-                    print(f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
-                    self.ap_ckb('log', f"Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Yaw Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
+                    self.ap_ckb('log', f"Yaw Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
                     break
                 else:
-                    print(f"Ignored Yaw Angle: {round(delta, 2)}: Time: {round(test_time, 2)} Rate: {rate}")
+                    print(f"Ignored Yaw Angle: {delta}: Time: {round(test_time, 2)} Rate: {rate}")
 
-        # If we have logged values, add the ship default rate at 30 deg
+        # If we have logged values, add the last rate for 30 and 60 deg
         if len(self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate']) > 0:
-            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][300] = self.ap.yawrate
-            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][600] = self.ap.yawrate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(30.0)] = rate
+            self.ap.current_ship_cfg[self.ap.speed_demand]['YawRate'][str(60.0)] = rate
             self.ap_ckb('log', f"Default: Yaw Angle: 30: Rate: {self.ap.yawrate}")
 
-        self.ap_ckb('log', "Completed Yaw Calibration.")
-        self.ap_ckb('log', "Remember to Save if you wish to keep these values!")
+        self.ap_ckb('log', "Completed Yaw Calibration. Remember to Save.")
 
     def ship_tst_roll(self, angle: float):
         """ Performs a ship roll test by pitching 360 degrees.

@@ -489,31 +489,31 @@ class EDAutopilot:
             self.sunpitchuptime = current_ship_cfg.get('SunPitchUp+Time', 0.0)
             logger.info(f"Loaded your custom configuration for {ship_type} from ship_configs.json")
 
-        for spd_dmd in ['SCSpeed50']:
+        for spd_dmd in ['Speed0', 'Speed50', 'Speed100', 'SCSpeed0', 'SCSpeed50', 'SCSpeed100']:
             # Check RPY Calibration
             if spd_dmd not in current_ship_cfg:
                 self.ap_ckb('log', "WARNING: Perform Roll/Pitch/Yaw Calibration on this ship.")
                 current_ship_cfg[spd_dmd] = dict()
 
-            speed_demand = current_ship_cfg[spd_dmd]
-            if 'RollRate' not in speed_demand:
+            spd_dmd_dict = current_ship_cfg[spd_dmd]
+            if 'RollRate' not in spd_dmd_dict:
                 self.ap_ckb('log', "WARNING: Perform Roll Calibration on this ship.")
                 # Default roll rates at 5, 45 and 90 deg
-                speed_demand['RollRate'] = {"50": self.rollrate / 2,
-                                            "450": self.rollrate,
-                                            "600": self.rollrate}
-            if 'PitchRate' not in speed_demand:
+                spd_dmd_dict['RollRate'] = {"5.0": self.rollrate / 2,
+                                            "45.0": self.rollrate,
+                                            "60.0": self.rollrate}
+            if 'PitchRate' not in spd_dmd_dict:
                 self.ap_ckb('log', "WARNING: Perform Pitch Calibration on this ship.")
                 # Default pitch rates at 0.5, 30 and 90 deg
-                speed_demand['PitchRate'] = {"5": self.pitchrate / 2,
-                                             "300": self.pitchrate,
-                                             "600": self.pitchrate}
-            if 'YawRate' not in speed_demand:
+                spd_dmd_dict['PitchRate'] = {"0.5": self.pitchrate / 2,
+                                             "30.0": self.pitchrate,
+                                             "60.0": self.pitchrate}
+            if 'YawRate' not in spd_dmd_dict:
                 self.ap_ckb('log', "WARNING: Perform Yaw Calibration on this ship.")
                 # Default yaw rates at 0.5, 30 and 90 deg
-                speed_demand['YawRate'] = {"5": self.yawrate / 2,
-                                           "300": self.yawrate,
-                                           "600": self.yawrate}
+                spd_dmd_dict['YawRate'] = {"0.5": self.yawrate / 2,
+                                           "30.0": self.yawrate,
+                                           "60.0": self.yawrate}
 
     def update_overlay(self):
         """ Draw the overlay data on the ED Window """

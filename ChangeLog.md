@@ -1,5 +1,9 @@
-# 4/28/2026 v1.9.0 b13
-- Added Lynx Highliner
+# 4/29/2026 v1.9.0 b13
+- Braking Change: Ship PRY rates now stored in float instead of int*10 format. This will require recalibration or manual editing of ships config json file.
+- Added Speed0, Speed50, Speed100, SCSpeed0, Speed100 to the ship config to allow each to be tuned.
+- Added Set Speed buttons for 0/50/100% for ship tuning.
+- Added additional steps to the ship RPY tuning.
+- Added Lynx Highliner.
 
 # 4/26/2026 v1.9.0 b12
 - Fixed template reload issue. Thanks Patrick.
