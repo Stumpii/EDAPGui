@@ -1,5 +1,13 @@
-# 4/28/2026 v1.9.0 b13
-- Added Lynx Highliner
+# 5/2/2026 v1.9.0 b14
+- Fixed pitch up to remove the 1.25 multiplier. Thanks Patrick.
+- Added 2 sec time delay after setting throttle on surface launch. Thanks Patrick.
+
+# 4/29/2026 v1.9.0 b13
+- Breaking Change: Ship PRY rates now stored in float instead of int*10 format. This will require recalibration or manual editing of ships config json file.
+- Added Speed0, Speed50, Speed100, SCSpeed0, Speed100 to the ship config to allow each to be tuned.
+- Added Set Speed buttons for 0/50/100% for ship tuning.
+- Added additional steps to the ship RPY tuning.
+- Added Lynx Highliner.
 
 # 4/26/2026 v1.9.0 b12
 - Fixed template reload issue. Thanks Patrick.
