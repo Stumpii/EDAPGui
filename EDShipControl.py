@@ -51,7 +51,7 @@ class EDShipControl:
         htime = abs_deg / self.ap.rollrate
 
         if self.ap.speed_demand is None:
-            self.ap.set_speed_50()
+            self.ap.set_throttle_50()
 
         # Calculate rate for less than 45 degrees, else use default
         if self.ap.current_ship_cfg:
@@ -104,7 +104,7 @@ class EDShipControl:
         htime = abs_deg / self.ap.pitchrate
 
         if self.ap.speed_demand is None:
-            self.ap.set_speed_50()
+            self.ap.set_throttle_50()
 
         # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:
@@ -157,7 +157,7 @@ class EDShipControl:
         htime = abs_deg / self.ap.yawrate
 
         if self.ap.speed_demand is None:
-            self.ap.set_speed_50()
+            self.ap.set_throttle_50()
 
         # Calculate rate for less than 30 degrees, else use default
         if self.ap.current_ship_cfg:

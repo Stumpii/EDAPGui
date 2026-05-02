@@ -598,13 +598,13 @@ class APGui:
         self.log_msg(f"Status update: {txt}")
 
     def ship_throttle_0(self):
-        self.ed_ap.set_speed_0()
+        self.ed_ap.set_throttle_0()
 
     def ship_throttle_50(self):
-        self.ed_ap.set_speed_50()
+        self.ed_ap.set_throttle_50()
 
     def ship_throttle_100(self):
-        self.ed_ap.set_speed_100()
+        self.ed_ap.set_throttle_100()
 
     def ship_tst_pitch(self):
         # self.ed_ap.ship_control.ship_tst_pitch(360)
