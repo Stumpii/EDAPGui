@@ -2951,24 +2951,30 @@ class EDAutopilot:
     def set_speed_0(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed0'
+            self.ap_ckb('log', f"Setting throttle to 0% (in SC).")
         else:
             self.speed_demand = 'Speed0'
+            self.ap_ckb('log', f"Setting throttle to 0%.")
 
         self.keys.send('SetSpeedZero', repeat)
 
     def set_speed_50(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed50'
+            self.ap_ckb('log', f"Setting throttle to 50% (in SC).")
         else:
             self.speed_demand = 'Speed50'
+            self.ap_ckb('log', f"Setting throttle to 50%.")
 
         self.keys.send('SetSpeed50', repeat)
 
     def set_speed_100(self, repeat=1):
         if self.status.get_flag(FlagsSupercruise):
             self.speed_demand = 'SCSpeed100'
+            self.ap_ckb('log', f"Setting throttle to 100% (in SC).")
         else:
             self.speed_demand = 'Speed100'
+            self.ap_ckb('log', f"Setting throttle to 100%.")
 
         self.keys.send('SetSpeed100', repeat)
 
