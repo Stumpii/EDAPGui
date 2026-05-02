@@ -408,7 +408,7 @@ class EDAutopilot:
 
     def load_ship_configs(self):
         """
-        Load all the ship configs from the ship configs file.
+        Load all the ship configs from the ship_configs.json file.
         @return: N/A
         """
         shp_cnf = read_json_file(filepath='./configs/ship_configs.json')
@@ -2181,8 +2181,11 @@ class EDAutopilot:
 
             # Undocked or off the surface, so leave planet
             self.set_speed_50()
+            # Wait for throttle to take effect.
+            sleep(2.0)
+
             # The pitch rates are defined in SC, not normal flights, so bump this up a bit
-            self.ship_control.pitch_up_down(90 * 1.25)
+            self.ship_control.pitch_up_down(90)
 
             # Engage Supercruise
             self.sc_engage(True)

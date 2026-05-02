@@ -64,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b12"
+EDAP_VERSION = "V1.9.0 b14"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -1064,24 +1064,24 @@ class APGui:
         btn_speed_100 = ttk.Button(blk_ship, text='100% Throttle', command=self.ship_speed_100)
         btn_speed_100.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
-        lbl_calibrate_note = ttk.Label(blk_ship, text="Calibrate Roll:\n1. Set speed: Supercruise 50%.\n"
+        lbl_calibrate_note = ttk.Label(blk_ship, text="Tune Ship Roll:\n1. Set speed above.\n"
                                                       "2. Target remote System.\n"
-                                                      "3. Maneuver target to 12 o'clock on compass.")
+                                                      "3. Maneuver target to top dead center of compass.")
         lbl_calibrate_note.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_roll = ttk.Button(blk_ship, text='4. Calibrate Roll Rate', command=self.ship_tst_roll)
+        btn_tst_roll = ttk.Button(blk_ship, text='4. Gather Roll Rates', command=self.ship_tst_roll)
         btn_tst_roll.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
         btn_roll_edit = ttk.Button(blk_ship, text='5. Edit Roll Curve', command=self.edit_roll_curve)
         btn_roll_edit.grid(row=10, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
-        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Calibrate Pitch & Yaw:\n1. Set speed: Supercruise 50%.\n"
+        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Tune Pitch & Yaw:\n1. Set speed above.\n"
                                                        "2. Target remote System.\n"
                                                        "3. Maneuver target to center of screen (and compass).")
         lbl_calibrate_note2.grid(row=11, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_pitch = ttk.Button(blk_ship, text='4. Calibrate Pitch Rate', command=self.ship_tst_pitch)
+        btn_tst_pitch = ttk.Button(blk_ship, text='4. Gather Pitch Rates', command=self.ship_tst_pitch)
         btn_tst_pitch.grid(row=12, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
         btn_pit_edit = ttk.Button(blk_ship, text='5. Edit Pitch Curve', command=self.edit_pit_curve)
         btn_pit_edit.grid(row=12, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_tst_yaw = ttk.Button(blk_ship, text='6. Calibrate Yaw Rate', command=self.ship_tst_yaw)
+        btn_tst_yaw = ttk.Button(blk_ship, text='6. Gather Yaw Rates', command=self.ship_tst_yaw)
         btn_tst_yaw.grid(row=13, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
         btn_yaw_edit = ttk.Button(blk_ship, text='7. Edit Yaw Curve', command=self.edit_yaw_curve)
         btn_yaw_edit.grid(row=14, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
