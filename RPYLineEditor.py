@@ -8,14 +8,14 @@ from matplotlib.lines import Line2D
 
 def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
     """ A line editor. The input data is in the following format.
-    The key is a string representing the angle in degree x10:
+    The key is a string representing the angle in degree:
         PitchRate = {
-        "5": 6.0,
-        "10": 10.47,
-        "25": 16.81,
-        "43": 21.9,
-        "93": 27.22,
-        "300": 39.7
+        "0.5": 6.0,
+        "1.0": 10.47,
+        "2.5": 16.81,
+        "4.3": 21.9,
+        "9.3": 27.22,
+        "30.0": 39.7
     }
     @param curve: The dict of line data.
     @return: The changed dict or None.
@@ -27,10 +27,7 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
 
     # print(f"Original curve: {curve}")
 
-    # Convert each item to int and divide by 10
-    curve_int = {int(k) / 10: v for k, v in curve.items()}
-    # Sort the curve by angle (sorts ascending)
-    sorted_curve = dict(sorted(curve_int.items()))
+    sorted_curve = convert_curve_to_float(curve)
 
     # print(f"Sorted curve: {sorted_curve}")
 
@@ -64,24 +61,40 @@ def line_editor(curve: dict[str, float]) -> dict[str, float] | None:
         updated_curve: dict[str, float] = {}
         for item in p.line.get_xydata():
             # Add to dict in format [str, float] format
-            updated_curve[str(int(item[0] * 10))] = round(float(item[1]), 2)
+            updated_curve[str(round(item[0], 1))] = round(float(item[1]), 2)
 
         # print(f"Updated curve: {updated_curve}")
         return updated_curve
 
 
-def dist_point_to_segment(p: [float, float], s0, s1):
+def convert_curve_to_float(curve: dict[str, float]) -> dict[float, float] | None:
     """
-    Get the distance from the point *p* to the segment (*s0*, *s1*), where
-    *p*, *s0*, *s1* are ``[x, y]`` arrays.
+    Converts the [str, float] dictionary to [float, float] and sorts it ascending.
+    This is because it is stored in as json, where the key must be a string.
+    So ['0.5', 23.4]  becomes [0.5, 23.4]
+    @param curve:
+    @return:
     """
-    s01 = s1 - s0
-    s0p = p - s0
-    if (s01 == 0).all():
-        return np.hypot(*s0p)
-    # Project onto segment, without going past segment ends.
-    p1 = s0 + np.clip((s0p @ s01) / (s01 @ s01), 0, 1) * s01
-    return np.hypot(*(p - p1))
+    # Convert each item to float
+    curve_float = {float(k): v for k, v in curve.items()}
+    # Sort the curve by angle (sorts ascending)
+    sorted_curve = dict(sorted(curve_float.items()))
+    return sorted_curve
+
+
+def convert_curve_to_str(curve: dict[float, float]) -> dict[str, float] | None:
+    """
+    Converts the [float, float] dictionary to [str, float].
+    This allows it to be stored in as json, where the key must be a string.
+    So [0.5, 23.4]  becomes ['0.5', 23.4]
+    @param curve:
+    @return:
+    """
+    # Sort the curve by angle (sorts ascending)
+    sorted_curve = dict(sorted(curve.items()))
+    # Recreate original dict structure
+    curve_str = {str(k): v for k, v in sorted_curve.items()}
+    return curve_str
 
 
 class LineInteractor:
@@ -118,6 +131,20 @@ class LineInteractor:
         canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.canvas = canvas
 
+    @staticmethod
+    def dist_point_to_segment(p: [float, float], s0, s1):
+        """
+        Get the distance from the point *p* to the segment (*s0*, *s1*), where
+        *p*, *s0*, *s1* are ``[x, y]`` arrays.
+        """
+        s01 = s1 - s0
+        s0p = p - s0
+        if (s01 == 0).all():
+            return np.hypot(*s0p)
+        # Project onto segment, without going past segment ends.
+        p1 = s0 + np.clip((s0p @ s01) / (s01 @ s01), 0, 1) * s01
+        return np.hypot(*(p - p1))
+
     def on_draw(self, event):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.line)
@@ -127,13 +154,13 @@ class LineInteractor:
         Return the index of the point closest to the event position or *None*
         if no point is within ``self.epsilon`` to the event position.
         """
-        # display coords
+        # display co-ords
         xy = np.asarray(self.line.get_xydata())
         xyt = self.line.get_transform().transform(xy)
         xt, yt = xyt[:, 0], xyt[:, 1]
         d = np.hypot(xt - event.x, yt - event.y)
-        indseq, = np.nonzero(d == d.min())
-        ind = indseq[0]
+        ind_seq, = np.nonzero(d == d.min())
+        ind = ind_seq[0]
 
         if d[ind] >= self.epsilon:
             ind = None
@@ -171,7 +198,7 @@ class LineInteractor:
             for i in range(len(xys) - 1):
                 s0 = xys[i]
                 s1 = xys[i + 1]
-                d = dist_point_to_segment(p, s0, s1)
+                d = self.dist_point_to_segment(p, s0, s1)
                 # Check if this is closer segment
                 if d < best_d or best_d == -1:
                     best_i = i
@@ -210,15 +237,19 @@ class LineInteractor:
 
 if __name__ == '__main__':
     PitchRate = {
-        "5": 6.0,
-        "10": 10.47,
-        "55": 16.81,
-        "43": 21.9,
-        "93": 27.22,
-        "300": 39.7,
-        "600": 39.7
+        "0.5": 6.0,
+        "1.0": 10.47,
+        "5.5": 16.81,
+        "4.3": 21.9,
+        "9.3": 27.22,
+        "30.0": 39.7,
+        "60.0": 39.7
     }
     # print(f"old arr: {PitchRate}")
+
+    # Test convert and revert
+    y1 = convert_curve_to_float(PitchRate)
+    x1 = convert_curve_to_str(y1)
 
     new_arr = line_editor(PitchRate)
     if new_arr is not None:

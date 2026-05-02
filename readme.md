@@ -294,8 +294,8 @@ The following settings from the AP.json file (in the configs folder) are **not**
     "target_align_outer_lim": 1.0,
     "target_align_inner_lim": 0.5,
 
-    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
     "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, the time in Secs to fly away after enabling SC.
+    "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
     "OCDepartureAngle": 90.0       # Angle to pitch up when leaving an Orbital Construction Site
 ```
                                                               
