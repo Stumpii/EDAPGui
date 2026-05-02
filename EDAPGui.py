@@ -597,13 +597,13 @@ class APGui:
         self.status.configure(text="Status: " + txt)
         self.log_msg(f"Status update: {txt}")
 
-    def ship_speed_0(self):
+    def ship_throttle_0(self):
         self.ed_ap.set_speed_0()
 
-    def ship_speed_50(self):
+    def ship_throttle_50(self):
         self.ed_ap.set_speed_50()
 
-    def ship_speed_100(self):
+    def ship_throttle_100(self):
         self.ed_ap.set_speed_100()
 
     def ship_tst_pitch(self):
@@ -1057,11 +1057,11 @@ class APGui:
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
-        btn_speed_0 = ttk.Button(blk_ship, text='0% Throttle', command=self.ship_speed_0)
+        btn_speed_0 = ttk.Button(blk_ship, text='0% Throttle', command=self.ship_throttle_0)
         btn_speed_0.grid(row=7, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_speed_50 = ttk.Button(blk_ship, text='50% Throttle', command=self.ship_speed_50)
+        btn_speed_50 = ttk.Button(blk_ship, text='50% Throttle', command=self.ship_throttle_50)
         btn_speed_50.grid(row=7, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_speed_100 = ttk.Button(blk_ship, text='100% Throttle', command=self.ship_speed_100)
+        btn_speed_100 = ttk.Button(blk_ship, text='100% Throttle', command=self.ship_throttle_100)
         btn_speed_100.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
         lbl_calibrate_note = ttk.Label(blk_ship, text="Tune Ship Roll:\n1. Set speed above.\n"
