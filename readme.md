@@ -134,6 +134,9 @@ The following error may occur:
 
 The error is usually as a result of mss incompatibility. Try pip install mss==8.0.3 or pip install mss==8.0.3.
 
+## Upgrades
+If you install a new version, copy the **Configs** folder from the old version to the new version to retain the settings you have configured. Refer to the release notes to identify and configuration that needs to be changed for that version upgrade.
+
 # Running ED_AP
 * With Elite Dangerous (ED) running, start ED_AP:
     * By double clicking start_ed_ap.bat in Windows Explorer (preferred method).
@@ -162,7 +165,7 @@ Once ED_AP is running there are few steps to complete the first time ED AP is ru
 
 
 # Required Keybindings
-The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the chagnes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
+The following keybindings are required by AP, so make sure a key is assigned to each by going into the Elite Dangerous options and assigning a key. After changing keybindings run AP again for the changes to be read. An error will appear if any of the keybindings are missing in Elite Dangerous.
 
 | Binding               | Name                     | Location under OPTIONS > CONTROLS            |
 |-----------------------|--------------------------|----------------------------------------------|
@@ -297,6 +300,8 @@ The following settings from the AP.json file (in the configs folder) are **not**
     "FCDepartureTime": 30.0,       # When leaving a Fleet Carrier, the time in Secs to fly away after enabling SC.
     "FCDepartureAngle": 90.0,      # Angle to pitch up when leaving a Fleet Carrier
     "OCDepartureAngle": 90.0       # Angle to pitch up when leaving an Orbital Construction Site
+
+    "OCRMobile": false,  # Use the mobile (light) version which is smaller and faster, but less accurate.
 ```
                                                               
 ## Elite Dangerous, Role Play and Autopilot
