@@ -642,8 +642,14 @@ class EDWayPoint:
                             _abort = True
                             break
 
-                    elif sys_bookmark_type == 'Nav Panel OCR' and next_wp_station != "":
-                        # Set destination via system name
+                    elif next_wp_station != "":
+                        # A system name is defined and 'Nav Panel OCR' is selected, or both gal bookmark and system
+                        # bookmark are empty, so we will default to using OCR.
+                        if sys_bookmark_type != 'Nav Panel OCR':
+                            # Log fall back to OCR message.
+                            self.ap.ap_ckb('log', f"No bookmark number configured for '{next_wp_station}'; defaulting "
+                                                  f"to Nav Panel OCR to set station by name.")
+                        # Locate the station by name in the in-game Nav Panel (left HUD) and lock onto it.
                         res = self.ap.nav_panel.lock_destination(next_wp_station)
                         if not res:
                             self.ap_ckb('log+vce', f"Unable to set Nav Panel OCR bookmark.")
@@ -651,7 +657,8 @@ class EDWayPoint:
                             break
 
                     else:
-                        self.ap_ckb('log+vce', f"No bookmark defined.")
+                        # No bookmark and no station name -- nothing to target.
+                        self.ap_ckb('log+vce', "No bookmark or station name defined for this waypoint.")
                         _abort = True
                         break
 
@@ -708,31 +715,31 @@ def main():
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Aluminium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Beryllium", 1, wp.cargo_parser)
     wp.ap.stn_svcs_in_ship.commodities_market.sell_commodity(keys, "Cobalt", 1, wp.cargo_parser)
-    #wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
+    # wp.ap.stn_svcs_in_ship.buy_commodity(keys, "Titanium", 5, 200)
 
     # dest = 'Enayex'
-    #print(dest)
+    # print(dest)
 
-    #print("In waypoint_assist, at:"+str(dest))
+    # print("In waypoint_assist, at:"+str(dest))
 
     # already in doc config, test the trade
-    #wp.execute_trade(keys, dest)
+    # wp.execute_trade(keys, dest)
 
     # Set the Route for the waypoint^#
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
-    #while dest != "":
+    # while dest != "":
 
     #  print("Doing: "+str(dest))
     #  print(wp.waypoints[dest])
 
-    #wp.set_station_target(None, dest)
+    # wp.set_station_target(None, dest)
 
     # Mark this waypoint as complated
-    #wp.mark_waypoint_complete(dest)
+    # wp.mark_waypoint_complete(dest)
 
     # set target to next waypoint and loop
-    #dest = wp.waypoint_next(ap=None)
+    # dest = wp.waypoint_next(ap=None)
 
 
 if __name__ == "__main__":
