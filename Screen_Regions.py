@@ -573,10 +573,10 @@ class Screen_Regions:
         Returns an unfiltered image. """
         return screen.get_screen_rect_pct(self.reg_pct[region_name]['rect'])
 
-    def capture_region_filtered(self, screen, region_name, rgb=True):
+    def capture_region_filtered(self, screen, region_name, inv_col=True):
         """ Grab screen region and call its filter routine.
         Returns the filtered image. """
-        scr = screen.get_screen_region(self.reg[region_name]['rect'], rgb)
+        scr = screen.get_screen_region(self.reg[region_name]['rect'], inv_col)
         if self.reg[region_name]['filterCB'] is None:
             # return the screen region untouched in BGRA format.
             return scr
