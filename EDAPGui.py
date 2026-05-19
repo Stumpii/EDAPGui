@@ -64,7 +64,7 @@ Author: sumzer0@yahoo.com
 # ---------------------------------------------------------------------------
 # must be updated with a new release so that the update check works properly!
 # contains the names of the release.
-EDAP_VERSION = "V1.9.0 b14"
+EDAP_VERSION = "V1.9.0 b17"
 # depending on how release versions are best marked you could also change it to the release tag, see function check_update.
 # ---------------------------------------------------------------------------
 
@@ -172,6 +172,9 @@ class APGui:
         self.lab_ck = {}
         self.single_waypoint_system = tk.StringVar()
         self.single_waypoint_station = tk.StringVar()
+        self.throttle_var = tk.StringVar()
+        self.throttle_combo = None
+        self.throttle_keys = []
         self._global_shopping_list_tab = None
         self.waypoint_editor_tab = None
         self.colonize_tab = None
@@ -201,9 +204,6 @@ class APGui:
 
         self.radiobuttonvar['dss_button'].set(self.ed_ap.config['DSSButton'])
 
-        self.entries['ship']['PitchRate'].delete(0, tk.END)
-        self.entries['ship']['RollRate'].delete(0, tk.END)
-        self.entries['ship']['YawRate'].delete(0, tk.END)
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
 
         self.entries['autopilot']['Sun Bright Threshold'].delete(0, tk.END)
@@ -229,9 +229,6 @@ class APGui:
         self.entries['keys']['Default Hold Time'].delete(0, tk.END)
         self.entries['keys']['Repeat Key Delay'].delete(0, tk.END)
 
-        self.entries['ship']['PitchRate'].insert(0, float(self.ed_ap.pitchrate))
-        self.entries['ship']['RollRate'].insert(0, float(self.ed_ap.rollrate))
-        self.entries['ship']['YawRate'].insert(0, float(self.ed_ap.yawrate))
         self.entries['ship']['SunPitchUp+Time'].insert(0, float(self.ed_ap.sunpitchuptime))
 
         self.entries['autopilot']['Sun Bright Threshold'].insert(0, int(self.ed_ap.config['SunBrightThreshold']))
@@ -290,6 +287,12 @@ class APGui:
             keyboard.add_hotkey(self.ed_ap.config['HotKey_StartFSD'], self.callback, args=('fsd_start', None))
             keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'], self.callback, args=('sc_start', None))
             keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'], self.callback, args=('robigo_start', None))
+
+            # TODO - Enable these to allow pips to be controlled by EDAP when using the defined keys (tbd).
+            # keyboard.add_hotkey('up', self.callback, args=('up', None))
+            # keyboard.add_hotkey('down', self.callback, args=('down', None))
+            # keyboard.add_hotkey('left', self.callback, args=('left', None))
+            # keyboard.add_hotkey('right', self.callback, args=('right', None))
 
     # callback from the EDAP, to configure GUI items
     def callback(self, msg, body=None):
@@ -376,19 +379,47 @@ class APGui:
         elif key == 'statusline':
             self.update_statusline(body)
         elif msg == 'update_ship_cfg':
-            self.update_ship_cfg()
+            self.root.after(0, self.update_ship_cfg)
+        elif msg == 'load_waypoints':
+            # TODO - Enable this at some point to auto load the previous waypoints on startup. Not called at the moment.
+            self.waypoint_editor_tab.editor_load_waypoint_file(body)
+        elif msg == 'up':
+            # TODO - Enable these to allow pips to be controlled by EDAP when using the defined keys (tbd). Not called at the moment.
+            print('up')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseEnginesPower', repeat=3)
+        elif msg == 'down':
+            print('down')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+        elif msg == 'left':
+            print('left')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseSystemsPower', repeat=3)
+        elif msg == 'right':
+            print('right')
+            if ((self.ed_ap.status.get_flag(FlagsInMainShip) or self.ed_ap.status.get_flag(FlagsInFighter))
+                    and self.ed_ap.status.get_gui_focus() == GuiFocusNoFocus):
+                self.ed_ap.keys.send('ResetPowerDistribution')
+                self.ed_ap.keys.send('IncreaseWeaponsPower', repeat=3)
 
     def update_ship_cfg(self):
-        # load up the display with what we read from ED_AP for the current ship
-        self.entries['ship']['PitchRate'].delete(0, tk.END)
-        self.entries['ship']['RollRate'].delete(0, tk.END)
-        self.entries['ship']['YawRate'].delete(0, tk.END)
+        """
+        Load up the display with what we read from ED_AP for the current ship.
+        Triggered when the ship is changed.
+        @return:
+        """
         self.entries['ship']['SunPitchUp+Time'].delete(0, tk.END)
-
-        self.entries['ship']['PitchRate'].insert(0, self.ed_ap.pitchrate)
-        self.entries['ship']['RollRate'].insert(0, self.ed_ap.rollrate)
-        self.entries['ship']['YawRate'].insert(0, self.ed_ap.yawrate)
         self.entries['ship']['SunPitchUp+Time'].insert(0, self.ed_ap.sunpitchuptime)
+
+        if self.ed_ap.current_ship_cfg:
+            self.throttle_keys = [key for key, value in self.ed_ap.current_ship_cfg.items() if 'Speed' in key]
+            self.throttle_combo['values'] = self.throttle_keys
 
     def calibrate_callback(self):
         self.ed_ap.calibrate_target()
@@ -563,6 +594,10 @@ class APGui:
         else:
             self.log_msg("You have the latest version of EDAP!")
 
+    def on_throttle_select(self, event):
+        # The actual logi cis done on the edit curve buttons.
+        pass
+
     def open_changelog(self):
         webbrowser.open_new("https://github.com/SumZer0-git/EDAPGui/blob/main/ChangeLog.md")
 
@@ -612,20 +647,14 @@ class APGui:
     def ship_throttle_100(self):
         self.ed_ap.set_throttle_100()
 
-    def ship_tst_pitch(self):
-        # self.ed_ap.ship_control.ship_tst_pitch(360)
-        # self.ed_ap.ship_control.ship_tst_pitch_new(360)
-        self.ed_ap.ship_tst_pitch_enabled = True
+    # def ship_tst_pitch(self):
+        # self.ed_ap.ship_tst_pitch_enabled = True
 
-    def ship_tst_roll(self):
-        # self.ed_ap.ship_control.ship_tst_roll(360)
-        # self.ed_ap.ship_control.ship_tst_roll_new(360)
-        self.ed_ap.ship_tst_roll_enabled = True
+    # def ship_tst_roll(self):
+        # self.ed_ap.ship_tst_roll_enabled = True
 
-    def ship_tst_yaw(self):
-        # self.ed_ap.ship_control.ship_tst_yaw(360)
-        # self.ed_ap.ship_control.ship_tst_yaw_new(360)
-        self.ed_ap.ship_tst_yaw_enabled = True
+    # def ship_tst_yaw(self):
+        # self.ed_ap.ship_tst_yaw_enabled = True
 
     def ship_tst_pitch_30(self):
         self.ed_ap.ship_control.ship_tst_pitch(30)
@@ -656,57 +685,61 @@ class APGui:
 
     def edit_roll_curve(self):
         # Get current ship roll curve
-        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if self.ed_ap.speed_demand in ship_cfg:
-            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
-            if 'RollRate' in spd_dmd_dict:
-                curve = spd_dmd_dict['RollRate']
-
-                # Edit the curve
-                new_curve = line_editor(curve)
-                if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
-                        spd_dmd_dict['RollRate'] = new_curve
+        if self.ed_ap.current_ship_cfg:
+            # Get the selected speed from the combobox
+            selected_throttle = self.throttle_var.get()  # i.e. SCSpeed50 etc.
+            if selected_throttle in self.ed_ap.current_ship_cfg:
+                spd_dmd_dict = self.ed_ap.current_ship_cfg[selected_throttle]
+                if 'RollRate' in spd_dmd_dict:
+                    curve = spd_dmd_dict['RollRate']
+                    # Edit the curve
+                    new_curve = line_editor(curve, f"{selected_throttle} - Roll curve")
+                    if new_curve is not None:
+                        if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                            spd_dmd_dict['RollRate'] = new_curve
             else:
-                messagebox.showinfo("EDAP", "Perform Calibration first.")
-        else:
-            messagebox.showinfo("EDAP", "Perform Calibration first.")
+                messagebox.showinfo("EDAP", "Select a Throttle setting in the dropdown above.")
 
     def edit_pit_curve(self):
         # Get current ship pitch curve
-        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if self.ed_ap.speed_demand in ship_cfg:
-            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
-            if 'PitchRate' in spd_dmd_dict:
-                curve = spd_dmd_dict['PitchRate']
-
-                # Edit the curve
-                new_curve = line_editor(curve)
-                if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
-                        spd_dmd_dict['PitchRate'] = new_curve
+        if self.ed_ap.current_ship_cfg:
+            # Get the selected speed from the combobox
+            selected_throttle = self.throttle_var.get()  # i.e. SCSpeed50 etc.
+            if selected_throttle in self.ed_ap.current_ship_cfg:
+                spd_dmd_dict = self.ed_ap.current_ship_cfg[selected_throttle]
+                if 'PitchRate' in spd_dmd_dict:
+                    curve = spd_dmd_dict['PitchRate']
+                    # Edit the curve
+                    new_curve = line_editor(curve, f"{selected_throttle} - Pitch curve")
+                    if new_curve is not None:
+                        if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                            spd_dmd_dict['PitchRate'] = new_curve
             else:
-                messagebox.showinfo("EDAP", "Perform Calibration first.")
-        else:
-            messagebox.showinfo("EDAP", "Perform Calibration first.")
+                messagebox.showinfo("EDAP", "Select a Throttle setting in the dropdown above.")
 
     def edit_yaw_curve(self):
         # Get current ship yaw curve
-        ship_cfg = self.ed_ap.ship_configs['Ship_Configs'][self.ed_ap.current_ship_type]
-        if self.ed_ap.speed_demand in ship_cfg:
-            spd_dmd_dict = ship_cfg[self.ed_ap.speed_demand]
-            if 'YawRate' in spd_dmd_dict:
-                curve = spd_dmd_dict['YawRate']
-
-                # Edit the curve
-                new_curve = line_editor(curve)
-                if new_curve is not None:
-                    if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
-                        spd_dmd_dict['YawRate'] = new_curve
+        if self.ed_ap.current_ship_cfg:
+            # Get the selected speed from the combobox
+            selected_throttle = self.throttle_var.get()  # i.e. SCSpeed50 etc.
+            if selected_throttle in self.ed_ap.current_ship_cfg:
+                spd_dmd_dict = self.ed_ap.current_ship_cfg[selected_throttle]
+                if 'YawRate' in spd_dmd_dict:
+                    curve = spd_dmd_dict['YawRate']
+                    # Edit the curve
+                    new_curve = line_editor(curve, f"{selected_throttle} - Pitch curve")
+                    if new_curve is not None:
+                        if messagebox.askyesno("RPY curve", "Keep the changes made to curve? If Yes, remember to save."):
+                            spd_dmd_dict['YawRate'] = new_curve
             else:
-                messagebox.showinfo("EDAP", "Perform Calibration first.")
-        else:
-            messagebox.showinfo("EDAP", "Perform Calibration first.")
+                messagebox.showinfo("EDAP", "Select a Throttle setting in the dropdown above.")
+
+    def tuning_align_target(self):
+        """
+        Aligns to the target for tuning.
+        @return: N/A
+        """
+        self.ed_ap.compass_align(self.ed_ap.scrReg)
 
     def save_settings(self):
         self.entry_update(None)
@@ -725,9 +758,6 @@ class APGui:
         @return: Nothing
         """
         try:
-            self.ed_ap.pitchrate = float(self.entries['ship']['PitchRate'].get())
-            self.ed_ap.rollrate = float(self.entries['ship']['RollRate'].get())
-            self.ed_ap.yawrate = float(self.entries['ship']['YawRate'].get())
             self.ed_ap.sunpitchuptime = float(self.entries['ship']['SunPitchUp+Time'].get())
 
             self.ed_ap.config['SunBrightThreshold'] = int(self.entries['autopilot']['Sun Bright Threshold'].get())
@@ -755,6 +785,7 @@ class APGui:
             self.ed_ap.config['Key_ModDelay'] = float(self.entries['keys']['Modifier Key Delay'].get())
             self.ed_ap.config['Key_DefHoldTime'] = float(self.entries['keys']['Default Hold Time'].get())
             self.ed_ap.config['Key_RepeatDelay'] = float(self.entries['keys']['Repeat Key Delay'].get())
+            self.ed_ap.config['AutoTuneRPYRates'] = self.checkboxvar['Enable Auto-tune RPY'].get()
 
             # Process config[] settings to update classes as necessary
             self.ed_ap.process_config_settings()
@@ -962,19 +993,24 @@ class APGui:
         if field == 'Debug Images':
             self.ed_ap.debug_images = self.checkboxvar['Debug Images'].get()
 
-    def makeform(self, win, ftype, fields, r: int = 0, inc: float = 1, r_from: float = 0, rto: float = 1000):
+        if field == 'Enable Auto-tune RPY':
+            self.ed_ap.config['AutoTuneRPYRates'] = self.checkboxvar['Enable Auto-tune RPY'].get()
+
+    def makeform(self, win: ttk.LabelFrame, f_type: int, fields, r: int = 0, inc: float = 1, r_from: float = 0,
+                 rto: float = 1000):
         entries = {}
         win.columnconfigure(1, weight=1)
 
-        for field in fields:
-            if ftype == FORM_TYPE_CHECKBOX:
-                self.checkboxvar[field] = tk.IntVar()
-                lab = ttk.Checkbutton(win, text=field, variable=self.checkboxvar[field], command=(lambda field=field: self.check_cb(field)))
-                self.lab_ck[field] = lab
+        for fld in fields:
+            if f_type == FORM_TYPE_CHECKBOX:
+                self.checkboxvar[fld] = tk.IntVar()
+                lab = ttk.Checkbutton(win, text=fld, variable=self.checkboxvar[fld],
+                                      command=(lambda field=fld: self.check_cb(field)))
+                self.lab_ck[fld] = lab
                 lab.grid(row=r, column=0, columnspan=2, padx=2, pady=2, sticky=tk.W)
             else:
-                lab = ttk.Label(win, text=field + ": ")
-                if ftype == FORM_TYPE_SPINBOX:
+                lab = ttk.Label(win, text=fld + ": ")
+                if f_type == FORM_TYPE_SPINBOX:
                     ent = ttk.Spinbox(win, width=10, from_=r_from, to=rto, increment=inc, justify=tk.RIGHT)
                 else:
                     ent = ttk.Entry(win, width=10, justify=tk.RIGHT)
@@ -982,16 +1018,15 @@ class APGui:
                 ent.insert(0, "0")
                 lab.grid(row=r, column=0, padx=2, pady=2, sticky=tk.W)
                 ent.grid(row=r, column=1, padx=2, pady=2, sticky=tk.E)
-                entries[field] = ent
+                entries[fld] = ent
 
-            lab = ToolTip(lab, msg=self.tooltips[field], delay=1.0, bg="#808080", fg="#FFFFFF")
+            lab = ToolTip(lab, msg=self.tooltips[fld], delay=1.0, bg="#808080", fg="#FFFFFF")
             r += 1
         return entries
 
     def gui_gen(self, win):
 
         modes_check_fields = ('FSD Route Assist', 'Supercruise Assist', 'Waypoint Assist', 'Robigo Assist', 'AFK Combat Assist', 'DSS Assist', 'On Foot')
-        ship_entry_fields = ('RollRate', 'PitchRate', 'YawRate')
         autopilot_entry_fields = ('Sun Bright Threshold', 'Nav Align Tries', 'Jump Tries', 'Docking Retries', 'Wait For Autodock')
         buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Stop All')
         refuel_entry_fields = ('Refuel Threshold', 'Scoop Timeout', 'Fuel Threshold Abort')
@@ -1071,43 +1106,65 @@ class APGui:
         # ship values block
         blk_ship = ttk.LabelFrame(blk_main, text="SHIP", padding=(10, 5))
         blk_ship.grid(row=0, column=1, padx=2, pady=2, sticky="NSEW")
-        self.entries['ship'] = self.makeform(blk_ship, FORM_TYPE_SPINBOX, ship_entry_fields, 1, 0.5)
 
         lbl_sun_pitch_up = ttk.Label(blk_ship, text='SunPitchUp +/- Time:')
-        lbl_sun_pitch_up.grid(row=6, column=0, pady=3, sticky=tk.W)
+        lbl_sun_pitch_up.grid(row=1, column=0, pady=3, sticky=tk.W)
         spn_sun_pitch_up = ttk.Spinbox(blk_ship, width=10, from_=-100, to=100, increment=0.5, justify=tk.RIGHT)
-        spn_sun_pitch_up.grid(row=6, column=1, padx=2, pady=2, sticky=tk.E)
+        spn_sun_pitch_up.grid(row=1, column=1, padx=2, pady=2, sticky=tk.E)
         spn_sun_pitch_up.bind('<FocusOut>', self.entry_update)
+        self.entries['ship'] = {}
         self.entries['ship']['SunPitchUp+Time'] = spn_sun_pitch_up
 
+        lbl_calibrate_note = ttk.Label(blk_ship, text="Ship RPY Tuning:\n1. Enable Auto-tune.\n"
+                                                      "2. Fly until until response is correct.\n"
+                                                      "3. Use Align to Target button to fine tune.\n"
+                                                      "4a. Use Throttle dropdown to select and...\n"
+                                                      "4b. Edit Curve if necessary and save changes.\n"
+                                                      "5. Disable Auto-tune.")
+        lbl_calibrate_note.grid(row=2, columnspan=2, pady=5, sticky=tk.W)
+
+        self.checkboxvar['Enable Auto-tune RPY'] = tk.BooleanVar()
+        self.checkboxvar['Enable Auto-tune RPY'].set(bool(self.ed_ap.config['AutoTuneRPYRates']))
+        cb_auto_tune_rpy = ttk.Checkbutton(blk_ship, text='Enable Auto-tune RPY',
+                                           variable=self.checkboxvar['Enable Auto-tune RPY'],
+                                           command=(lambda field='Enable Auto-tune RPY': self.check_cb(field)))
+        cb_auto_tune_rpy.grid(row=3, column=0, padx=2, pady=2, sticky=tk.W)
+
         btn_speed_0 = ttk.Button(blk_ship, text='0% Throttle', command=self.ship_throttle_0)
-        btn_speed_0.grid(row=7, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_speed_0.grid(row=4, column=0, padx=2, pady=12, columnspan=1, sticky="NSEW")
         btn_speed_50 = ttk.Button(blk_ship, text='50% Throttle', command=self.ship_throttle_50)
-        btn_speed_50.grid(row=7, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_speed_50.grid(row=4, column=1, padx=2, pady=12, columnspan=1, sticky="NSEW")
         btn_speed_100 = ttk.Button(blk_ship, text='100% Throttle', command=self.ship_throttle_100)
-        btn_speed_100.grid(row=8, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_speed_100.grid(row=5, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
 
-        lbl_calibrate_note = ttk.Label(blk_ship, text="Tune Ship Roll:\n1. Set speed above.\n"
-                                                      "2. Target remote System.\n"
-                                                      "3. Maneuver target to top dead center of compass.")
-        lbl_calibrate_note.grid(row=9, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_roll = ttk.Button(blk_ship, text='4. Gather Roll Rates', command=self.ship_tst_roll)
-        btn_tst_roll.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_roll_edit = ttk.Button(blk_ship, text='5. Edit Roll Curve', command=self.edit_roll_curve)
-        btn_roll_edit.grid(row=10, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_align_target = ttk.Button(blk_ship, text='Align to Target', command=self.tuning_align_target)
+        btn_align_target.grid(row=6, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
-        lbl_calibrate_note2 = ttk.Label(blk_ship, text="Tune Pitch & Yaw:\n1. Set speed above.\n"
-                                                       "2. Target remote System.\n"
-                                                       "3. Maneuver target to center of screen (and compass).")
-        lbl_calibrate_note2.grid(row=11, columnspan=2, pady=5, sticky=tk.W)
-        btn_tst_pitch = ttk.Button(blk_ship, text='4. Gather Pitch Rates', command=self.ship_tst_pitch)
-        btn_tst_pitch.grid(row=12, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_pit_edit = ttk.Button(blk_ship, text='5. Edit Pitch Curve', command=self.edit_pit_curve)
-        btn_pit_edit.grid(row=12, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
-        btn_tst_yaw = ttk.Button(blk_ship, text='6. Gather Yaw Rates', command=self.ship_tst_yaw)
-        btn_tst_yaw.grid(row=13, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
-        btn_yaw_edit = ttk.Button(blk_ship, text='7. Edit Yaw Curve', command=self.edit_yaw_curve)
-        btn_yaw_edit.grid(row=14, column=1, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        ttk.Label(blk_ship, text="Throttle:").grid(row=7, column=0, padx=5, pady=5, sticky=tk.W)
+
+        self.throttle_var = tk.StringVar()
+        self.throttle_combo = ttk.Combobox(blk_ship, textvariable=self.throttle_var, values=self.throttle_keys)
+        self.throttle_combo.grid(row=7, column=1, padx=5, pady=5, sticky="EW")
+        self.throttle_combo.bind("<<ComboboxSelected>>", self.on_throttle_select)
+
+
+        # btn_tst_roll = ttk.Button(blk_ship, text='4. Gather Roll Rates', command=self.ship_tst_roll)
+        # btn_tst_roll.grid(row=10, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_roll_edit = ttk.Button(blk_ship, text='Edit Roll Curve', command=self.edit_roll_curve)
+        btn_roll_edit.grid(row=10, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+
+        # lbl_calibrate_note2 = ttk.Label(blk_ship, text="Tune Pitch & Yaw:\n1. Set speed above.\n"
+        #                                                "2. Target remote System.\n"
+        #                                                "3. Maneuver target to center of screen (and compass).")
+        # lbl_calibrate_note2.grid(row=11, columnspan=2, pady=5, sticky=tk.W)
+        # btn_tst_pitch = ttk.Button(blk_ship, text='4. Gather Pitch Rates', command=self.ship_tst_pitch)
+        # btn_tst_pitch.grid(row=12, column=0, padx=2, pady=2, columnspan=1, sticky="NSEW")
+        btn_pit_edit = ttk.Button(blk_ship, text='Edit Pitch Curve', command=self.edit_pit_curve)
+        btn_pit_edit.grid(row=12, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
+        # btn_tst_yaw = ttk.Button(blk_ship, text='6. Gather Yaw Rates', command=self.ship_tst_yaw)
+        # btn_tst_yaw.grid(row=13, column=0, padx=5, pady=2, columnspan=1, sticky="NSEW")
+        btn_yaw_edit = ttk.Button(blk_ship, text='Edit Yaw Curve', command=self.edit_yaw_curve)
+        btn_yaw_edit.grid(row=13, column=0, padx=2, pady=2, columnspan=2, sticky="NSEW")
 
         # log window
         log = ttk.LabelFrame(page0, text="LOG", padding=(10, 5))
