@@ -1362,7 +1362,9 @@ class EDAutopilot:
         if self.status.get_gui_focus() != GuiFocusNoFocus:
             return False
 
-        image = self.scr.get_screen_region(scr_reg.reg['disengage']['rect'], rgb=False)
+        image = self.scr.get_screen_region(scr_reg.reg['disengage']['rect'])
+        # TODO delete this line when COLOR_RGB2BGR is removed from get_screen()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mask = scr_reg.capture_region_filtered(self.scr, 'disengage')
         masked_image = cv2.bitwise_and(image, image, mask=mask)
         image = masked_image
