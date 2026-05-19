@@ -76,6 +76,11 @@ class Screen:
         self.camera = None
         self.using_screen = True  # True to use screen, false to use an image. Set screen_image to the image
         self._screen_image = None  # Screen image captured from screen, or loaded by user for testing.
+        self.screen_width = 0
+        self.screen_height = 0
+        self.screen_left = 0
+        self.screen_top = 0
+        self.aspect_ratio = 0
         self._last_camera_frame = None
 
         # Find ED window
@@ -87,6 +92,9 @@ class Screen:
                                        output_color="BGR")  # Output BGR to match CV2
             self.screen_width = 1920  # Fallback width
             self.screen_height = 1080  # Fallback height
+            self.aspect_ratio = self.screen_width / self.screen_height
+            self.screen_left = 0
+            self.screen_top = 0
         else:
             # Find adapter and monitor
             (adapter_idx, monitor_idx) = self.find_output(list(self.ed_rect))
@@ -95,6 +103,9 @@ class Screen:
 
             self.screen_width = self.ed_rect[2] - self.ed_rect[0]
             self.screen_height = self.ed_rect[3] - self.ed_rect[1]
+            self.aspect_ratio = self.screen_width / self.screen_height
+            self.screen_left = self.ed_rect[0]
+            self.screen_top = self.ed_rect[1]
             logger.debug(f'Found Elite Dangerous window position: {self.ed_rect}')
 
         self.scales = {
