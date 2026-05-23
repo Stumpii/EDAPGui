@@ -9,7 +9,7 @@ import win32gui
 from numpy import array
 import json
 import dxcam
-from dxcam.dxcam import Output, Device
+from dxcam import Output, Device
 from dxcam.util.io import (enum_dxgi_adapters)
 
 from EDlogger import logger
@@ -61,6 +61,25 @@ def crop_image_by_pct(image, quad: Quad):
     return cropped
 
 
+def crop_image_by_pct2(image, rect):
+    """ Crop an image using a percentage values (0.0 - 1.0).
+    Rect is an array of crop % [0.10, 0.20, 0.90, 0.95] = [Left, Top, Right, Bottom]
+    Returns the cropped image. """
+    # TODO - this function seems more efficient than crop_image_by_pct. Maybe modify this one to use Quad and get
+    #  rid of the other one.
+    # Existing size
+    h, w, ch = image.shape
+
+    # Crop to leave only the selected rectangle
+    x0 = int(w * rect[0])
+    y0 = int(h * rect[1])
+    x1 = int(w * rect[2])
+    y1 = int(h * rect[3])
+
+    # Crop image
+    return image[y0:y1, x0:x1]
+
+
 def crop_image_pix(image, quad: Quad):
     """ Crop an image using a pixel values.
     Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1] = [L, T, R, B]
@@ -83,11 +102,13 @@ class Screen:
         self.aspect_ratio = 0
         self._last_camera_frame = None
 
-        # Find ED window
+        # Find ED window position to determine which monitor it is on
         self.ed_rect = self.get_elite_window_rect()
         if self.ed_rect is None:
-            self.ap_ckb('log', f"ERROR: Could not find window {elite_dangerous_window}.")
-            logger.error(f'Could not find window {elite_dangerous_window}.')
+            msg = f"Could not find window '{elite_dangerous_window}'. Once Elite Dangerous is running, restart EDAP."
+            self.ap_ckb('log', f"ERROR: {msg}")
+            logger.error(msg)
+
             self.camera = dxcam.create(device_idx=0, output_idx=0,
                                        output_color="BGR")  # Output BGR to match CV2
             self.screen_width = 1920  # Fallback width
@@ -108,7 +129,9 @@ class Screen:
             self.screen_top = self.ed_rect[1]
             logger.debug(f'Found Elite Dangerous window position: {self.ed_rect}')
 
-        self.scales = {
+        # Add new screen resolutions here with tested scale factors
+        # this table will be default, overwritten when loading resolution.json file
+        self.scales = {  # scaleX, scaleY
             '1024x768':   [0.39, 0.39],
             '1080x1080':  [0.5, 0.5],
             '1280x800':   [0.48, 0.48],
@@ -142,7 +165,8 @@ class Screen:
             self.scaleX = self.screen_width / 3440.0
             self.scaleY = self.screen_height / 1440.0
 
-        logger.debug('screen size: ' + str(self.screen_width) + " " + str(self.screen_height))
+        logger.debug('screen size: w='+str(self.screen_width)+" h="+str(self.screen_height))
+        logger.debug('screen position: x='+str(self.screen_left)+" y="+str(self.screen_top))
         logger.debug('Default scale X, Y: ' + str(self.scaleX) + ", " + str(self.scaleY))
 
     def find_output(self, region: list[int]) -> tuple[int, int]:
@@ -184,14 +208,20 @@ class Screen:
         """
         hwnd = win32gui.FindWindow(None, elite_dangerous_window)
         if hwnd:
-            return win32gui.GetWindowRect(hwnd)
-        return None
+            rect = win32gui.GetWindowRect(hwnd)
+            return rect
+        else:
+            return None
 
     @staticmethod
     def elite_window_exists() -> bool:
         """ Does the ED Client Window exist (i.e. is ED running)
         """
-        return bool(win32gui.FindWindow(None, elite_dangerous_window))
+        hwnd = win32gui.FindWindow(None, elite_dangerous_window)
+        if hwnd:
+            return True
+        else:
+            return False
 
     def write_config(self, data, filename='./configs/resolution.json'):
         if data is None:
@@ -204,26 +234,30 @@ class Screen:
 
     @staticmethod
     def read_config(filename='./configs/resolution.json'):
+        s = None
         try:
             with open(filename, "r") as fp:
-                return json.load(fp)
+                s = json.load(fp)
         except Exception as e:
             logger.warning("Screen.py read_config error :" + str(e))
-            return None
+
+        return s
 
     def get_screen_size(self):
         return self.screen_width, self.screen_height
 
-    def get_screen_region(self, reg, rgb=True):
+    def get_screen_region(self, rect, rgb=True):
         """ Gets the screen region. Should be BGR only for CV2.
-        @param reg: Reg defines a box in pixels.
+        @param rect: Reg defines a box in pixels.
         @param rgb: Returns RGB when true, else BGR when false.
         """
-        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]), rgb)
+        image = self.get_screen(int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3]), rgb)
         return image
 
     def get_screen(self, x_left, y_top, x_right, y_bot, rgb=True):
-        """ Gets the screen. Should be BGR only for CV2.
+        """ Get screen from co-ords in pixels. Should be BGR only for CV2.
+        Returns the captured image, or None if capture failed (empty grab, no monitor, etc.).
+        Callers must tolerate None.
         @param x_left:
         @param y_top:
         @param x_right:
@@ -231,7 +265,7 @@ class Screen:
         @param rgb: Returns RGB when true, else BGR when false.
         """
         region = (x_left, y_top, x_right, y_bot)
-        frame = self.camera.grab(region=region)  # Frame is in RGB format
+        frame = self.camera.grab(region=region, new_frame_only=False)  # Frame is in BGR format
         if frame is None:
             if self._last_camera_frame is not None:
                 frame = self._last_camera_frame
@@ -248,7 +282,7 @@ class Screen:
     def get_screen_rect_pct(self, rect):
         """ Grabs a screenshot and returns the selected region as an image in BGR format for CV2.
         @param rect: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
-        @return: An image defined by the region.
+        @return: An image defined by the region, or None if capture failed.
         """
         if self.using_screen:
             abs_rect = self.screen_rect_to_abs(rect)
@@ -274,11 +308,20 @@ class Screen:
             int(rect[3] * self.screen_height)
         ]
 
+    def screen_region_pct_to_pix(self, quad: Quad) -> Quad:
+        """ Converts and array of real percentage screen values to int absolutes.
+        @param quad: A rect array ([L, T, R, B]) in percent (0.0 - 1.0)
+        @return: A rect array ([L, T, R, B]) in pixels
+        """
+        q = copy(quad)
+        q.scale_from_origin(self.screen_width, self.screen_height)
+        return q
+
     def get_screen_full(self):
         """ Grabs a full screenshot and returns the image in BGR format for CV2.
         """
         if self.using_screen:
-            frame = self.camera.grab()  # Frame is in RGB format
+            frame = self.camera.grab(new_frame_only=False)  # Frame is in RGB format
             if frame is None:
                 if self._last_camera_frame is not None:
                     return self._last_camera_frame
@@ -288,28 +331,6 @@ class Screen:
         else:
             image = cv2.cvtColor(self._screen_image, cv2.COLOR_RGB2BGR)  # Convert to BGR format for CV2
             return image
-
-    def crop_image_by_pct(self, image, rect):
-        """ Crop an image using a percentage values (0.0 - 1.0).
-        Rect is an array of crop % [0.10, 0.20, 0.90, 0.95] = [Left, Top, Right, Bottom]
-        Returns the cropped image. """
-        # Existing size
-        h, w, ch = image.shape
-
-        # Crop to leave only the selected rectangle
-        x0 = int(w * rect[0])
-        y0 = int(h * rect[1])
-        x1 = int(w * rect[2])
-        y1 = int(h * rect[3])
-
-        # Crop image
-        return image[y0:y1, x0:x1]
-
-    def crop_image(self, image, rect):
-        """ Crop an image using a pixel values.
-        Rect is an array of pixel values [100, 200, 1800, 1600] = [X0, Y0, X1, Y1]
-        Returns the cropped image."""
-        return image[rect[1]:rect[3], rect[0]:rect[2]]  # i.e. [y:y+h, x:x+w]
 
     def set_screen_image(self, image):
         """ Use an image instead of a screen capture. Sets the image and also sets the
@@ -325,6 +346,9 @@ class Screen:
         # Set the screen size to the original image size, not the region size
         self.screen_width = w
         self.screen_height = h
+        self.screen_left = 0
+        self.screen_top = 0
+
 
 
 # Usage Example
