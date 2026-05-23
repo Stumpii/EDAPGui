@@ -1430,7 +1430,6 @@ class EDAutopilot:
     def stop_sco_monitoring(self):
         """ Stop Supercruise Overcharge Monitoring. """
         self._sc_sco_active_loop_enable = False
-        self._sc_disengage_active = False
 
     def _sc_sco_active_loop(self):
         """ A loop to determine is Supercruise Overcharge is active.
@@ -1485,6 +1484,9 @@ class EDAutopilot:
             elapsed_time = time.time() - start_time
             if elapsed_time < 1.0:
                 sleep(1.0 - elapsed_time)
+
+        # Reset disengage latch, in case it was latched.
+        self._sc_disengage_active = False
 
     def undock(self):
         """ Performs menu action to undock from Station """
