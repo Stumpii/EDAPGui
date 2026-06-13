@@ -39,11 +39,9 @@ class EDInternalStatusPanel:
         # Nav Panel region covers the entire navigation panel.
         self.reg = {'panel_bounds1': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
+                    'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
+                    'sts_pnl_tab': {'rect': [0.0, 0.0, 0.15, 0.7]}, # Size of the tab within the tab bar.
                     }
-        self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'H': {'rect': [0.174, 0.2265, 0.75, 0.8528]},
-                        'sts_pnl_tab': {'rect': [0.0, 0.0, 0.15, 0.7]},
-                        }
         self.panel_quad_pct = Quad()
         self.panel_quad_pix = Quad()
         self.panel = None
@@ -106,7 +104,7 @@ class EDInternalStatusPanel:
             return None
 
         # Convert region rect to quad
-        tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+        tab_bar_quad = Quad.from_rect(self.reg['tab_bar']['rect'])
         # Crop the image to the extents of the quad
         tab_bar = crop_image_by_pct(self.panel, tab_bar_quad)
         cv2.imwrite(f'test/status-panel/out/tab_bar.png', tab_bar)
@@ -132,7 +130,7 @@ class EDInternalStatusPanel:
             return None
 
         # Convert region rect to quad
-        inventory_panel_quad = Quad.from_rect(self.sub_reg['inventory_panel']['rect'])
+        inventory_panel_quad = Quad.from_rect(self.reg['inventory_panel']['rect'])
         # Crop the image to the extents of the quad
         inventory_panel = crop_image_by_pct(panel, inventory_panel_quad)
         cv2.imwrite(f'test/status-panel/out/inventory_panel.png', inventory_panel)
@@ -208,11 +206,11 @@ class EDInternalStatusPanel:
             if tab_bar is None:
                 return False, ""
 
-            item = Quad.from_rect(self.sub_reg['sts_pnl_tab']['rect'])
+            item = Quad.from_rect(self.reg['sts_pnl_tab']['rect'])
             img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, item, 'status panel')
             if img_selected is not None:
                 if self.ap.debug_overlay:
-                    tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+                    tab_bar_quad = Quad.from_rect(self.reg['tab_bar']['rect'])
                     # Convert to a percentage of the nav panel
                     quad.scale_from_origin(tab_bar_quad.width, tab_bar_quad.height)
                     # quad.offset(tab_bar_quad.left, tab_bar_quad.top)

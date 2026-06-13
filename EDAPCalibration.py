@@ -201,7 +201,7 @@ class Calibration:
             json.dump(self.ocr_calibration_data, f, indent=4)
         # self.log_msg("OCR calibration data saved.")
         self.ap_ckb('log', f"OCR calibration data saved.")
-        # messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
+        messagebox.showinfo("Saved", "OCR calibration data saved.\nPlease restart the application for changes to take effect.")
 
     def reset_all_calibrations(self):
         if messagebox.askyesno("Reset All Calibrations",

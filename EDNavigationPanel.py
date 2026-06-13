@@ -126,12 +126,11 @@ class EDNavigationPanel:
         # Nav Panel region covers the entire navigation panel.
         self.reg = {'panel_bounds1': {'rect': [0.0, 0.2, 0.7, 0.35]},
                     'panel_bounds2': {'rect': [0.0, 0.2, 0.7, 0.35]},
+                    'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]}, # Subregion of the tab bar within the whole nav panel
+                    'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]},
+                    'nav_pnl_tab': {'rect': [0.0, 0.0, 0.23, 0.7]}, # Size of the tab within the tab bar.
+                    'nav_pnl_location': {'rect': [0.0, 0.0, 1.0, 0.08]}, # Size of the location line within the location panel.
                     }
-        self.sub_reg = {'tab_bar': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        'location_panel': {'rect': [0.2218, 0.3, 0.8, 1.0]},
-                        'nav_pnl_tab': {'rect': [0.0, 0.0, 0.23, 0.7]},
-                        'nav_pnl_location': {'rect': [0.0, 0.0, 1.0, 0.08]},
-                        }
         self.panel_quad_pct = Quad()
         self.panel_quad_pix = Quad()
         self.panel = None
@@ -194,7 +193,7 @@ class EDNavigationPanel:
             return None
 
         # Convert region rect to quad
-        tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+        tab_bar_quad = Quad.from_rect(self.reg['tab_bar']['rect'])
         # Crop the image to the extents of the quad
         tab_bar = crop_image_by_pct(self.panel, tab_bar_quad)
         cv2.imwrite(f'test/nav-panel/out/tab_bar.png', tab_bar)
@@ -220,7 +219,7 @@ class EDNavigationPanel:
             return None
 
         # Convert region rect to quad
-        location_panel_quad = Quad.from_rect(self.sub_reg['location_panel']['rect'])
+        location_panel_quad = Quad.from_rect(self.reg['location_panel']['rect'])
         # Crop the image to the extents of the quad
         location_panel = crop_image_by_pct(nav_panel, location_panel_quad)
         cv2.imwrite(f'test/nav-panel/out/location_panel.png', location_panel)
@@ -291,11 +290,11 @@ class EDNavigationPanel:
             if tab_bar is None:
                 return False, ""
 
-            item = Quad.from_rect(self.sub_reg['nav_pnl_tab']['rect'])
+            item = Quad.from_rect(self.reg['nav_pnl_tab']['rect'])
             img_selected, _, ocr_textlist, quad = self.ocr.get_highlighted_item_data(tab_bar, item, 'nav panel')
             if img_selected is not None:
                 if self.ap.debug_overlay:
-                    tab_bar_quad = Quad.from_rect(self.sub_reg['tab_bar']['rect'])
+                    tab_bar_quad = Quad.from_rect(self.reg['tab_bar']['rect'])
                     # Convert to a percentage of the nav panel
                     quad.scale_from_origin(tab_bar_quad.width, tab_bar_quad.height)
                     # quad.offset(tab_bar_quad.left, tab_bar_quad.top)
@@ -449,7 +448,7 @@ class EDNavigationPanel:
                 return None
 
             # Find the selected item/menu (solid orange)
-            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            item = Quad.from_rect(self.reg['nav_pnl_location']['rect'])
             img_selected, q = self.ocr.get_highlighted_item_in_image(loc_panel, item)
 
             # Check if end of list.
@@ -494,7 +493,7 @@ class EDNavigationPanel:
                 return False
 
             # Find the selected item/menu (solid orange)
-            item = Quad.from_rect(self.sub_reg['nav_pnl_location']['rect'])
+            item = Quad.from_rect(self.reg['nav_pnl_location']['rect'])
             img_selected, quad = self.ocr.get_highlighted_item_in_image(loc_panel, item)
 
             # Check if end of list.
@@ -504,7 +503,7 @@ class EDNavigationPanel:
 
             if self.ap.debug_overlay:
                 # Scale the selected item down to the scale of the tab bar
-                loc_pnl_quad = Quad.from_rect(self.sub_reg['location_panel']['rect'])
+                loc_pnl_quad = Quad.from_rect(self.reg['location_panel']['rect'])
                 q = copy(quad)
                 # Convert to a percentage of the nav panel
                 q.scale_from_origin(loc_pnl_quad.width, loc_pnl_quad.height)
