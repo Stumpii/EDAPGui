@@ -1,5 +1,6 @@
 # 6/13/2026 v1.9.4 b0
 - Added reading of player settings to check GUI brightness and nav panel option.
+- Added Nav panel and Status panel regions to the calibration tab as regions.
 
 # 6/13/2026 v1.9.3
 - Removed duplicate save all settings buttons.
