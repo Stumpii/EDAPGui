@@ -1,3 +1,6 @@
+# 6/13/2026 v1.9.4 b0
+- Added reading of player settings to check GUI brightness and nav panel option.
+
 # 6/13/2026 v1.9.3
 - Removed duplicate save all settings buttons.
 - Removed test rpy buttons.
