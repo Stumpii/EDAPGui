@@ -133,9 +133,9 @@ def closest_angle(angle: float) -> float:
     elif angle > 15:
         a = round_to_multiple(angle, 5)
     elif angle > 5:
-        a = round_to_multiple(angle, 1)
+        a = round_to_multiple(angle, 2)
     else:
-        a = round_to_multiple(angle, 0.25)
+        a = round_to_multiple(angle, 0.5)
     return a
 
 
