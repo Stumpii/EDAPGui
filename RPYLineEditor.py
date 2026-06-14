@@ -46,6 +46,7 @@ def line_editor(curve: dict[str, float], throttle_text: str) -> dict[str, float]
     ax1.set_title(f'{throttle_text}')
     ax1.text(0.75, 0.25, 'Click and drag a point to move it\n\'i\' to insert, \'d\' to delete a point.',
              horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
+    ax1.set_xscale('log')
     ax1.set_xlabel('Dist to Target (Deg)')
     ax1.set_ylabel('RPY Rate (Deg/Sec)')
     ax1.set_xlim(auto=True)

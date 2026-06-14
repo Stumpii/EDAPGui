@@ -1,4 +1,5 @@
 # 6/13/2026 v1.9.4 b0
+- Changed RPY curve to log scale for easier viewing of data.
 - Set throttle buttons now change curve editor dropdown.
 - Added thread lock to overlay objects to prevent errors.
 - Decreased degree intervals for logging of RPY point to make manual tuning easier.
