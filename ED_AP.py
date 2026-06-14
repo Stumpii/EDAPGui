@@ -1064,9 +1064,9 @@ class EDAutopilot:
 
             self.overlay.overlay_rect('compass', (compass_with_border.left, compass_with_border.top), (compass_with_border.right, compass_with_border.bottom), (0, 255, 0), 2)
             self.overlay.overlay_rect('nav', (nav_to_screen.left, nav_to_screen.top), (nav_to_screen.right, nav_to_screen.bottom), (0, 255, 0), 2)
-            self.overlay.overlay_floating_text('compass', f'Com: {max_val:5.2f} > {scr_reg.compass_match_thresh}', compass_with_border.left, compass_with_border.top - 85, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav', f'Nav: {n_max_val:5.2f} > {scr_reg.navpoint_match_thresh}', compass_with_border.left, compass_with_border.top - 65, (0, 255, 0))
-            self.overlay.overlay_floating_text('nav_beh', f'NavB: {b_max_val:5.2f}', compass_with_border.left, compass_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('compass', f'Com: {max_val:5.2f} > {scr_reg.compass_match_thresh}', compass_with_border.left, compass_with_border.top - 65, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav', f'Nav: {n_max_val:5.2f} > {scr_reg.navpoint_match_thresh}', compass_with_border.left, compass_with_border.top - 45, (0, 255, 0))
+            self.overlay.overlay_floating_text('nav_beh', f'NavB: {b_max_val:5.2f}', compass_with_border.left, compass_with_border.top - 25, (0, 255, 0))
             self.overlay.overlay_floating_text('compass_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', compass_with_border.left, compass_with_border.bottom, (0, 255, 0))
             self.overlay.overlay_paint()
 
@@ -1202,7 +1202,7 @@ class EDAutopilot:
             self.overlay.overlay_rect('target', (target_with_border.left, target_with_border.top), (target_with_border.right, target_with_border.bottom), (0, 255, 0), 2)
             self.overlay.overlay_floating_text('target', f'Tar: {max_val:5.2f} > {scr_reg.target_thresh}', target_with_border.left, target_with_border.top - 45, (0, 255, 0))
             self.overlay.overlay_floating_text('target_occ', f'TarOcc: {maxVal_occ:5.2f} > {scr_reg.target_occluded_thresh}', target_with_border.left, target_with_border.top - 25, (0, 255, 0))
-            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', target_with_border.left, target_with_border.top , (0, 255, 0))
+            self.overlay.overlay_floating_text('target_rpy', f'r: {round(final_roll_deg, 2)} p: {round(final_pit_deg, 2)} y: {round(final_yaw_deg, 2)}', target_with_border.left, target_with_border.bottom , (0, 255, 0))
             self.overlay.overlay_paint()
 
         if self.cv_view:
