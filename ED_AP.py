@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import traceback
-from math import atan, degrees, tan, radians
+from math import atan, degrees, tan, radians, sqrt
 import random
 from string import Formatter
 from tkinter import messagebox
@@ -1427,7 +1427,7 @@ class EDAutopilot:
         This runs on a separate thread monitoring the status in the background. """
         while self._sc_sco_active_loop_enable:
             # deactivate if not in SC
-            if not self.status.get_flag(FlagsSupercruise):
+            if not self.status.get_flag(FlagsSupercruise) and not self._sc_disengage_active:
                 self.stop_sco_monitoring()
                 break
 
@@ -2806,8 +2806,11 @@ class EDAutopilot:
                     self._prev_star_system = cur_star_system
                     self.update_ap_status("Idle")
 
-    def single_waypoint_assist(self):
-        """ Travel to a system or station or both."""
+    def single_waypoint_assist(self) -> bool:
+        """
+        Travel to a system or station or both.
+        :return: True on success, else False.
+        """
         if self._single_waypoint_system == "" and self._single_waypoint_station == "":
             return False
 
@@ -2823,7 +2826,7 @@ class EDAutopilot:
 
             # Jump to destination
             res = self.jump_to_system(self.scrReg)
-            if res is False:
+            if not res:
                 return False
 
         if self._single_waypoint_station != "":
@@ -2832,8 +2835,11 @@ class EDAutopilot:
                return False
 
             res = self.supercruise_to_station(self.scrReg, self._single_waypoint_station)
-            if res is False:
+            if not res:
                 return False
+
+        # If no problem occurred, must have been successful.
+        return True
 
     def ctype_async_raise(self, thread_obj, exception):
         """ Raising an exception to the engine loop thread, so we can terminate its execution
