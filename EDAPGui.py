@@ -635,12 +635,15 @@ class APGui:
 
     def ship_throttle_0(self):
         self.ed_ap.set_throttle_0()
+        self.throttle_var.set(self.ed_ap.speed_demand)
 
     def ship_throttle_50(self):
         self.ed_ap.set_throttle_50()
+        self.throttle_var.set(self.ed_ap.speed_demand)
 
     def ship_throttle_100(self):
         self.ed_ap.set_throttle_100()
+        self.throttle_var.set(self.ed_ap.speed_demand)
 
     def edit_roll_curve(self):
         # Get current ship roll curve
