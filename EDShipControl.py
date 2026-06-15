@@ -95,12 +95,14 @@ class EDShipControl:
         throttle = self.get_throttle_demand_dict()
         if throttle:
             c = convert_curve_to_float(throttle['RollRate'])
-            # Add the new item. Conversion will sort them.
-            a = closest_angle(angle)
-            c[a] = round(rate, 2)
-            # Convert back to str which will sort the values automatically.
-            s = convert_curve_to_str(c)
-            throttle['RollRate'] = s
+            if c:
+                # Add the new item. Conversion will sort them.
+                a = closest_angle(angle)
+                c[a] = round(rate, 2)
+                # Convert back to str which will sort the values automatically.
+                s = convert_curve_to_str(c)
+                if s:
+                    throttle['RollRate'] = s
 
             self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
                                f'Roll curve at {a} deg, {round(rate, 2)} deg/s.')
@@ -115,12 +117,14 @@ class EDShipControl:
         throttle = self.get_throttle_demand_dict()
         if throttle:
             c = convert_curve_to_float(throttle['PitchRate'])
-            # Add the new item. Conversion will sort them.
-            a = closest_angle(angle)
-            c[a] = round(rate, 2)
-            # Convert back to str which will sort the values automatically.
-            s = convert_curve_to_str(c)
-            throttle['PitchRate'] = s
+            if c:
+                # Add the new item. Conversion will sort them.
+                a = closest_angle(angle)
+                c[a] = round(rate, 2)
+                # Convert back to str which will sort the values automatically.
+                s = convert_curve_to_str(c)
+                if s:
+                    throttle['PitchRate'] = s
 
             self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
                                f'Pitch curve at {a} deg, {round(rate, 2)} deg/s.')
@@ -135,14 +139,16 @@ class EDShipControl:
         throttle = self.get_throttle_demand_dict()
         if throttle:
             c = convert_curve_to_float(throttle['YawRate'])
-            # Add the new item. Conversion will sort them.
-            a = closest_angle(angle)
-            c[a] = round(rate, 2)
-            # Convert back to str which will sort the values automatically.
-            s = convert_curve_to_str(c)
-            throttle['YawRate'] = s
-            self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
-                               f'Yaw curve at {a} deg, {round(rate, 2)} deg/s.')
+            if c:
+                # Add the new item. Conversion will sort them.
+                a = closest_angle(angle)
+                c[a] = round(rate, 2)
+                # Convert back to str which will sort the values automatically.
+                s = convert_curve_to_str(c)
+                if s:
+                    throttle['YawRate'] = s
+                    self.ap_ckb('log', f'Added a point to the {self.ap.speed_demand} '
+                                       f'Yaw curve at {a} deg, {round(rate, 2)} deg/s.')
 
     def get_throttle_demand_dict(self) -> ThrottleDemand | None:
         """
