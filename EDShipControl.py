@@ -507,7 +507,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_compass_target_offset()
+                off2: CompassTargetOffset = self.ap.get_compass_target_offset()
                 if not off2:
                     break
 
@@ -572,7 +572,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_compass_target_offset()
+                off2: CompassTargetOffset = self.ap.get_compass_target_offset()
                 if not off2:
                     print(f"Target lost")
                     break
@@ -637,7 +637,7 @@ class EDShipControl:
 
                 sleep(1)
 
-                off2 = self.ap.get_compass_target_offset()
+                off2: CompassTargetOffset = self.ap.get_compass_target_offset()
                 if not off2:
                     break
 
