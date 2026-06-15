@@ -184,8 +184,8 @@ class EDAutopilot:
         self.current_ship_type = None
         self.current_ship_cfg = None
         self.gui_loaded = False
-        # self._nav_cor_x = 0.0  # Nav Point correction to pitch
-        # self._nav_cor_y = 0.0  # Nav Point correction to yaw
+        self._nav_cor_x = 0.0  # Nav Point correction to pitch
+        self._nav_cor_y = 0.0  # Nav Point correction to yaw
         self.target_align_outer_lim = 1.0  # In deg. Anything outside of this range will cause alignment.
         self.target_align_inner_lim = 0.5  # In deg. Will stop alignment when in this range.
         self.debug_show_compass_overlay = False
@@ -981,11 +981,11 @@ class EDAutopilot:
 
         # Continue calc
         final_x_pct = 2*(((n_compass_quad.left-compass_quad.left) / (compass_quad.width - n_compass_quad.width)) - 0.5)  # X as percent (-1.0 to 1.0, 0.0 in the center)
-        # final_x_pct = final_x_pct - self._nav_cor_x
+        final_x_pct = final_x_pct - self._nav_cor_x
         final_x_pct = max(min(final_x_pct, 1.0), -1.0)
 
         final_y_pct = -2*(((n_compass_quad.top-compass_quad.top) / (compass_quad.height - n_compass_quad.height)) - 0.5)  # Y as percent (-1.0 to 1.0, 0.0 in the center)
-        # final_y_pct = final_y_pct - self._nav_cor_y
+        final_y_pct = final_y_pct - self._nav_cor_y
         final_y_pct = max(min(final_y_pct, 1.0), -1.0)
 
         # Calc angle in degrees starting at 0 deg at 12 o'clock and increasing clockwise
@@ -1252,6 +1252,14 @@ class EDAutopilot:
             # Roll is not useful as a comparison because it goes wild when at p=0, y=0.
             if pit_err > 2.0 or yaw_err > 2.0:
                 self.ap_ckb('log', f'Compass-Target error p: {round(pit_err, 2)}deg y: {round(yaw_err, 2)}deg')
+
+            # We are aligned, so define the navigation correction as the current offset.
+            # This won't be 100% accurate, but will be within a few degrees.
+            if pit_err < 4.0 and yaw_err < 4.0:
+                if abs(tar_off1['pit']) < 0.25 and abs(tar_off1['yaw']) < 0.25:
+                    self._nav_cor_x = self._nav_cor_x + nav_off1['x']
+                    self._nav_cor_y = self._nav_cor_y + nav_off1['y']
+                    # print(f"Nav correction: 'x': {self._nav_cor_x}, 'y': {self._nav_cor_y}")
 
             # Prefer target (will be more accurate). Maybe add some additional logic to this later.
             use_target = True
