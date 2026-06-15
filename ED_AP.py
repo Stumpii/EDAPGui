@@ -19,7 +19,7 @@ from simple_localization import LocalizationManager
 from EDAP_EDMesg_Server import EDMesgServer
 from EDGalaxyMap import EDGalaxyMap
 from EDGraphicsSettings import EDGraphicsSettings
-from EDShipControl import EDShipControl, CompassTargetOffset
+from EDShipControl import EDShipControl, CompassOffset, TargetOffset, CompassTargetOffset
 from EDStationServicesInShip import EDStationServicesInShip
 from EDSystemMap import EDSystemMap
 from EDlogger import logging
@@ -67,28 +67,6 @@ class FSDAssistReturn(Enum):
     Failed = 0  # Failed to reach system
     Partial = 1  # Reached final system, but there is a local destination
     Complete = 2  # Reached final system and there is no local destination
-
-
-class TargetOffset(TypedDict):
-    """
-    Dictionary containing target information.
-    """
-    roll: float
-    pit: float
-    yaw: float
-    occ: bool
-
-
-class CompassOffset(TypedDict):
-    """
-    Dictionary containing navigation (compass) information.
-    """
-    x: float
-    y: float
-    z: float
-    roll: float
-    pit: float
-    yaw: float
 
 
 class EDAutopilot:

@@ -26,6 +26,32 @@ def scale(inp: float, in_min: float, in_max: float, out_min: float, out_max: flo
         return x
 
 
+class TargetOffset(TypedDict):
+    """
+    Dictionary containing target information.
+    """
+    roll: float # Roll in deg (ccw -180.0 to cw 180.0, 0.0 at the top)
+    pit: float # Y in deg (-180.0 to 180.0, 0.0 in the center)
+    yaw: float # X in deg (-180.0 to 180.0, 0.0 in the center)
+    r: float # Distance to pitch-yaw point
+    occ: bool # Occluded (when True)
+
+
+class CompassOffset(TypedDict):
+    """
+    Dictionary containing navigation (compass) information.
+    """
+    x: float # X as percent (-1.0 to 1.0, 0.0 in the center)
+    y: float # X as percent (-1.0 to 1.0, 0.0 in the center)
+    z: float # -1.0 if nav point behind, 1.0 if nav point ahead
+    roll: float # Roll in deg (ccw -180.0 to cw 180.0, 0.0 at the top)
+    pit: float # Y in deg (-180.0 to 180.0, 0.0 in the center)
+    yaw: float # X in deg (-180.0 to 180.0, 0.0 in the center)
+    pit_raw: float # Y in deg (-90.0 to 90.0, 0.0 in the center, even when nav point behind)
+    yaw_raw: float # X in deg (-90.0 to 90.0, 0.0 in the center, even when nav point behind)
+    r: float # Distance to pitch-yaw point
+
+
 class CompassTargetOffset(TypedDict):
     """
     Dictionary containing navigation (compass) and/or Target information.
