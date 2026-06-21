@@ -11,8 +11,11 @@ class EDPlayerSettings:
 
     def __init__(self, cb, display_file_path=None):
         self.ap_ckb = cb
-        self.dashboard_gui_brightness = ''
-        self.hide_location_icons = ''
+        self.dashboard_gui_brightness = '' # GUI brightness ('0.0' to '1.0')
+        self.hide_location_icons = '' # Hide icons in nav panel ('0'=Don't hide, '1'=Hide)
+        self.language = '' # Language ('English' etc.)
+        self.language_override_active = '' # ? ('0' ? or '1' ?)
+
         self.player_settings_filepath = display_file_path if display_file_path else self.get_latest_settings()
 
         if not self.player_settings_filepath or not isfile(self.player_settings_filepath):
@@ -33,6 +36,13 @@ class EDPlayerSettings:
             self.hide_location_icons = self.display_settings['Root']['HideLocationIcons']['@Value']
             logger.debug(f"Elite Dangerous player setting 'HideLocationIcons': {self.hide_location_icons}.")
 
+            self.language = self.display_settings['Root']['Language']['@Value']
+            logger.debug(f"Elite Dangerous player setting 'Language': {self.language}.")
+
+            self.language_override_active = self.display_settings['Root']['LanguageOverrideActive']['@Value']
+            logger.debug(f"Elite Dangerous player setting 'LanguageOverrideActive': {self.language_override_active}.")
+
+        # Check settings...
         if float(self.dashboard_gui_brightness) < 1.0:
             self.ap_ckb('log', f"WARNING: Consider changing setting 'Interface Brightness' to maximum in 'R Panel > Ship > Pilot Preferences'.")
             logger.warning("Consider changing setting 'Interface Brightness' to maximum in 'R Panel > Ship > Pilot Preferences'.")
@@ -40,6 +50,10 @@ class EDPlayerSettings:
         if int(self.hide_location_icons) == 1:
             self.ap_ckb('log', f"WARNING: Consider changing setting 'Location Status Icons' to 'Show Icons' in 'R Panel > Ship > Pilot Preferences'.")
             logger.warning("Consider changing setting 'Location Status Icons' to 'Show Icons' in 'R Panel > Ship > Pilot Preferences'.")
+
+        if self.language != 'English':
+            self.ap_ckb('log', f"WARNING: ED is not set to English language. Remember to change the language setting in ap.json.")
+            logger.warning("WARNING: ED is not set to English language. Remember to change the language setting in ap.json.")
 
     @staticmethod
     def read_settings(filename) -> dict:
