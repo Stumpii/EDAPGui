@@ -36,12 +36,11 @@ def line_editor(curve: dict[str, float], throttle_text: str) -> dict[str, float]
     ys = list(sorted_curve.values())
 
     fig, ax1 = plt.subplots()
-    line = Line2D(xs, ys,
-                  marker='o', markerfacecolor='r',
-                  animated=True, figure=fig)
+    line = Line2D(xs, ys, marker='o', markerfacecolor='r', animated=True, figure=fig)
+    smooth_line = Line2D(xs, ys, animated=True, color='red', label='Best Fit Line')
     old = copy(line.get_xydata())
 
-    p = LineInteractor(ax1, line)
+    p = LineInteractor(ax1, line, smooth_line)
 
     ax1.set_title(f'{throttle_text}')
     ax1.text(0.75, 0.25, 'Click and drag a point to move it\n\'i\' to insert, \'d\' to delete a point.',
@@ -140,6 +139,31 @@ def closest_angle(angle: float) -> float:
     return a
 
 
+def moving_average(values: list[float], window_size):
+    """
+    Generate moving average values of the specified data.
+    :param values: Array of values.
+    :param window_size: An odd integer value. Must be odd to allow the same number of prepend and append values.
+    :return: Array of moving average values. Length is the same as the input array.
+    """
+    # Generate error if size is even.
+    if window_size % 2 == 0:
+        raise Exception("Moving average window size must be an odd integer")
+
+    temp_array = np.array(values)
+
+    # Determine how many points to prepend and append
+    count = int(window_size / 2)
+    for i in range(count):
+        # Prepend and append the first and last values
+        temp_array = np.append(temp_array, temp_array[-1])
+        temp_array = np.insert(temp_array, 0, temp_array[0])
+
+    # Perform the moving average using 'valid' option that will eliminate the added values.
+    window = np.ones(int(window_size)) / float(window_size)
+    return np.convolve(temp_array, window, 'valid')
+
+
 class LineInteractor:
     """
     A line editor.
@@ -156,14 +180,17 @@ class LineInteractor:
 
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, line2d):
+    def __init__(self, ax, line2d, smooth_line2d):
         if line2d.figure is None:
             raise RuntimeError('You must first add the line to a figure '
                                'or canvas before defining the interactor')
         self.background = None
         self.ax = ax
         self.line = line2d
+        self.smooth_line = smooth_line2d
+        self.update_smooth_line()
         self.ax.add_line(self.line)
+        self.ax.add_line(self.smooth_line)
         self._ind = None  # the active vert
 
         canvas = line2d.figure.canvas
@@ -173,6 +200,20 @@ class LineInteractor:
         canvas.mpl_connect('button_release_event', self.on_button_release)
         canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.canvas = canvas
+
+    def update_smooth_line(self):
+        x_vals = self.line.get_xdata() # np.array(xs)
+        y_vals = self.line.get_ydata() # np.array(ys)
+
+        # Calc coefficients of line of best fit
+        # coefficients = np.polyfit(x_vals, y_vals, 2)  # 1 means linear
+        # Create polynomial function of best fit
+        # p1d = np.poly1d(coefficients)
+        # Plot best fit line
+        # self.smooth_line = Line2D(x_vals, p1d(x_vals), animated=True, color='red', label='Best Fit Line')
+        ma = moving_average(y_vals, 5)
+        self.smooth_line.set_data(x_vals, ma) #p1d(x_vals))
+
 
     @staticmethod
     def dist_point_to_segment(p: [float, float], s0, s1):
@@ -191,6 +232,7 @@ class LineInteractor:
     def on_draw(self, event):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.line)
+        self.ax.draw_artist(self.smooth_line)
 
     def get_ind_under_point(self, event):
         """
@@ -233,6 +275,7 @@ class LineInteractor:
             if ind is not None:
                 updated_xys = np.delete(self.line.get_xydata(), ind, axis=0)
                 self.line.set_data(zip(*updated_xys))
+                self.update_smooth_line()
         elif event.key == 'i':
             xys = self.line.get_transform().transform(self.line.get_xydata())
             p = event.x, event.y  # display co-ords
@@ -253,8 +296,9 @@ class LineInteractor:
                     [event.xdata, event.ydata],
                     axis=0)
                 self.line.set_data(zip(*updated_xys))
+                self.update_smooth_line()
 
-        if self.line.stale:
+        if self.line.stale or self.smooth_line.stale:
             self.canvas.draw_idle()
 
     def on_mouse_move(self, event):
@@ -272,9 +316,11 @@ class LineInteractor:
         xys[self._ind] = [x, y]
         # Write data back to line
         self.line.set_data(zip(*xys))
+        self.update_smooth_line()
 
         self.canvas.restore_region(self.background)
         self.ax.draw_artist(self.line)
+        self.ax.draw_artist(self.smooth_line)
         self.canvas.blit(self.ax.bbox)
 
 
