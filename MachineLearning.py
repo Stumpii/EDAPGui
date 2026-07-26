@@ -35,15 +35,15 @@ class MachLearn:
         self.ap = ed_ap
         self.ap_ckb = cb
 
-        self.compass_ml_model = YOLO("Yolo26/compass-model/weights/best.pt")
-        self.target_ml_model = YOLO("Yolo26/target-model/weights/best.pt")
+        self.compass_ml_model = YOLO("Yolo/compass-model/weights/best.pt")
+        self.target_ml_model = YOLO("Yolo/target-model/weights/best.pt")
 
     def model_predict(self, model: ModelType, image, class_name: str) -> list[MachLearnMatch] | None:
         """ Performs a prediction of an image using the relevant model and returns the results.
         @param model: Model type (i.e. Compass or Target)
         @param image: The image to check.
         @param class_name: The class name to filter by i.e.
-         for Compass Model: 'compass', 'navpoint and 'navpoint-behind'.
+         for Compass Model: 'compass', 'navpoint' and 'navpoint-behind'.
          for Target Model: 'target', 'target-occluded'.
         @return: A list of learning matches.
         """
